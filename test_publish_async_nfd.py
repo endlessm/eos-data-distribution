@@ -30,14 +30,19 @@ def dump(*list):
     print(result)
 
 class Chunks(object):
-    def __init__(self, filename, keyChain, certificateName, chunkSize = 4096):
+    def __init__(self, filename, face, chunkSize = 4096):
         self.filename = filename
         self.f = open(filename)
+        self.face = face
         self.chunkSize = chunkSize
 
+        # Use the system default key chain and certificate name to sign commands.
+        keyChain = KeyChain()
         self._keyChain = keyChain
-        self._certificateName = certificateName
+        self._certificateName = keyChain.getDefaultCertificateName()
         self._responseCount = 0
+
+        face.setCommandSigningInfo(keyChain, self._certificateName)
 
     def getChunk(self, n):
         self.f.seek(self.chunkSize * n)
@@ -54,7 +59,8 @@ class Chunks(object):
         # hack to get the segment number
         seg = int(repr(name).split('%')[-1])
 
-        content = self.getChunk(seg)
+        content = "%s;" % self.chunkSize
+        content += self.getChunk(seg)
         data.setContent(content)
         self._keyChain.sign(data, self._certificateName)
 
@@ -75,19 +81,22 @@ if __name__ == "__main__":
     except:
         name = "/endless/testchunks/" + filename
 
+    try:
+        chunkSize = sys.argv[3]
+    except:
+        chunkSize = 4096
+
     print (sys.argv)
 
     # The default Face will connect using a Unix socket, or to "localhost".
     face = Face()
 
-    # Use the system default key chain and certificate name to sign commands.
-    keyChain = KeyChain()
-    face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName())
-
     # Also use the default certificate name to sign data packets.
-    chunks = Chunks(filename, keyChain, keyChain.getDefaultCertificateName())
+    chunks = Chunks(filename, face, chunkSize)
+
+    name += "/chunked"
     prefix = Name(name)
-    dump("Register prefix", prefix.toUri())
+    dump("Register prefix", prefix.toUri(), "chunkSize", chunkSize)
     face.registerPrefix(prefix, chunks.onInterest, chunks.onRegisterFailed)
 
     while chunks._responseCount < 100:

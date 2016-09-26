@@ -38,11 +38,16 @@ class Chunks(object):
 
 
     def putChunk(self, n, data):
-        self.f.seek(self.chunkSize * n)
+        buf = data.buf()
+        chunkSize = str(bytearray(buf[:10])).split(';')[0]
+        skip = len(chunkSize) + 1
+        chunkSize = int(chunkSize)
+        print ("got data, seq: %d, chunksize: %d, skip: %d" % (n, chunkSize, skip))
 
+        self.f.seek(chunkSize * n)
         # that was complicated… getContent() returns an ndn.Blob, that needs
         # to call into buf() to get a bytearray…
-        return self.f.write(bytearray(data.buf()))
+        return self.f.write(bytearray(buf)[skip:])
 
     def onData(self, interest, data):
         self._callbackCount += 1
@@ -69,6 +74,8 @@ if __name__ == "__main__":
         name = sys.argv[2]
     except:
         name = "/endless/testchunks"
+
+    name += "/chunked/"
 
     face = Face()
     chunks = Chunks(face, filename)
