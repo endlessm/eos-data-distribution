@@ -32,32 +32,23 @@ def dump(*list):
 
 if __name__ == "__main__":
     import sys
+    import argparse
 
-    filename = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    parser.add_argument("-n", "--name")
+    parser.add_argument("-c", "--chunksize", type=int, default=4096)
+    args = parser.parse_args()
 
-    try:
-        name = sys.argv[2]
-    except:
-        name = "/endless/testchunks/" + filename
+    if not args.name:
+        args.name = "/endless/testchunks/" + args.filename
+    args.name += "/chunked"
 
-    try:
-        chunkSize = sys.argv[3]
-    except:
-        chunkSize = 4096
-
-    print (sys.argv)
-
-    # The default Face will connect using a Unix socket, or to "localhost".
-    face = Face()
-
-    # Also use the default certificate name to sign data packets.
-    chunks = Chunks(filename, face, chunkSize)
-
-    chunks = Chunks(name, filename, chunkSize)
+    chunks = Chunks(args.name, args.filename, args.chunksize)
     chunks.registerPrefix()
 
     while chunks._responseCount < 100:
-        face.processEvents()
+        chunks.face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
         time.sleep(0.01)
 

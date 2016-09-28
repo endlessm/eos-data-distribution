@@ -31,23 +31,23 @@ def dump(*list):
 
 if __name__ == "__main__":
     import sys
-    arg = 1
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--filename")
+    parser.add_argument("name")
 
-    filename = sys.argv[1]
+    args = parser.parse_args()
+    if not args.filename:
+        args.filename = args.name.split('/')[-1]
 
-    try:
-        name = sys.argv[2]
-    except:
-        name = "/endless/testchunks"
-
-    name += "/chunked/"
+    args.name += "/chunked/"
 
     face = Face()
-    chunks = Chunks(name, filename, face)
+    chunks = Chunks(args.name, args.filename, face)
     chunks.expressInterest()
 
     while chunks._callbackCount < 3:
-        face.processEvents()
+        chunks.face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
         time.sleep(0.01)
 
