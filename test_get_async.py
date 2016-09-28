@@ -21,48 +21,13 @@ import time
 from pyndn import Name
 from pyndn import Face
 
+from Chunks import Consumer as Chunks
+
 def dump(*list):
     result = ""
     for element in list:
         result += (element if type(element) is str else str(element)) + " "
     print(result)
-
-class Chunks(object):
-    def __init__(self, face, filename, chunkSize = 4096):
-        self.filename = filename
-        self.f = open(filename, "w+")
-
-        self.chunkSize = chunkSize
-        self._callbackCount = 0
-        self.face = face
-
-
-    def putChunk(self, n, data):
-        buf = data.buf()
-        chunkSize = str(bytearray(buf[:10])).split(';')[0]
-        skip = len(chunkSize) + 1
-        chunkSize = int(chunkSize)
-        print ("got data, seq: %d, chunksize: %d, skip: %d" % (n, chunkSize, skip))
-
-        self.f.seek(chunkSize * n)
-        # that was complicated… getContent() returns an ndn.Blob, that needs
-        # to call into buf() to get a bytearray…
-        return self.f.write(bytearray(buf)[skip:])
-
-    def onData(self, interest, data):
-        self._callbackCount += 1
-        name = data.getName()
-        seg = int(repr(name).split('%')[-1])
-
-        dump("Got data packet with name", name.toUri())
-        # Use join to convert each byte to chr.
-        self.putChunk(seg, data.getContent())
-        name = Name(interest.name).getSuccessor()
-        self.face.expressInterest(name, self.onData, self.onTimeout)
-
-    def onTimeout(self, interest):
-        self._callbackCount += 1
-        dump("Time out for interest", interest.getName().toUri())
 
 if __name__ == "__main__":
     import sys
@@ -78,12 +43,8 @@ if __name__ == "__main__":
     name += "/chunked/"
 
     face = Face()
-    chunks = Chunks(face, filename)
-
-    # Try to fetch.
-    name1 = Name(name).appendSegment(0)
-    dump("Express name:", name1.toUri())
-    face.expressInterest(name1, chunks.onData, chunks.onTimeout)
+    chunks = Chunks(name, filename, face)
+    chunks.expressInterest()
 
     while chunks._callbackCount < 3:
         face.processEvents()

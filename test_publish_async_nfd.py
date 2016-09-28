@@ -21,55 +21,14 @@ import time
 from pyndn import Name
 from pyndn import Data
 from pyndn import Face
-from pyndn.security import KeyChain
+
+from Chunks import Producer as Chunks
 
 def dump(*list):
     result = ""
     for element in list:
         result += (element if type(element) is str else str(element)) + " "
     print(result)
-
-class Chunks(object):
-    def __init__(self, filename, face, chunkSize = 4096):
-        self.filename = filename
-        self.f = open(filename)
-        self.face = face
-        self.chunkSize = chunkSize
-
-        # Use the system default key chain and certificate name to sign commands.
-        keyChain = KeyChain()
-        self._keyChain = keyChain
-        self._certificateName = keyChain.getDefaultCertificateName()
-        self._responseCount = 0
-
-        face.setCommandSigningInfo(keyChain, self._certificateName)
-
-    def getChunk(self, n):
-        self.f.seek(self.chunkSize * n)
-        return self.f.read(self.chunkSize)
-
-    def onInterest(self, prefix, interest, face, interestFilterId, filter):
-        self._responseCount += 1
-
-        print ("Got interest", interest.toUri())
-
-        # Make and sign a Data packet.
-        name = interest.getName()
-        data = Data(name)
-        # hack to get the segment number
-        seg = int(repr(name).split('%')[-1])
-
-        content = "%s;" % self.chunkSize
-        content += self.getChunk(seg)
-        data.setContent(content)
-        self._keyChain.sign(data, self._certificateName)
-
-        dump("Sent Segment", seg)
-        face.putData(data)
-
-    def onRegisterFailed(self, prefix):
-        self._responseCount += 1
-        dump("Register failed for prefix", prefix.toUri())
 
 if __name__ == "__main__":
     import sys
@@ -94,10 +53,8 @@ if __name__ == "__main__":
     # Also use the default certificate name to sign data packets.
     chunks = Chunks(filename, face, chunkSize)
 
-    name += "/chunked"
-    prefix = Name(name)
-    dump("Register prefix", prefix.toUri(), "chunkSize", chunkSize)
-    face.registerPrefix(prefix, chunks.onInterest, chunks.onRegisterFailed)
+    chunks = Chunks(name, filename, chunkSize)
+    chunks.registerPrefix()
 
     while chunks._responseCount < 100:
         face.processEvents()
