@@ -1,0 +1,4 @@
+*.pyc
+*.shard
+.vagrant
+.gitignore
