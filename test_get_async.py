@@ -34,6 +34,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename")
+    parser.add_argument("-l", "--limit", default=3)
     parser.add_argument("name")
 
     args = parser.parse_args()
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     chunks = Chunks(args.name, args.filename, face)
     chunks.expressInterest()
 
-    while chunks._callbackCount < 3:
+    while args.limit and chunks._callbackCount < args.limit:
         chunks.face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
         time.sleep(0.01)
