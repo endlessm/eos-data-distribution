@@ -79,7 +79,7 @@ class Producer(Chunks):
 
         self.face.setCommandSigningInfo(keyChain, self._certificateName)
 
-    def getChunk(self, n):
+    def getChunk(self, name, n, prefix=None):
         self.f.seek(self.chunkSize * n)
         return self.f.read(self.chunkSize)
 
@@ -95,7 +95,7 @@ class Producer(Chunks):
         seg = int(repr(name).split('%')[-1])
 
         content = "%s;" % self.chunkSize
-        content += self.getChunk(seg)
+        content += self.getChunk(name, seg, prefix=prefix)
         data.setContent(content)
         self._keyChain.sign(data, self._certificateName)
 
