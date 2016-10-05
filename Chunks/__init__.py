@@ -92,7 +92,7 @@ class Producer(Chunks):
         name = interest.getName()
         data = Data(name)
         # hack to get the segment number
-        seg = int(repr(name).split('%')[-1])
+        seg = int(repr(name).split('%')[-1], 16)
 
         content = "%s;" % self.chunkSize
         content += self.getChunk(name, seg, prefix=prefix)
@@ -132,7 +132,7 @@ class Consumer(Chunks):
     def onData(self, interest, data):
         self._callbackCount += 1
         name = data.getName()
-        seg = int(repr(name).split('%')[-1])
+        seg = int(repr(name).split('%')[-1], 16)
 
         print("Got data packet with name", name.toUri())
         self.putChunk(seg, data.getContent())
