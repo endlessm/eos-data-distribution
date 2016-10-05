@@ -23,10 +23,13 @@ from pyndn import Data
 from pyndn import Face
 
 class Chunks(object):
-    def __init__(self, name, filename, chunkSize = 4096, mode="r+", face=None):
+    def __init__(self, name, filename=None, chunkSize = 4096, mode="r+", face=None):
         self.name = name
         self.filename = filename
-        self.f = open(filename, mode)
+
+        if filename:
+            self.f = open(filename, mode)
+
         self.chunkSize = chunkSize
 
         # The default Face will connect using a Unix socket, or to "localhost".
