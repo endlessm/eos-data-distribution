@@ -44,4 +44,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       end
     end
   end
+
+  config.vm.define "ndn0" do |ndn0|
+    ndn0.vm.network "forwarded_port", guest: 6363, host: "6363", protocol: "tcp"
+    ndn0.vm.network "forwarded_port", guest: 6363, host: "6363", protocol: "udp"
+    ndn0.vm.network "forwarded_port", guest: 8080, host: "8080", protocol: "tcp"
+  end
 end
