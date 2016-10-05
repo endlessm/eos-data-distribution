@@ -39,6 +39,11 @@ class Chunks(object):
             self.face = Face()
 
         self._callbackCount = 0
+        self._responseCount = 0
+
+    def processEvents(self):
+        self.face.processEvents()
+        return True
 
     def onRegisterFailed(self, prefix):
         self._responseCount += 1
