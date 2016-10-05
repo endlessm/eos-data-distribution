@@ -18,9 +18,12 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 from pyndn.security import KeyChain
+
 from pyndn import Name
 from pyndn import Data
 from pyndn import Face
+
+from os import path
 
 class Chunks(object):
     def __init__(self, name, filename=None, chunkSize = 4096, mode="r+", face=None):
@@ -94,12 +97,15 @@ class Producer(Chunks):
         print("Sent Segment", seg)
         face.putData(data)
 
-    def registerPrefix(self):
-        prefix = Name(self.name)
+    def registerPrefix(self, prefix = None,
+                       postfix = "", flags = None):
+        if not prefix:
+            prefix = Name(path.join(self.name, postfix))
         print("Register prefix", prefix.toUri(), "chunkSize", self.chunkSize)
         self.face.registerPrefix(prefix, self.onInterest,
                                  self.onRegisterFailed,
-                                 self.onRegisterSuccess)
+                                 self.onRegisterSuccess,
+                                 flags=flags)
         return prefix
 
 class Consumer(Chunks):
