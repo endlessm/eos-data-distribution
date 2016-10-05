@@ -49,6 +49,9 @@ class Chunks(object):
         self._responseCount += 1
         print("Register failed for prefix", prefix.toUri())
 
+    def onRegisterSuccess(self, prefix, registered):
+        print("Register succeded for prefix", prefix.toUri(), registered)
+
     def onTimeout(self, interest):
         self._callbackCount += 1
         print("Time out for interest", interest.getName().toUri())
@@ -94,8 +97,10 @@ class Producer(Chunks):
     def registerPrefix(self):
         prefix = Name(self.name)
         print("Register prefix", prefix.toUri(), "chunkSize", self.chunkSize)
-        self.face.registerPrefix(prefix, self.onInterest, self.onRegisterFailed)
-
+        self.face.registerPrefix(prefix, self.onInterest,
+                                 self.onRegisterFailed,
+                                 self.onRegisterSuccess)
+        return prefix
 
 class Consumer(Chunks):
     def __init__(self, name, filename, chunkSize = 4096, face=None):
