@@ -69,7 +69,12 @@ class Producer(Chunks):
         # Use the system default key chain and certificate name to sign commands.
         keyChain = KeyChain()
         self._keyChain = keyChain
-        self._certificateName = keyChain.getDefaultCertificateName()
+        try:
+            self._certificateName = keyChain.getDefaultCertificateName()
+        except:
+            name = Name (self.name)
+            print "warning could not get default certificate name, creating a new one from %s" % name.toUri()
+            self._certificateName = keyChain.createIdentityAndCertificate(name)
         self._responseCount = 0
 
         self.face.setCommandSigningInfo(keyChain, self._certificateName)
