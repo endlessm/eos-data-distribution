@@ -43,7 +43,7 @@ class ProducerPool(object):
         self.pool = dict()
         self.face = Face()
 
-        GLib.timeout_add(100, lambda: self.face.processEvents())
+        GLib.timeout_add(100, self.processEvents)
 
     def publish_name(self, filename):
         name = path.join(ENDLESS_NDN_BASE_NAME,
