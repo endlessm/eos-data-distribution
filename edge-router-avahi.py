@@ -26,6 +26,8 @@ from gi.repository import GLib
 from MDNS import ServiceDiscovery
 import netifaces
 
+from Chunks import Producer
+
 SERVICES = ["_nfd._tcp", "_nfd._udp"]
 
 gatways, ips = None, None
@@ -33,7 +35,7 @@ gatways, ips = None, None
 def flatten(l):
     return [i for s in l for i in s]
 
-class EdgeRouter():
+class EdgeRouter(Producer):
     def __init__(self):
         sda = ServiceDiscovery(SERVICES)
         sda.start()
@@ -50,14 +52,11 @@ class EdgeRouter():
     def routed(self, routed):
         self._routed = routed
         if routed:
-            s = "NOT"
-        else: s = ""
-
-        print "%s Being routed by an NDN node,%s acting as an edge router" %(s, s)
-        if routed:
+            print "Not Being routed by an NDN node, acting as an edge router"
             self.stop()
             return
 
+        print "Being routed by an NDN node at %s, NOT acting as an edge router" % (self._routed)
         self.start()
 
     def stop(self):
@@ -80,9 +79,10 @@ class EdgeRouter():
             print "%s is my address, skipping" % address
             return
 
-        print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, sda.siocgifname(interface), protocol)
+        ifname = sda.siocgifname(interface)
+        print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, ifname, protocol)
 
-        self.routed(True)
+        self.routed(ifname)
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
         print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, sda.siocgifname(interface), protocol)
