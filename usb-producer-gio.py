@@ -27,10 +27,10 @@ from gi.repository import GLib
 from os import path, walk
 from Chunks import Producer
 
-from pyndn import Face
-
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 ENDLESS_NDN_BASE_NAME = "/endless/soma/v0/"
+
+from SimpleStore import Producer as SimpleStoreProducer
 
 def dump(*list):
     result = ""
@@ -38,28 +38,7 @@ def dump(*list):
         result += (element if type(element) is str else str(element)) + " "
     print(result)
 
-class ProducerPool(object):
-    def __init__(self, chunkSize=4096):
-        self.pool = dict()
-        self.face = Face()
-
-        GLib.timeout_add(100, self.processEvents)
-
-    def publish_name(self, filename):
-        name = path.join(ENDLESS_NDN_BASE_NAME,
-                            filename.split(ENDLESS_NDN_CACHE_PATH)[1])
-        producer = Producer (name, filename, face=self.face)
-        producer.registerPrefix()
-        self.pool[name] = producer
-
-    def publish_all_names(self, base):
-        for root, dirs, files in walk(base):
-            for file in files:
-                if file.endswith(".shard"):
-                    print(path.join(root, file))
-                    self.publish_name(path.join(root, file))
-
-def mount_added_cb(monitor, mount, pool):
+def mount_added_cb(monitor, mount, store):
     drive = mount.get_drive()
     root = mount.get_root()
     base = path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
@@ -69,16 +48,16 @@ def mount_added_cb(monitor, mount, pool):
 
     if path.exists(base):
         print ("Starting import")
-        pool.publish_all_names(base)
+        store.publish_all_names(base)
     else:
         print ("No NDN data found !")
 
 if __name__ == '__main__':
     loop = GLib.MainLoop()
     monitor = Gio.VolumeMonitor.get()
-    pool = ProducerPool()
+    store = SimpleStoreProducer()
 
     for mount in monitor.get_mounts():
-        mount_added_cb(monitor, mount, pool)
-    monitor.connect("mount-added", mount_added_cb, pool)
+        mount_added_cb(monitor, mount, store)
+    monitor.connect("mount-added", mount_added_cb, store)
     loop.run()
