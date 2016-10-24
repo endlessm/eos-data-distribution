@@ -17,6 +17,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import gi
+gi.require_version('GLib', '2.0')
+
+from gi.repository import GLib
+
 from pyndn.security import KeyChain
 
 from pyndn import Name
@@ -25,8 +30,29 @@ from pyndn import Face
 
 from os import path
 
+class Pool(object):
+    def __init__(self, face = Face(), tick=100):
+        self.tick = tick
+        self.face = face
+        self.pool = dict()
+
+        # if no MainLoop is added this should be free right ?
+        GLib.timeout_add(self.tick, self.processEvents)
+
+    def addProducer(self, *args, **kwargs):
+        args[face] = self.face
+        producer = Producer(*args, **kwargs)
+        producer.registerPrefix()
+        self.pool[args.name] = producer
+
+    def processEvents(self):
+        self.face.processEvents()
+        return True
+
+
 class Chunks(object):
-    def __init__(self, name, filename=None, chunkSize = 4096, mode="r+", face=None):
+    def __init__(self, name, filename=None, chunkSize = 4096, mode="r+",
+                 face=None):
         self.name = name
         self.filename = filename
 
