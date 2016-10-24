@@ -17,23 +17,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+from os import path, walk
 from pyndn import Face
+from Chunks import Pool
 
-class Producer(object):
-    def __init__(self, chunkSize=4096):
-        self.pool = dict()
-        self.face = Face()
+class Producer(Pool):
+    def __init__(self, base, *args, **kwargs):
+        super(Producer, self).__init__(*args, **kwargs)
+        self.base = base
 
-    def publish_name(self, filename):
-        name = path.join(ENDLESS_NDN_BASE_NAME,
-                            filename.split(ENDLESS_NDN_CACHE_PATH)[1])
-        producer = Producer (name, filename, face=self.face)
-        producer.registerPrefix()
-        self.pool[name] = producer
+        if not base:
+            import sys
+            sys.exit()
 
-    def publish_all_names(self, base):
-        for root, dirs, files in walk(base):
+    def publish_name(self, filename, split):
+        name = path.join(self.base,
+                         filename.split(split)[1])
+        self.addProducer(name, filename)
+
+    def publish_all_names(self, basedir, split):
+        for root, dirs, files in walk(basedir):
             for file in files:
                 if file.endswith(".shard"):
                     print(path.join(root, file))
-                    self.publish_name(path.join(root, file))
+                    self.publish_name(path.join(root, file), split)

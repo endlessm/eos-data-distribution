@@ -41,8 +41,6 @@ class EdgeGetter(Producer):
         self.flags = ForwardingFlags()
         self.flags.setChildInherit(True)
 
-        GLib.timeout_add(1000, self.processEvents)
-
     def getChunk(self, name, n, prefix):
         """
         Convert data requests to urls like:
