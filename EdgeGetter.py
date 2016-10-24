@@ -30,10 +30,10 @@ from Chunks import Producer
 from os import path
 
 class EdgeGetter(Producer):
-    def __init__(self, name,
+    def __init__(self,
                  base = 'https://subscriptions.prod.soma.endless-cloud.com',
-                 chunkSize = 4096, face=None):
-        super(EdgeGetter, self).__init__(name, chunkSize=chunkSize, face=face)
+                 *args, **kwargs):
+        super(EdgeGetter, self).__init__(*args, **kwargs)
         self.base = base
         self.subs = dict()
         self.names = dict()
