@@ -1,11 +1,24 @@
 from gi.repository import Gio
-from gi.repository import GLib
 from gi.repository import GObject
 
-class DirMonitor(GObject.GObject):
+EventToSignal = {
+    Gio.FileMonitorEvent.ATTRIBUTE_CHANGED: 'attributes-changed',
+    Gio.FileMonitorEvent.CHANGED: 'changed',
+    Gio.FileMonitorEvent.CHANGES_DONE_HINT: 'changes-done-hint',
+    Gio.FileMonitorEvent.CREATED: 'created',
+    Gio.FileMonitorEvent.DELETED: 'deleted',
+    Gio.FileMonitorEvent.MOVED: 'moved',
+    Gio.FileMonitorEvent.MOVED_IN: 'moved-in',
+    Gio.FileMonitorEvent.MOVED_OUT: 'moved-out',
+    Gio.FileMonitorEvent.PRE_UNMOUNT: 'pre-unmount',
+    Gio.FileMonitorEvent.RENAMED: 'renamed',
+    Gio.FileMonitorEvent.UNMOUNTED: 'unmounted',
+}
+
+class Monitor(GObject.GObject):
     __gsignals__ = {
-        'changed': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object, object, object, object, object))
+        v: (GObject.SIGNAL_RUN_FIRST, None,
+                    (str, object, object, object, object, object)) for k, v in EventToSignal.items()
     }
 
     def __init__(self, dir, flags=Gio.FileMonitorFlags.NONE, userdata=None):
@@ -38,11 +51,13 @@ class DirMonitor(GObject.GObject):
         self.monitors[f.get_path()] = m
 
     def changed_cb(self, m, f, o, evt, d):
-        self.emit('changed', m, f, o, evt, d)
+        p = f.get_path()
+        self.emit(EventToSignal[evt], p, m, f, o, evt, d)
+
         try:
-            p = f.get_path()
-            if not self.isDir(f) and self.monitors[p]:
-                self.monitors[p].cancel()
+            if self.isDir(f):
+                if self.monitors[p]:
+                    self.monitors[p].cancel()
         except:
             pass
 
@@ -50,10 +65,11 @@ class DirMonitor(GObject.GObject):
         return self.monitorAll(f)
 
 if __name__ == '__main__':
-    def cb_changed(M, m, f, o, evt, d=None):
-        print ('changed', f, o, evt)
+    def cb_changed(M, p, m, f, o, evt, d=None, e=None):
+        print ('signal', e, p, f, o, evt)
 
-        m = DirMonitor('./tmp')
-        m.connect('changed', cb_changed)
+    from gi.repository import GLib
+    m = Monitor('./tmp')
+    [m.connect(s, cb_changed, s) for s in EventToSignal.values()]
 
-        GLib.MainLoop().run()
+    GLib.MainLoop().run()
