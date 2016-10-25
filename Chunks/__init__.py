@@ -32,6 +32,7 @@ from os import path
 
 class Pool(object):
     def __init__(self, face = Face(), tick=100):
+        self.face = face
         self.tick = tick
         self.face = face
         self.pool = dict()
@@ -40,10 +41,14 @@ class Pool(object):
         GLib.timeout_add(self.tick, self.processEvents)
 
     def addProducer(self, *args, **kwargs):
-        args[face] = self.face
+        kwargs['face'] = self.face
         producer = Producer(*args, **kwargs)
         producer.registerPrefix()
         self.pool[args.name] = producer
+
+    def delProducer(self, name):
+        producer = self.pool[name]
+        producer.removeRegisteredPrefix(name)
 
     def processEvents(self):
         self.face.processEvents()
@@ -90,6 +95,7 @@ class Producer(Chunks):
         super(Producer, self).__init__(name, filename, chunkSize,
                                        mode="r+", face=face)
         self.generateKeys()
+        self.prefixes = dict()
 
     def generateKeys(self):
         # Use the system default key chain and certificate name to sign commands.
@@ -128,12 +134,16 @@ class Producer(Chunks):
         print("Sent Segment", seg)
         face.putData(data)
 
+    def removeRegistredPrefix(self, prefix):
+        self.face.removeRegistredPrefix(self.prefixes[prefix])
+        del (self.prefixes[prefix])
+
     def registerPrefix(self, prefix = None,
                        postfix = "", flags = None):
         if not prefix:
             prefix = Name(path.join(self.name, postfix))
         print("Register prefix", prefix.toUri(), "chunkSize", self.chunkSize)
-        self.face.registerPrefix(prefix, self.onInterest,
+        self.prefixes[prefix] = self.face.registerPrefix(prefix, self.onInterest,
                                  self.onRegisterFailed,
                                  self.onRegisterSuccess,
                                  flags=flags)
