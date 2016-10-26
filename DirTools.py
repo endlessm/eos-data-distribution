@@ -1,19 +1,9 @@
 from gi.repository import Gio
 from gi.repository import GObject
 
-EventToSignal = {
-    Gio.FileMonitorEvent.ATTRIBUTE_CHANGED: 'attributes-changed',
-    Gio.FileMonitorEvent.CHANGED: 'changed',
-    Gio.FileMonitorEvent.CHANGES_DONE_HINT: 'changes-done-hint',
-    Gio.FileMonitorEvent.CREATED: 'created',
-    Gio.FileMonitorEvent.DELETED: 'deleted',
-    Gio.FileMonitorEvent.MOVED: 'moved',
-    Gio.FileMonitorEvent.MOVED_IN: 'moved-in',
-    Gio.FileMonitorEvent.MOVED_OUT: 'moved-out',
-    Gio.FileMonitorEvent.PRE_UNMOUNT: 'pre-unmount',
-    Gio.FileMonitorEvent.RENAMED: 'renamed',
-    Gio.FileMonitorEvent.UNMOUNTED: 'unmounted',
-}
+EventToSignal = {Gio.FileMonitorEvent.__dict__[i]: i.lower().replace('_', '-')
+                 for i in Gio.FileMonitorEvent.__dict__
+                 if not i.startswith('__')}
 
 class Monitor(GObject.GObject):
     __gsignals__ = {
