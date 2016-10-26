@@ -137,19 +137,21 @@ class Producer(Chunks):
         print("Sent Segment", seg)
         face.putData(data)
 
-    def removeRegistredPrefix(self, prefix):
-        self.face.removeRegistredPrefix(self.prefixes[prefix])
-        del (self.prefixes[prefix])
+    def removeRegisteredPrefix(self, prefix):
+        name = Name(prefix)
+        self.face.removeRegisteredPrefix(self.prefixes[name])
+        del (self.prefixes[name])
 
     def registerPrefix(self, prefix = None,
                        postfix = "", flags = None):
         if not prefix:
             prefix = Name(path.join(self.name, postfix))
         print("Register prefix", prefix.toUri(), "chunkSize", self.chunkSize)
-        self.prefixes[prefix] = self.face.registerPrefix(prefix, self.onInterest,
-                                 self.onRegisterFailed,
-                                 self.onRegisterSuccess,
-                                 flags=flags)
+        self.prefixes[prefix] = self.face.registerPrefix(prefix,
+                                  self.onInterest,
+                                  self.onRegisterFailed,
+                                  self.onRegisterSuccess,
+                                  flags=flags)
         return prefix
 
 class Consumer(Chunks):
