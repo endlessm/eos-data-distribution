@@ -41,9 +41,10 @@ class Pool(object):
 
     def addProducer(self, *args, **kwargs):
         kwargs['face'] = self.face
+        (name, filename) = args
         producer = Producer(*args, **kwargs)
         producer.registerPrefix()
-        self.pool[args.name] = producer
+        self.pool[name] = producer
 
     def delProducer(self, name):
         producer = self.pool[name]
