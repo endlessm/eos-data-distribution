@@ -32,7 +32,6 @@ from os import path
 
 class Pool(object):
     def __init__(self, face = Face(), tick=100):
-        self.face = face
         self.tick = tick
         self.face = face
         self.pool = dict()
