@@ -20,6 +20,7 @@
 import gi
 gi.require_version('GLib', '2.0')
 
+from gi.repository import GObject
 from gi.repository import GLib
 
 from pyndn.security import KeyChain
@@ -30,8 +31,16 @@ from pyndn import Face
 
 from os import path
 
-class Pool(object):
+class Pool(GObject.GObject):
+    __gsignals__ = {
+        'added': (GObject.SIGNAL_RUN_FIRST, None,
+                    (object, object)),
+        'removed': (GObject.SIGNAL_RUN_FIRST, None,
+                    (object)),
+    }
+
     def __init__(self, face = Face(), tick=100):
+        GObject.GObject.__init__(self)
         self.tick = tick
         self.face = face
         self.pool = dict()
@@ -45,10 +54,12 @@ class Pool(object):
         producer = Producer(*args, **kwargs)
         producer.registerPrefix()
         self.pool[name] = producer
+        self.emit('added', name, producer)
 
     def delProducer(self, name):
         producer = self.pool[name]
         producer.removeRegisteredPrefix(name)
+        self.emit('removed', name)
 
     def processEvents(self):
         self.face.processEvents()
