@@ -67,10 +67,13 @@ class Chunks(object):
         self.chunkSize = chunkSize
 
         # The default Face will connect using a Unix socket, or to "localhost".
-        try:
-            self.face = Face(face)
-        except:
-            self.face = Face()
+        if type(face) == Face:
+            self.face = face
+        else:
+            try:
+                self.face = Face(face)
+            except:
+                self.face = Face()
 
         self._callbackCount = 0
         self._responseCount = 0
