@@ -48,14 +48,14 @@ def mount_added_cb(monitor, mount, store):
 
     if path.exists(base):
         print ("Starting import")
-        store.publish_all_names(base, split=ENDLESS_NDN_CACHE_PATH)
+        store.publish_all_names(base)
     else:
         print ("No NDN data found !")
 
 if __name__ == '__main__':
     loop = GLib.MainLoop()
     monitor = Gio.VolumeMonitor.get()
-    store = SimpleStoreProducer(base=ENDLESS_NDN_BASE_NAME)
+    store = SimpleStoreProducer(prefix=ENDLESS_NDN_BASE_NAME, split=ENDLESS_NDN_CACHE_PATH)
 
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)

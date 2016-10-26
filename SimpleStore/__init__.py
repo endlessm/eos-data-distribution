@@ -17,27 +17,54 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import re
+
 from os import path, walk
 from pyndn import Face
 from Chunks import Pool
+from DirTools import Monitor
+
+r = re.compile(r'^/+')
 
 class Producer(Pool):
-    def __init__(self, base, *args, **kwargs):
+    def __init__(self, base=None, prefix='/', ext='.shard', split=None, *args, **kwargs):
         super(Producer, self).__init__(*args, **kwargs)
         self.base = base
+        self.ext = ext
+        self.split = split or base
+        self.prefix = prefix
 
-        if not base:
-            import sys
-            sys.exit()
+        self.dirs = dict()
 
-    def publish_name(self, filename, split):
-        name = path.join(self.base,
-                         filename.split(split)[1])
+        if base:
+            self.publish_all_names(base)
+
+    def remove_name(self, name):
+        self.delProducer(name)
+
+    def publish_name(self, filename):
+        print 'publish', filename, self.prefix
+        if not filename.endswith(self.ext):
+            print('ignoring', filename)
+            return
+
+        basename = r.sub('', filename.split(self.split)[1])
+        name = path.join(self.prefix, basename)
+
+        print 'name', name
         self.addProducer(name, filename)
 
-    def publish_all_names(self, basedir, split):
+    def walk_dir(self, basedir):
         for root, dirs, files in walk(basedir):
+            # for dir in dirs:
+            #     self.walk_dir(path.join(root,dir))
             for file in files:
-                if file.endswith(".shard"):
-                    print(path.join(root, file))
-                    self.publish_name(path.join(root, file), split)
+                print 'publish-name', basedir, file
+                self.publish_name(path.join(root, file))
+
+    def publish_all_names(self, basedir):
+        self.walk_dir(basedir)
+        monitor = Monitor(basedir)
+        [monitor.connect(s, self.publish_name, s) for s in ['created', 'moved-in', 'renamed']]
+        [monitor.connect(s, self.remove_name, s)  for s in ['moved-out', 'renamed']]
+        self.dirs[basedir] = monitor
