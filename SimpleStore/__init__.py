@@ -35,6 +35,7 @@ class Producer(Pool):
         self.prefix = prefix
 
         self.dirs = dict()
+        self.producers = dict()
 
         if base:
             self.publish_all_names(base)
@@ -51,8 +52,8 @@ class Producer(Pool):
         basename = r.sub('', filename.split(self.split)[1])
         name = path.join(self.prefix, basename)
 
-        print 'name', name
-        self.addProducer(name, filename)
+        producer = self.addProducer(name, filename)
+        self.producers[filename] = name
 
     def walk_dir(self, basedir):
         for root, dirs, files in walk(basedir):

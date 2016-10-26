@@ -52,6 +52,11 @@ def mount_added_cb(monitor, mount, store):
     else:
         print ("No NDN data found !")
 
+def mount_removed_cb(monitor, mount, store):
+    root = mount.get_root()
+    p = root.get_path()
+    print [store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)]
+
 if __name__ == '__main__':
     loop = GLib.MainLoop()
     monitor = Gio.VolumeMonitor.get()
@@ -60,4 +65,5 @@ if __name__ == '__main__':
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)
     monitor.connect("mount-added", mount_added_cb, store)
+    monitor.connect("mount-removed", mount_removed_cb, store)
     loop.run()
