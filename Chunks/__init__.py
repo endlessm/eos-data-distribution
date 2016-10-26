@@ -150,6 +150,7 @@ class Producer(Chunks):
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
+        print "Un-Register prefix", name.toUri()
         self.face.removeRegisteredPrefix(self.prefixes[name])
         del (self.prefixes[name])
 
@@ -157,12 +158,13 @@ class Producer(Chunks):
                        postfix = "", flags = None):
         if not prefix:
             prefix = Name(path.join(self.name, postfix))
-        print("Register prefix", prefix.toUri(), "chunkSize", self.chunkSize)
+        print "Register prefix", prefix.toUri()
         self.prefixes[prefix] = self.face.registerPrefix(prefix,
                                   self.onInterest,
                                   self.onRegisterFailed,
                                   self.onRegisterSuccess,
                                   flags=flags)
+
         return prefix
 
 class Consumer(Chunks):
