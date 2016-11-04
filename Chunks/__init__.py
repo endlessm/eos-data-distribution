@@ -136,6 +136,7 @@ class Consumer(Chunks):
     def __init__(self, name, filename, chunkSize = 4096, face=None):
         super(Consumer, self).__init__(name, filename, chunkSize,
                                        mode="w+", face=face)
+        self.pit = dict()
 
     def putChunk(self, n, data):
         buf = data.buf()
@@ -158,8 +159,13 @@ class Consumer(Chunks):
         name = Name(interest.name).getSuccessor()
         self.face.expressInterest(name, self.onData, self.onTimeout)
 
-    def expressInterest(self):
-        name = Name(self.name).appendSegment(0)
-        print("Express name:", name.toUri())
-        self.face.expressInterest(name, self.onData, self.onTimeout)
+    def expressInterest(self, name=None):
+        if not name: name = self.name
+        segname = Name(name).appendSegment(0)
+        print("Express name:", segname.toUri())
+        self.pit[name] = self.face.expressInterest(segname, self.onData, self.onTimeout)
+
+    def removePendingInterest(self, name):
+        self.face.removePendingInterest(self.pit[name])
+        del self.pit[name]
 
