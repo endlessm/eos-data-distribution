@@ -21,39 +21,74 @@ import re
 
 from os import path, walk
 from pyndn import Face
-from Chunks import Pool
 from DirTools import Monitor
+
+from chunks import Pool
 
 r = re.compile(r'^/+')
 
-class Producer(Pool):
+def dump(*args, **kwargs):
+    print 'DUMPING', args, kwargs
+
+class Pool(Pool.MixPool):
     def __init__(self, base=None, prefix='/', ext='.shard', split=None, *args, **kwargs):
-        super(Producer, self).__init__(*args, **kwargs)
+        super(Pool, self).__init__(*args, **kwargs)
         self.base = base
         self.ext = ext
         self.split = split or base
         self.prefix = prefix
 
+        # XXX(xaiki): this is a lot of bookeeping, can probably be reduced
         self.dirs = dict()
+        self.dirpubs = dict()
         self.producers = dict()
+        self.filenames = dict()
 
-        if base:
-            self.publish_all_names(base)
+        if base: self.publish_all_names()
 
-    def remove_name(self, name):
-        self.delProducer(name)
+    def _path_to_name(self, filename):
+        if self.split:
+            basename = r.sub('', filename.split(self.split)[1])
+        else:
+            basename = filename
+        return path.join(self.prefix, basename)
 
-    def publish_name(self, filename):
+    def unpublish(self, basedir):
+        [self.unpublish_name(n) for n in self.dirpubs[basedir]]
+        del self.dirpubs[basedir]
+        del self.dirs[basedir]
+
+    def _unpublish_name(self, M, p, m, f, o, evt, e=None, d=None):
+        return self.unpublish_name(f, d)
+
+    def unpublish_name(self, name, basedir=None):
+        print 'remove', name
+        self.producer.remove(name)
+        filename = self.filenames[name]
+        del self.filenames[name]
+        del self.producers[filename]
+
+        if basedir:
+            del self.dirpubs[basedir][n]
+
+    def _publish_name(self, M, p, m, f, o, evt, e=None, d=None):
+        return self.publish_name(f, d)
+
+    def publish_name(self, filename, basedir=None):
         print 'publish', filename, self.prefix
         if not filename.endswith(self.ext):
             print('ignoring', filename)
             return
 
-        basename = r.sub('', filename.split(self.split)[1])
-        name = path.join(self.prefix, basename)
-
-        producer = self.addProducer(name, filename)
+        name = self._path_to_name(filename)
+        producer = self.producer.add(name, filename)
         self.producers[filename] = name
+        self.filenames[name] = filename
+        if basedir:
+            try:
+                self.dirpubs[basedir].update({name: producer})
+            except KeyError:
+                self.dirpubs[basedir] = {name: producer}
 
     def walk_dir(self, basedir):
         for root, dirs, files in walk(basedir):
@@ -61,11 +96,11 @@ class Producer(Pool):
             #     self.walk_dir(path.join(root,dir))
             for file in files:
                 print 'publish-name', basedir, file
-                self.publish_name(path.join(root, file))
+                self.publish_name(path.join(root, file), basedir)
 
     def publish_all_names(self, basedir):
         self.walk_dir(basedir)
         monitor = Monitor(basedir)
-        [monitor.connect(s, self.publish_name, s) for s in ['created', 'moved-in', 'renamed']]
-        [monitor.connect(s, self.remove_name, s)  for s in ['moved-out', 'renamed']]
+        [monitor.connect(s, self._publish_name, basedir) for s in ['created', 'moved-in', 'renamed']]
+        [monitor.connect(s, self._unpublish_name, basedir)  for s in ['moved-out', 'renamed']]
         self.dirs[basedir] = monitor
