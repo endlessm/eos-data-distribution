@@ -30,9 +30,11 @@ r = re.compile(r'^/+')
 def dump(*args, **kwargs):
     print 'DUMPING', args, kwargs
 
-class Pool(Pool.MixPool):
+
+class Base(Pool.MixPool):
+
     def __init__(self, base=None, prefix='/', ext='.shard', split=None, *args, **kwargs):
-        super(Pool, self).__init__(*args, **kwargs)
+        super(Base, self).__init__(*args, **kwargs)
         self.base = base
         self.ext = ext
         self.split = split or base
@@ -104,3 +106,11 @@ class Pool(Pool.MixPool):
         [monitor.connect(s, self._publish_name, basedir) for s in ['created', 'moved-in', 'renamed']]
         [monitor.connect(s, self._unpublish_name, basedir)  for s in ['moved-out', 'renamed']]
         self.dirs[basedir] = monitor
+
+class Producer(Base):
+    def __init__(self, *args, **kwargs):
+        super(Producer, self).__init__(*args, **kwargs)
+
+class Consumer(Base):
+    def __init__(self, *args, **kwargs):
+        super(Consumer, self).__init__(*args, **kwargs)
