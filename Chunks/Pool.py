@@ -44,9 +44,8 @@ class Pool(GObject.GObject):
                     (object,)),
     }
 
-    def __init__(self, klass, face = Face(), tick=100):
+    def __init__(self, face = Face(), tick=100):
         GObject.GObject.__init__(self)
-        self.klass = klass
         self.tick = tick
         self.face = face
         self.pool = dict()
