@@ -86,7 +86,7 @@ class Chunks(GObject.GObject):
         print("Time out for interest", interest.getName().toUri())
 
 class Producer(Chunks):
-    def __init__(self, name, filename=None, chunkSize = 4096, face=None):
+    def __init__(self, name, filename=None, chunkSize=4096, face=None):
         super(Producer, self).__init__(name, filename, chunkSize,
                                        mode="r+", face=face)
         self.generateKeys()
