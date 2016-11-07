@@ -67,13 +67,16 @@ class Producer(Pool):
         producer = Chunks.Producer(*args, **kwargs)
         producer.registerPrefix()
         self.pool[name] = producer
-        self.emit('added', name, producer)
+
+        producer.connect('register-success', lambda n, p, d=None:
+                    self.emit('added', name, producer))
+        producer.connect('register-failed', lambda n, d=None:
+                    self.remove(name))
 
     def remove(self, name):
         producer = self.pool[name]
         producer.removeRegisteredPrefix(name)
         self.emit('removed', name)
-
 
 class Consumer(Pool):
     def __init__(self, *args, **kwargs):
