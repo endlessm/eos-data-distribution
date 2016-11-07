@@ -109,9 +109,10 @@ class MixPool(GObject.GObject):
         self.producer = Producer(*args, **kwargs)
         self.consumer = Consumer(*args, **kwargs)
 
-        [self.producer.connect(s, lambda *args, **kwargs: self.emit('producer-%s'%s, *args, **kwargs)) for s in SIGNALS]
-        [self.consumer.connect(s, lambda *args, **kwargs: self.emit('consumer-%s'%s, *args, **kwargs)) for s in SIGNALS]
-
+        self.producer.connect('removed', lambda i, p, P, d: self.emit('producer-removed', p, P, d))
+        self.producer.connect('added', lambda i, p, d: self.emit('producer-added', p, d))
+        self.consumer.connect('removed', lambda i, p, P, d: self.emit('consumer-removed', p, P, d))
+        self.consumer.connect('added', lambda i, p, d: self.emit('consumer-added', p, d))
 
     def get_producer(self):
         return self.producer
