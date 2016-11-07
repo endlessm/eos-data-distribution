@@ -46,7 +46,7 @@ class Base(Pool.MixPool):
         self.producers = dict()
         self.filenames = dict()
 
-        if base: self.publish_all_names()
+        if base: self.publish_all_names(base)
 
     def _path_to_name(self, filename):
         if self.split:
