@@ -21,6 +21,9 @@ class Monitor(GObject.GObject):
             print 'asked to monitor something that is not a dir', dir
         self.monitorAll(f)
 
+    def filterSignals(self, a):
+        return [e for e in a if e in EventToSignal.keys()]
+
     def monitorAll(self, f):
         if not self.monitor(f): return
         for i in f.enumerate_children("", Gio.FileQueryInfoFlags.NONE, None):
