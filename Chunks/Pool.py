@@ -106,10 +106,15 @@ class MixPool(GObject.GObject):
 
     def __init__(self, *args, **kwargs):
         super(MixPool, self).__init__()
-
         self.producer = Producer(*args, **kwargs)
         self.consumer = Consumer(*args, **kwargs)
 
         [self.producer.connect(s, lambda *args, **kwargs: self.emit('producer-%s'%s, *args, **kwargs)) for s in SIGNALS]
         [self.consumer.connect(s, lambda *args, **kwargs: self.emit('consumer-%s'%s, *args, **kwargs)) for s in SIGNALS]
 
+
+    def get_producer(self):
+        return self.producer
+
+    def get_consumer(self):
+        return self.consumer
