@@ -31,9 +31,22 @@ from pyndn import Face
 
 from os import path
 
-class Chunks(object):
+class Chunks(GObject.GObject):
+    __gsignals__ = {
+        'register-failed': (GObject.SIGNAL_RUN_FIRST, None,
+                    (object,)),
+        'register-success': (GObject.SIGNAL_RUN_FIRST, None,
+                    (object, object)),
+        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None,
+                    (object,)),
+        'face-process-event': (GObject.SIGNAL_RUN_FIRST, None,
+                    (object,)),
+
+    }
+
     def __init__(self, name, filename=None, chunkSize = 4096, mode="r+",
                  face=None):
+        GObject.GObject.__init__(self)
         self.name = name
         self.filename = filename
 
@@ -60,13 +73,16 @@ class Chunks(object):
 
     def onRegisterFailed(self, prefix):
         self._responseCount += 1
+        self.emit('register-failed', prefix)
         print("Register failed for prefix", prefix.toUri())
 
     def onRegisterSuccess(self, prefix, registered):
+        self.emit('register-success', prefix, registered)
         print("Register succeded for prefix", prefix.toUri(), registered)
 
     def onTimeout(self, interest):
         self._callbackCount += 1
+        self.emit('interest-timeout', interest)
         print("Time out for interest", interest.getName().toUri())
 
 class Producer(Chunks):
