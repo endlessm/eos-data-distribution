@@ -158,7 +158,7 @@ class Consumer(Base):
 
         if (self.onData):
             print 'auto-connecting onData Signal'
-            self.connect('data', onInterest)
+            self.connect('data', onData)
 
     def _onData(self, *args, **kwargs):
         self._callbackCount += 1
