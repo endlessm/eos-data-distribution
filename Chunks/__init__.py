@@ -23,98 +23,21 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-from pyndn.security import KeyChain
-
 from pyndn import Name
 from pyndn import Data
-from pyndn import Face
 
 from os import path
 
-class Chunks(GObject.GObject):
-    __gsignals__ = {
-        'register-failed': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object,)),
-        'register-success': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object, object)),
-        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object,)),
-        'face-process-event': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object,)),
+import NDN
 
-    }
-
-    def __init__(self, name, filename=None, chunkSize = 4096, mode="r+",
-                 face=None):
-        GObject.GObject.__init__(self)
-        self.name = name
-        self.filename = filename
-
-        if filename:
-            self.f = open(filename, mode)
-
+class Producer(NDN.Producer):
+    def __init__(self, name, filename=None, chunkSize=4096):
+        super(Producer, self).__init__(name, *args, **kwargs)
         self.chunkSize = chunkSize
-
-        # The default Face will connect using a Unix socket, or to "localhost".
-        if type(face) == Face:
-            self.face = face
-        else:
-            try:
-                self.face = Face(face)
-            except:
-                self.face = Face()
-
-        self._callbackCount = 0
-        self._responseCount = 0
-
-    def processEvents(self):
-        self.face.processEvents()
-        return True
-
-    def onRegisterFailed(self, prefix):
-        self._responseCount += 1
-        self.emit('register-failed', prefix)
-        print("Register failed for prefix", prefix.toUri())
-
-    def onRegisterSuccess(self, prefix, registered):
-        self.emit('register-success', prefix, registered)
-        print("Register succeded for prefix", prefix.toUri(), registered)
-
-    def onTimeout(self, interest):
-        self._callbackCount += 1
-        self.emit('interest-timeout', interest)
-        print("Time out for interest", interest.getName().toUri())
-
-class Producer(Chunks):
-    def __init__(self, name, filename=None, chunkSize=4096, face=None):
-        super(Producer, self).__init__(name, filename, chunkSize,
-                                       mode="r+", face=face)
-        self.generateKeys()
-        self.prefixes = dict()
-
-    def generateKeys(self):
-        # Use the system default key chain and certificate name to sign commands.
-        keyChain = KeyChain()
-        self._keyChain = keyChain
-        try:
-            self._certificateName = keyChain.getDefaultCertificateName()
-        except:
-            name = Name (self.name)
-            print "warning could not get default certificate name, creating a new one from %s" % name.toUri()
-            self._certificateName = keyChain.createIdentityAndCertificate(name)
-        self._responseCount = 0
-
-        self.face.setCommandSigningInfo(keyChain, self._certificateName)
 
     def getChunk(self, name, n, prefix=None):
         self.f.seek(self.chunkSize * n)
         return self.f.read(self.chunkSize)
-
-    def _onInterest(self, *args, **kwargs):
-        self._responseCount += 1
-        print ("Got interest", interest.toUri())
-
-        return self.onInterest(*args, **kwargs)
 
     def onInterest(self, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
@@ -126,42 +49,18 @@ class Producer(Chunks):
         content = "%s;" % self.chunkSize
         content += self.getChunk(name, seg, prefix=prefix)
         data.setContent(content)
-        self._keyChain.sign(data, self._certificateName)
+        self.sign(data)
 
         print("Sent Segment", seg)
         face.putData(data)
 
-    def removeRegisteredPrefix(self, prefix):
-        name = Name(prefix)
-        print "Un-Register prefix", name.toUri()
-        try:
-            self.face.removeRegisteredPrefix(self.prefixes[name])
-            del (self.prefixes[name])
-        except:
-            print "tried to unregister a prefix that never was registred: ", prefix
-            pass
-
-    def registerPrefix(self, prefix = None,
-                       postfix = "", flags = None):
-        if type(prefix) is str:
-            prefix = Name(prefix)
-
-        if not prefix:
-            prefix = Name(path.join(self.name, postfix))
-        print "Register prefix", prefix.toUri()
-        self.prefixes[prefix] = self.face.registerPrefix(prefix,
-                                  self._onInterest,
-                                  self.onRegisterFailed,
-                                  self.onRegisterSuccess,
-                                  flags=flags)
-        print 'prefixes', self.prefixes
-        return prefix
-
 class Consumer(Chunks):
-    def __init__(self, name, filename, chunkSize = 4096, face=None):
-        super(Consumer, self).__init__(name, filename, chunkSize,
-                                       mode="w+", face=face)
-        self.pit = dict()
+    def __init__(self, name, filename, chunkSize = 4096, *args, **kwargs):
+        super(Consumer, self).__init__(name, *args, **kwargs)
+        if filename:
+            self.f = open(filename, mode)
+
+        self.chunkSize = chunkSize
 
     def putChunk(self, n, data):
         buf = data.buf()
@@ -175,7 +74,6 @@ class Consumer(Chunks):
         return self.f.write(bytearray(buf)[skip:])
 
     def onData(self, interest, data):
-        self._callbackCount += 1
         name = data.getName()
         seg = int(repr(name).split('%')[-1], 16)
 
@@ -183,14 +81,4 @@ class Consumer(Chunks):
         self.putChunk(seg, data.getContent())
         name = Name(interest.name).getSuccessor()
         self.face.expressInterest(name, self.onData, self.onTimeout)
-
-    def expressInterest(self, name=None):
-        if not name: name = self.name
-        segname = Name(name).appendSegment(0)
-        print("Express name:", segname.toUri())
-        self.pit[name] = self.face.expressInterest(segname, self.onData, self.onTimeout)
-
-    def removePendingInterest(self, name):
-        self.face.removePendingInterest(self.pit[name])
-        del self.pit[name]
 
