@@ -143,6 +143,9 @@ class Producer(Chunks):
 
     def registerPrefix(self, prefix = None,
                        postfix = "", flags = None):
+        if type(prefix) is str:
+            prefix = Name(prefix)
+
         if not prefix:
             prefix = Name(path.join(self.name, postfix))
         print "Register prefix", prefix.toUri()
