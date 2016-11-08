@@ -21,12 +21,14 @@
 import gi
 
 from gi.repository import GLib
+from gi.repository import GObject
 #from gi.repository import Gio
 
 from MDNS import ServiceDiscovery
 import netifaces
 
 from Chunks import Producer
+import Edge
 
 SERVICES = ["_nfd._tcp", "_nfd._udp"]
 
@@ -35,8 +37,10 @@ gatways, ips = None, None
 def flatten(l):
     return [i for s in l for i in s]
 
-class EdgeRouter(Producer):
-    def __init__(self):
+class EdgeRouter(Edge.Getter):
+    def __init__(self, name, *args, **kwargs):
+        Edge.Getter.__init__(self, name, *args, **kwargs)
+
         sda = ServiceDiscovery(SERVICES)
         sda.start()
 
@@ -49,21 +53,21 @@ class EdgeRouter(Producer):
 
         self.routed(False)
 
-    def routed(self, routed):
-        self._routed = routed
-        if routed:
-            print "Not Being routed by an NDN node, acting as an edge router"
+    def routed(self, ifname, address=None):
+        self._routed = ifname
+        if self._routed:
+            print "Being routed by an NDN node at %s (via %s), NOT acting as an edge router" % (address, ifname)
             self.stop()
             return
 
-        print "Being routed by an NDN node at %s, NOT acting as an edge router" % (self._routed)
+        print "Not Being routed by an NDN node, acting as an edge router"
         self.start()
 
     def stop(self):
-        print "Not implemented"
+        self.removeRegisteredPrefix(self.name)
 
     def start(self):
-        print "Not implemented"
+        self.registerPrefix(self.name)
 
     def refresh_network(self):
         self.gateways = netifaces.gateways()
@@ -82,10 +86,13 @@ class EdgeRouter(Producer):
         ifname = sda.siocgifname(interface)
         print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, ifname, protocol)
 
-        self.routed(ifname)
+        self.routed(ifname, address)
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
         print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, sda.siocgifname(interface), protocol)
+        ifname = sda.siocgifname(interface)
+        if self._routed == ifname:
+            self.routed(False)
 
     def network_changed_cb(monitor, available):
         print "network changed"
@@ -94,7 +101,7 @@ class EdgeRouter(Producer):
 if __name__ == "__main__":
 #    nm = Gio.NetworkMonitor.get_default()
 #    nm.connect('network-changed', network_changed_cb)
-    er = EdgeRouter()
-    
+    er = EdgeRouter('/endless/soma/v1')
+
     loop = GLib.MainLoop()
     loop.run()
