@@ -134,8 +134,12 @@ class Producer(Chunks):
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
         print "Un-Register prefix", name.toUri()
-        self.face.removeRegisteredPrefix(self.prefixes[name])
-        del (self.prefixes[name])
+        try:
+            self.face.removeRegisteredPrefix(self.prefixes[name])
+            del (self.prefixes[name])
+        except:
+            print "tried to unregister a prefix that never was registred: ", prefix
+            pass
 
     def registerPrefix(self, prefix = None,
                        postfix = "", flags = None):
