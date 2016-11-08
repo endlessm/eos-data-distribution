@@ -154,7 +154,7 @@ class Producer(Chunks):
                                   self.onRegisterFailed,
                                   self.onRegisterSuccess,
                                   flags=flags)
-
+        print 'prefixes', self.prefixes
         return prefix
 
 class Consumer(Chunks):
