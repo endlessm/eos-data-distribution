@@ -110,11 +110,13 @@ class Producer(Chunks):
         self.f.seek(self.chunkSize * n)
         return self.f.read(self.chunkSize)
 
-    def onInterest(self, prefix, interest, face, interestFilterId, filter):
+    def _onInterest(self, *args, **kwargs):
         self._responseCount += 1
-
         print ("Got interest", interest.toUri())
 
+        return self.onInterest(*args, **kwargs)
+
+    def onInterest(self, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
         name = interest.getName()
         data = Data(name)
@@ -141,7 +143,7 @@ class Producer(Chunks):
             prefix = Name(path.join(self.name, postfix))
         print "Register prefix", prefix.toUri()
         self.prefixes[prefix] = self.face.registerPrefix(prefix,
-                                  self.onInterest,
+                                  self._onInterest,
                                   self.onRegisterFailed,
                                   self.onRegisterSuccess,
                                   flags=flags)
