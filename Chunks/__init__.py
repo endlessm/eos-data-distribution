@@ -40,20 +40,15 @@ class Producer(NDN.Producer):
     def onInterest(self, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
         name = interest.getName()
-        data = Data(name)
         # hack to get the segment number
         seg = int(repr(name).split('%')[-1], 16)
 
         content = "%s;" % self.chunkSize
         content += self.getChunk(name, seg, prefix=prefix)
-        data.setContent(content)
-        self.sign(data)
+        self.send(name, content)
 
-        print("Sent Segment", seg)
-        face.putData(data)
-
-class Consumer(Chunks):
-    def __init__(self, name, filename, chunkSize = 4096, *args, **kwargs):
+class Consumer(NDN.Consumer):
+    def __init__(self, name, filename, chunkSize = 4096, mode = "w+", *args, **kwargs):
         super(Consumer, self).__init__(name, *args, **kwargs)
         if filename:
             self.f = open(filename, mode)

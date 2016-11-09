@@ -21,7 +21,7 @@ import time
 from pyndn import Name
 from pyndn import Face
 
-from Chunks import Consumer as Chunks
+import Chunks
 
 def dump(*list):
     result = ""
@@ -44,8 +44,8 @@ if __name__ == "__main__":
     args.name += "/chunked/"
 
     face = Face()
-    chunks = Chunks(args.name, args.filename, face)
-    chunks.expressInterest()
+    chunks = Chunks.Consumer(args.name, args.filename, face)
+    chunks.expressInterest(forever=True)
 
     while args.limit and chunks._callbackCount < args.limit:
         chunks.face.processEvents()

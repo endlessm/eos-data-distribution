@@ -21,25 +21,37 @@
 from pyndn import Name
 from pyndn import Data
 from pyndn import Face
+
 from pyndn import ForwardingFlags
 
 import requests
 
-from Chunks import Producer
+import NDN
+import Chunks
 
 from os import path
 
-class Getter(Producer):
+class Getter(NDN.Producer):
+    def __init__(self, name,
+                 *args, **kwargs):
+        super(Getter, self).__init__(name, *args, **kwargs)
+
+        self.flags = ForwardingFlags()
+        self.flags.setChildInherit(True)
+
+    def onInterest(self, prefix, interest, face, interestFilterId, filter):
+        name = interest.getName()
+        print 'got interest', name
+
+class ChunksGetter(Chunks.Producer):
     def __init__(self, name,
                  base = 'https://subscriptions.prod.soma.endless-cloud.com',
                  *args, **kwargs):
-        super(Getter, self).__init__(name, *args, **kwargs)
+        super(ChunksGetter, self).__init__(name, *args, **kwargs)
         self.base = base
         self.subs = dict()
         self.names = dict()
         self.session = requests.Session()
-        self.flags = ForwardingFlags()
-        self.flags.setChildInherit(True)
 
     def getChunk(self, name, n, prefix):
         """
