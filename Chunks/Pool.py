@@ -50,13 +50,6 @@ class Pool(GObject.GObject):
         self.face = face
         self.pool = dict()
 
-        # if no MainLoop is added this should be free right ?
-        GLib.timeout_add(self.tick, self.processEvents)
-
-    def processEvents(self):
-        self.face.processEvents()
-        return True
-
 class Producer(Pool):
     def __init__(self, *args, **kwargs):
         super(Producer, self).__init__(*args, **kwargs)
