@@ -33,6 +33,8 @@ class Producer(NDN.Producer):
         super(Producer, self).__init__(name, *args, **kwargs)
         self.chunkSize = chunkSize
 
+        self.connect('interest', self.onInterest)
+
     def getChunk(self, name, n, prefix=None):
         self.f.seek(self.chunkSize * n)
         return self.f.read(self.chunkSize)
@@ -54,6 +56,11 @@ class Consumer(NDN.Consumer):
             self.f = open(filename, mode)
 
         self.chunkSize = chunkSize
+
+        self.connect('data', self.onData)
+
+    def makeInterest(self, name):
+        return Name(name).appendSegment(0)
 
     def putChunk(self, n, data):
         buf = data.buf()

@@ -22,6 +22,7 @@ from pyndn import Name
 from pyndn import Face
 
 import Chunks
+import NDN
 
 def dump(*list):
     result = ""
@@ -35,20 +36,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename")
     parser.add_argument("-l", "--limit", default=3)
+    parser.add_argument("-n", "--no-chunks", action='store_true')
     parser.add_argument("name")
 
     args = parser.parse_args()
     if not args.filename:
         args.filename = args.name.split('/')[-1]
 
-    args.name += "/chunked/"
-
     face = Face()
-    chunks = Chunks.Consumer(args.name, args.filename, face)
-    chunks.expressInterest(forever=True)
 
-    while args.limit and chunks._callbackCount < args.limit:
-        chunks.face.processEvents()
+    if args.no_chunks:
+        consumer = NDN.Consumer(args.name, face)
+    else:
+        args.name += "/chunked/"
+        consumer = Chunks.Consumer(args.name, args.filename, face)
+
+    consumer.expressInterest(forever=True)
+
+    while args.limit and consumer._callbackCount < args.limit:
+        consumer.face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
         time.sleep(0.01)
 

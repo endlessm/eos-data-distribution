@@ -39,9 +39,11 @@ class Getter(NDN.Producer):
         self.flags = ForwardingFlags()
         self.flags.setChildInherit(True)
 
-    def onInterest(self, prefix, interest, face, interestFilterId, filter):
+        self.connect('interest', self.onInterest)
+
+    def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        print 'got interest', name
+        print 'got interest', o, name
 
 class ChunksGetter(Chunks.Producer):
     def __init__(self, name,

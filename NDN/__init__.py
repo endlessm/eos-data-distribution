@@ -77,10 +77,6 @@ class Producer(Base):
         self.generateKeys()
         self.prefixes = dict()
 
-        if (self.onInterest):
-            print 'auto-connecting onInterest Signal'
-            self.connect('interest', self.onInterest)
-
     def generateKeys(self):
         # Use the system default key chain and certificate name to sign commands.
         keyChain = KeyChain()
@@ -108,10 +104,9 @@ class Producer(Base):
 
     def _onInterest(self, *args, **kwargs):
         self._responseCount += 1
-        print ("Got interest", interest.toUri())
+        print ("Got interest", args, kwargs)
 
         self.emit('interest', *args, **kwargs)
-        return self.onInterest(*args, **kwargs)
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
@@ -167,17 +162,16 @@ class Consumer(Base):
 #        self.generateKeys()
         self.prefixes = dict()
 
-        if (self.onData):
-            print 'auto-connecting onData Signal'
-            self.connect('data', self.onData)
-
     def _onData(self, *args, **kwargs):
         self._callbackCount += 1
         self.emit('data', *args, **kwargs)
 
+    def makeInterest(self, name):
+        return Name(name)
+
     def expressInterest(self, name=None, forever=False):
         if name == None: name = self.name
-        segname = Name(name).appendSegment(0)
+        segname = self.makeInterest(name)
         print "Express Interest name:", segname.toUri()
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
         self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
