@@ -26,8 +26,6 @@ from gi.repository import GLib
 from pyndn import Name
 from pyndn import Data
 
-from os import path
-
 import NDN
 
 class Producer(NDN.Producer):
