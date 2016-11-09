@@ -54,6 +54,8 @@ class Base(GObject.GObject):
         self._callbackCount = 0
         self._responseCount = 0
 
+        GLib.timeout_add(200, self.processEvents)
+
     def processEvents(self):
         self.face.processEvents()
         self.emit('face-process-event', self.face)
