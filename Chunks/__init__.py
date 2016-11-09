@@ -29,7 +29,7 @@ from pyndn import Data
 import NDN
 
 class Producer(NDN.Producer):
-    def __init__(self, name, filename=None, chunkSize=4096):
+    def __init__(self, name, filename=None, chunkSize=4096, *args, **kwargs):
         super(Producer, self).__init__(name, *args, **kwargs)
         self.chunkSize = chunkSize
 
