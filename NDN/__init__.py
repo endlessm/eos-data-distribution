@@ -126,8 +126,10 @@ class Producer(Base):
         if not prefix:
             prefix = Name(path.join(self.name, postfix))
 
-        if not flags:
-            flags = self.flags
+        try:
+            flags = flags or self.flags
+        except:
+            flags = None
 
         print "Register prefix", prefix.toUri()
         self.prefixes[prefix] = self.face.registerPrefix(prefix,
