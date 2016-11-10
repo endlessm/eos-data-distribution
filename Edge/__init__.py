@@ -36,6 +36,7 @@ class Getter(NDN.Producer):
                  *args, **kwargs):
         super(Getter, self).__init__(name, *args, **kwargs)
 
+        self.chunks = ChunksGetter(name, *args, **kwargs)
         self.flags = ForwardingFlags()
         self.flags.setChildInherit(True)
 
@@ -43,7 +44,13 @@ class Getter(NDN.Producer):
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        print 'got interest', o, name
+        subid = name.toUri().split(self.name)[1]
+        if subid.find('/') != -1:
+            print 'Error, we got a path, expected a subid', subid
+            return False
+        print 'got interest', o, name, subid
+        sub = self.chunks.publish(subid)
+        print 'published', sub
 
 class ChunksGetter(Chunks.Producer):
     def __init__(self, name,
