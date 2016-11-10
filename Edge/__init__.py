@@ -76,15 +76,12 @@ class ChunksGetter(Chunks.Producer):
         return r.text
 
     def publish(self, subId):
-        try:
-            sub = self.subs[subId]
-        except:
-            sub = self.subs[subId] = self.getSubscription(subId)
+        if subId in self.subs.keys():
+            print 'subscription already runing for', subId, '…ignoring new request'
+            return self.subs[subId]
 
-        try:
-            prefixes = sub['prefixes']
-        except:
-            prefixes = sub['prefixes'] = dict()
+        sub = self.subs[subId] = self.getSubscription(subId)
+        prefixes = sub['prefixes'] = dict()
 
         for shard in sub['shards']:
             print ('got shard', shard)
@@ -94,6 +91,7 @@ class ChunksGetter(Chunks.Producer):
             self.names[name] = shard
 
         self.subs[subId]['prefixes'] = prefixes
+        return sub
 
     def getSubscription(self, id):
         print 'base: %s' %self.base
