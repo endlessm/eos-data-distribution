@@ -39,7 +39,7 @@ class Producer(NDN.Producer):
         self.f.seek(self.chunkSize * n)
         return self.f.read(self.chunkSize)
 
-    def onInterest(self, prefix, interest, face, interestFilterId, filter):
+    def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
         name = interest.getName()
         # hack to get the segment number
@@ -73,7 +73,7 @@ class Consumer(NDN.Consumer):
         # to call into buf() to get a bytearray…
         return self.f.write(bytearray(buf)[skip:])
 
-    def onData(self, interest, data):
+    def onData(self, o, interest, data):
         name = data.getName()
         seg = int(repr(name).split('%')[-1], 16)
 
