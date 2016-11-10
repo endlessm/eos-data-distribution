@@ -30,6 +30,7 @@ import NDN
 import Chunks
 
 from os import path
+import json
 
 class Getter(NDN.Producer):
     def __init__(self, name,
@@ -48,9 +49,16 @@ class Getter(NDN.Producer):
         if subid.find('/') != -1:
             print 'Error, we got a path, expected a subid', subid
             return False
-        print 'got interest', o, name, subid
-        sub = self.chunks.publish(subid)
-        print 'published', sub
+
+        names = self.chunks.publish(subid)
+        print 'got interest', names
+
+        self.send(name, json.dumps(names))
+
+    def sendLinks(self, name, names):
+        link = Link(Data(name))
+        [link.addDelegation(0, Name(n)) for n in names]
+        self.sendFinish(link)
 
 class ChunksGetter(Chunks.Producer):
     def __init__(self, name,
@@ -59,6 +67,7 @@ class ChunksGetter(Chunks.Producer):
         super(ChunksGetter, self).__init__(name, *args, **kwargs)
         self.base = base
         self.subs = dict()
+        self.prefixes = dict()
         self.names = dict()
         self.session = requests.Session()
 
@@ -81,17 +90,19 @@ class ChunksGetter(Chunks.Producer):
             return self.subs[subId]
 
         sub = self.subs[subId] = self.getSubscription(subId)
-        prefixes = sub['prefixes'] = dict()
+        prefixes = dict()
+        ret = []
 
         for shard in sub['shards']:
             print ('got shard', shard)
-            postfix = 'v1/%s/shards/%s/%s' % (subId, shard['path'], shard['sha256_csum'])
+            postfix = '%s/shards/%s/%s' % (subId, shard['path'], shard['sha256_csum'])
             name = self.registerPrefix(postfix=postfix)
             prefixes[postfix] = name
             self.names[name] = shard
+            ret.append(name.toUri())
 
-        self.subs[subId]['prefixes'] = prefixes
-        return sub
+        self.prefixes[subId] = prefixes
+        return ret
 
     def getSubscription(self, id):
         print 'base: %s' %self.base

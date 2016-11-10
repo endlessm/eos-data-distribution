@@ -100,10 +100,11 @@ class Producer(Base):
     def send(self, name, content):
         data = Data(name)
         data.setContent(content)
-        self.sign(data)
+        self.sendFinish(data)
 
-        print("Sent Segment", seg)
-        face.putData(data)
+    def sendFinish(self, data):
+        self.sign(data)
+        self.face.putData(data)
 
     def _onInterest(self, *args, **kwargs):
         self._responseCount += 1
@@ -167,9 +168,11 @@ class Consumer(Base):
 #        self.generateKeys()
         self.prefixes = dict()
 
-    def _onData(self, *args, **kwargs):
+    def _onData(self, interest, data):
         self._callbackCount += 1
-        self.emit('data', *args, **kwargs)
+        # that is complicated… getContent() returns an ndn.Blob, that needs
+        # to call into buf() to get a bytearray…
+        self.emit('data', interest, data)
 
     def makeInterest(self, name):
         return Name(name)
