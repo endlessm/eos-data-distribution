@@ -63,22 +63,21 @@ class Consumer(NDN.Consumer):
         return Name(name).appendSegment(0)
 
     def putChunk(self, n, data):
-        buf = data.buf()
-        chunkSize = str(bytearray(buf[:10])).split(';')[0]
+        buf = self.dataToBytes(data)
+
+        chunkSize = str(buf[:10]).split(';')[0]
         skip = len(chunkSize) + 1
         chunkSize = int(chunkSize)
         print ("got data, seq: %d, chunksize: %d, skip: %d" % (n, chunkSize, skip))
         self.f.seek(chunkSize * n)
-        # that was complicated… getContent() returns an ndn.Blob, that needs
-        # to call into buf() to get a bytearray…
-        return self.f.write(bytearray(buf)[skip:])
+        return self.f.write(buf[skip:])
 
     def onData(self, o, interest, data):
         name = data.getName()
         seg = int(repr(name).split('%')[-1], 16)
 
         print("Got data packet with name", name.toUri())
-        self.putChunk(seg, data.getContent())
+        self.putChunk(seg, data)
         name = Name(interest.name).getSuccessor()
-        self.face.expressInterest(name, self.onData, self.onTimeout)
+        self.expressInterest(name)
 

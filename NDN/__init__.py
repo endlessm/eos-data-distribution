@@ -61,6 +61,9 @@ class Base(GObject.GObject):
         self.emit('face-process-event', self.face)
         return True
 
+    def dataToBytes(self, data):
+        return bytearray(data.getContent().buf())
+
 class Producer(Base):
     __gsignals__ = {
         'register-failed': (GObject.SIGNAL_RUN_FIRST, None,
