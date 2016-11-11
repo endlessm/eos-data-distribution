@@ -104,6 +104,10 @@ class ChunksGetter(Chunks.Producer):
             return self.subs[subId]
 
         sub = self.subs[subId] = self.getSubscription(subId)
+        if not sub:
+            print 'This sub is invalid', subId
+            return sub
+
         prefixes = dict()
         ret = []
 
