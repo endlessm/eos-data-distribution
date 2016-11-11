@@ -27,8 +27,9 @@ from gi.repository import GLib
 from os import path
 from Chunks import Producer
 
+from NDN import Endless
+
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
-ENDLESS_NDN_BASE_NAME = "/endless/soma/v0/"
 
 from SimpleStore import Producer as SimpleStoreProducer
 
@@ -60,7 +61,7 @@ def mount_removed_cb(monitor, mount, store):
 if __name__ == '__main__':
     loop = GLib.MainLoop()
     monitor = Gio.VolumeMonitor.get()
-    store = SimpleStoreProducer(prefix=ENDLESS_NDN_BASE_NAME, split=ENDLESS_NDN_CACHE_PATH)
+    store = SimpleStoreProducer(prefix=Endless.NAME.SOMA, split=ENDLESS_NDN_CACHE_PATH)
 
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)

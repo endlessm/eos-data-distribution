@@ -29,7 +29,7 @@ from pyndn import Name
 from pyndn import Data
 from pyndn import Face
 
-import Chunks
+import NDN
 
 from os import path
 from functools import partial
@@ -44,20 +44,21 @@ class Pool(GObject.GObject):
                     (object,)),
     }
 
-    def __init__(self, face = Face(), tick=100):
+    def __init__(self, face = Face(), klass=None, tick=100):
         GObject.GObject.__init__(self)
         self.tick = tick
         self.face = face
         self.pool = dict()
+        self.klass = klass
 
 class Producer(Pool):
-    def __init__(self, *args, **kwargs):
-        super(Producer, self).__init__(*args, **kwargs)
+    def __init__(self, klass = NDN.Producer, *args, **kwargs):
+        super(Producer, self).__init__(klass=klass, *args, **kwargs)
 
     def add(self, *args, **kwargs):
         kwargs['face'] = self.face
         (name, filename) = args
-        producer = Chunks.Producer(*args, **kwargs)
+        producer = self.klass(*args, **kwargs)
         producer.registerPrefix()
         self.pool[name] = producer
 
@@ -72,13 +73,13 @@ class Producer(Pool):
         self.emit('removed', name)
 
 class Consumer(Pool):
-    def __init__(self, *args, **kwargs):
-        super(Consumer, self).__init__(*args, **kwargs)
+    def __init__(self, klass=NDN.Consumer, *args, **kwargs):
+        super(Consumer, self).__init__(klass=klass, *args, **kwargs)
 
     def add(self, *args, **kwargs):
         kwargs['face'] = self.face
         (name, filename) = args
-        consumer = Chunks.Consumer(*args, **kwargs)
+        consumer = self.klass(*args, **kwargs)
         consumer.expressInterest()
         self.pool[name] = consumer
         self.emit('added', name, consumer)
@@ -100,10 +101,12 @@ class MixPool(GObject.GObject):
                     (object,)),
     }
 
-    def __init__(self, *args, **kwargs):
-        super(MixPool, self).__init__()
-        self.producer = Producer(*args, **kwargs)
-        self.consumer = Consumer(*args, **kwargs)
+    def __init__(self, producerKlass = NDN.Producer,
+                 consumerKlass = NDN.Consumer,
+                 *args, **kwargs):
+        super(MixPool, self).__init__(*args, **kwargs)
+        self.producer = Producer(klass=producerKlass, *args, **kwargs)
+        self.consumer = Consumer(klass=consumerKlass, *args, **kwargs)
 
         self.producer.connect('removed', lambda p, d=None: self.emit('producer-removed', p))
         self.producer.connect('added', lambda p, P, d=None: self.emit('producer-added', p, P))

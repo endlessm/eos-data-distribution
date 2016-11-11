@@ -22,7 +22,10 @@ from pyndn import Name
 from pyndn import Data
 from pyndn import Face
 
-from Chunks import Producer as Chunks
+import Chunks
+from NDN import Endless
+
+from os import path
 
 def dump(*list):
     result = ""
@@ -41,10 +44,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.name:
-        args.name = "/endless/testchunks/" + args.filename
+        args.name = path.join(Endless.NAMES.BASE, "testchunks/", args.filename)
     args.name += "/chunked"
 
-    chunks = Chunks(args.name, args.filename, args.chunksize)
+    chunks = Chunks.Producer(args.name, args.filename, args.chunksize)
     chunks.registerPrefix()
 
     while chunks._responseCount < 100:

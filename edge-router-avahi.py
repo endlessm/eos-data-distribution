@@ -28,6 +28,8 @@ from MDNS import ServiceDiscovery
 import netifaces
 
 from Chunks import Producer
+from NDN import Endless
+
 import Edge
 
 SERVICES = ["_nfd._tcp", "_nfd._udp"]
@@ -101,7 +103,7 @@ class EdgeRouter(Edge.Getter):
 if __name__ == "__main__":
 #    nm = Gio.NetworkMonitor.get_default()
 #    nm.connect('network-changed', network_changed_cb)
-    er = EdgeRouter('/endless/soma/v1')
+    er = EdgeRouter(Endless.NAMES.SOMA)
 
     loop = GLib.MainLoop()
     loop.run()

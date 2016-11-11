@@ -20,10 +20,7 @@
 from pyndn import Name
 from pyndn import Face
 
-import Chunks
-import NDN
-
-import json
+from NDN import Consumer, Endless
 
 import gi
 gi.require_version('GLib', '2.0')
@@ -32,6 +29,7 @@ from gi.repository import GObject
 from gi.repository import GLib
 
 from os import path
+import json
 
 def dump(*list, **kwargs):
     result = ""
@@ -39,29 +37,33 @@ def dump(*list, **kwargs):
         result += (element if type(element) is str else str(element)) + " "
     print(result)
 
-class DbusConsumer(NDN.Consumer):
-    def __init__(self, name, target, *args, **kwargs):
-        NDN.Consumer.__init__(self, name, *args, **kwargs)
+class DbusConsumer(Consumer):
+    def __init__(self, name, target, appids, *args, **kwargs):
+        Consumer.__init__(self, name=name, *args, **kwargs)
 
         self.target = target
-        self.expressInterest(forever=True)
         self.connect('data', self.getShards)
+
+        appname = lambda i: path.join(Endless.NAMES.INSTALLED, i)
+        [self.expressInterest(name=appname(i), forever=True) for i in appids]
 
     def getShards(self, consumer, interest, data):
         buf = self.dataToBytes(data)
         names = json.loads(str(buf))
-        self.chunks = [Chunks.Consumer(n, path.join(self.target, path.basename(n))) for n in names]
-        [c.expressInterest() for c in self.chunks]
+        print "GOT NAMES, all the names, the best names", names
 
 if __name__ == "__main__":
     import sys
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--target", default='./tmp')
-    parser.add_argument("name")
+    parser.add_argument("-n", "--name", default=Endless.NAMES.SOMA)
+    parser.add_argument("appids", nargs='+')
 
     args = parser.parse_args()
     kwargs = args.__dict__
+
+    print 'spawning DbusConsumer', kwargs
 
     consumer = DbusConsumer(**kwargs)
 

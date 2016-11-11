@@ -115,7 +115,7 @@ if __name__ == '__main__':
     from gi.repository import GLib
     import time
 
-    EG = Getter('/endless/soma')
+    EG = Getter(NDN.Endless.NAMES.SOMA)
     print EG.publish('10521bb3a18b573f088f84e59c9bbb6c2e2a1a67')
 
     GLib.MainLoop().run()
