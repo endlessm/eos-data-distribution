@@ -27,12 +27,55 @@ from gi.repository import GObject
 from gi.repository import GLib
 #from gi.repository import OSTree
 
-class Store(GObject.GObject):
-    def __init__(self, tempdir, prefix, repo):
-        GObject.GObject.__init__(self)
-        self.store = SimpleStore.Producer(tempdir, prefix)
+from NDN import Consumer, Producer, Endless
+import Chunks
+
+from os import path
+import json
+
+class Store(Producer):
+    def __init__(self, tempdir, repo, *args, **kwargs):
+        def delget(h, a):
+            ret = h[a]
+            del h[a]
+            return ret
+
+        self.prefixes = prefixes = Endless.Names({p: delget(kwargs, '%s_prefix'%p)  for p in ['consumer', 'producer']})
+        super(Store, self).__init__(name=prefixes.consumer, auto=True, *args, **kwargs)
+        self.tempdir = tempdir
+        self.repo = repo
+
+        self.store = SimpleStore.Producer(tempdir, prefixes.producer)
+
         self.store.connect('producer-added', self.onProducerAdded)
         self.store.connect('producer-removed', self.onProducerRemoved)
+
+        self.consumer = Consumer(name=prefixes.consumer, *args, **kwargs)
+
+        self.consumer.connect('data', self.getShards)
+
+        self.connect('interest', self.onInterest)
+
+    def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
+        name = interest.getName()
+        subid = name.toUri().split(self.prefixes.consumer)[1]
+        if not subid:
+            print 'Error, the requested name doesn\'t contain a sub', name.toUri()
+            return False
+
+        self.consumer.expressInterest(path.join(self.prefixes.producer, path.basename(subid)))
+
+    def getShards(self, consumer, interest, data):
+        buf = self.dataToBytes(data)
+        names = json.loads(str(buf))
+        filename = lambda n: path.join(self.tempdir, path.basename(n) + '.shard')
+
+        if not names:
+            print 'got no names, the sub is probably invalid'
+            return False
+
+        self.chunks = {n: Chunks.Consumer(n, filename(n), auto=True)
+                       for n in names}
 
     def onProducerAdded(self, name, producer, d=None):
         print name, 'added as', producer
@@ -48,7 +91,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--tempdir", required=True)
     parser.add_argument("-r", "--repo", required=True)
-    parser.add_argument("-p", "--prefix", default="/endless/soma/v1/")
+    parser.add_argument("-c", "--consumer-prefix", default=Endless.NAMES.INSTALLED)
+    parser.add_argument("-p", "--producer-prefix", default=Endless.NAMES.SOMA)
 
     args = parser.parse_args()
     kwargs = args.__dict__
