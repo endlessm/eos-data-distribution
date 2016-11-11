@@ -126,7 +126,10 @@ class ChunksGetter(Chunks.Producer):
         print 'base: %s' %self.base
         url = "%s/v1/%s/manifest.json" % (self.base, id)
         r = self.session.get(url)
-        return r.json()
+        print 'got:', r, self.base, id
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else: return False
 
 if __name__ == '__main__':
     from gi.repository import GLib
