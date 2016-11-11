@@ -47,7 +47,20 @@ class Getter(NDN.Producer):
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
         subid = name.toUri().split(self.name)[1]
+        # XXX(xaiki): hack
+        if subid.startswith('/'): subid = subid[1:]
+
+        print 'interest', name.toUri(), self.name, subid
+        if not subid:
+            print 'Error, the requested name doesn\'t contain a sub', name.toUri()
+            return False
+
         if subid.find('/') != -1:
+            # we still register, because this might be asking for an old
+            # subscription that we lost track of. Note that this is racy,
+            # because there is no getter associated (yet), if we have
+            # registered, this is a noop, is subscribe.
+            self.chunks.publish(subid.split('/')[0])
             print 'Error, we got a path, expected a subid', subid
             return False
 
