@@ -92,13 +92,14 @@ class ChunksGetter(Chunks.Producer):
         """
         import re
         shard = self.names[prefix]
-        print ("getChunk", prefix, n, shard)
+        print "Edge: getChunk", n, prefix, shard
         bytes = (n*self.chunkSize, (n+1)*self.chunkSize)
         r = self.session.get (shard['download_uri'],
                           headers = {'Range': 'bytes=%d-%d'%bytes})
         return r.text
 
     def publish(self, subId):
+        print 'asked for sub:', subId
         if subId in self.subs.keys():
             print 'subscription already runing for', subId, '…ignoring new request'
             return self.subs[subId]

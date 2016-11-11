@@ -40,6 +40,7 @@ class Producer(NDN.Producer):
         self.connect('interest', self.onInterest)
 
     def getChunk(self, name, n, prefix=None):
+        print 'asked for chunk', n, name.toUri()
         self.f.seek(self.chunkSize * n)
         return self.f.read(self.chunkSize)
 

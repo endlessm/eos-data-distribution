@@ -109,6 +109,7 @@ class Producer(Base):
 
     def sendFinish(self, data):
         self.sign(data)
+        print 'sending data', data.getContent()
         self.face.putData(data)
 
     def _onInterest(self, *args, **kwargs):
