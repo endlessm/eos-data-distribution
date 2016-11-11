@@ -51,7 +51,7 @@ if __name__ == "__main__":
         args.name += "/chunked/"
         consumer = Chunks.Consumer(args.name, args.filename, face)
 
-    consumer.expressInterest(forever=True)
+    consumer.consume(forever=True)
 
     while args.limit and consumer._callbackCount < args.limit:
         consumer.face.processEvents()

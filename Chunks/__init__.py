@@ -63,8 +63,9 @@ class Consumer(NDN.Consumer):
 
         self.connect('data', self.onData)
 
-    def makeInterest(self, name):
-        return Name(name).appendSegment(0)
+    def consume(self, name=None, start=0, *args, **kwargs):
+        if not name: name = self.name
+        self.expressInterest(name=Name(name).appendSegment(0), *args, **kwargs)
 
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
