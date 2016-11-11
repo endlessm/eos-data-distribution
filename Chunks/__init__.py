@@ -73,16 +73,15 @@ class Consumer(NDN.Consumer):
         chunkSize = str(buf[:10]).split(';')[0]
         skip = len(chunkSize) + 1
         chunkSize = int(chunkSize)
-        print ("got data, seq: %d, chunksize: %d, skip: %d" % (n, chunkSize, skip))
         self.f.seek(chunkSize * n)
         return self.f.write(buf[skip:])
 
     def onData(self, o, interest, data):
         name = data.getName()
         seg = int(repr(name).split('%')[-1], 16)
+        suc = name.getSuccessor()
 
-        print("Got data packet with name", name.toUri())
+        print "Got data packet", seg, "with name", name.toUri(), "succesor is", suc.toUri()
         self.putChunk(seg, data)
-        name = Name(interest.name).getSuccessor()
-        self.expressInterest(name)
+        self.expressInterest(suc)
 
