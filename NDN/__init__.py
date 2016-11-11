@@ -74,11 +74,16 @@ class Producer(Base):
                      (object, object, object, object, object))
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, auto=False, *args, **kwargs):
         super(Producer, self).__init__(*args, **kwargs)
 
         self.generateKeys()
-        self.prefixes = dict()
+        self._prefixes = dict()
+
+        if auto: self.produce()
+
+    def produce(self):
+        self.registerPrefix()
 
     def generateKeys(self):
         # Use the system default key chain and certificate name to sign commands.
@@ -161,12 +166,16 @@ class Consumer(Base):
                  (object,)),
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, auto=False, *args, **kwargs):
         super(Consumer, self).__init__(*args, **kwargs)
 
         self.pit = dict()
 #        self.generateKeys()
-        self.prefixes = dict()
+        self._prefixes = dict()
+        if auto: self.consume()
+
+    def consume(self):
+        self.expressInterest()
 
     def _onData(self, interest, data):
         self._callbackCount += 1
