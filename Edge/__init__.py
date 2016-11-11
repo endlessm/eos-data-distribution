@@ -35,9 +35,10 @@ import json
 class Getter(NDN.Producer):
     def __init__(self, name,
                  *args, **kwargs):
-        super(Getter, self).__init__(name, *args, **kwargs)
+        super(Getter, self).__init__(name=name, *args, **kwargs)
 
         self.chunks = ChunksGetter(name, *args, **kwargs)
+
         self.flags = ForwardingFlags()
         self.flags.setChildInherit(True)
 

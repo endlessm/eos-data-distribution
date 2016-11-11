@@ -55,7 +55,7 @@ class Producer(NDN.Producer):
 
 class Consumer(NDN.Consumer):
     def __init__(self, name, filename, chunkSize = 4096, mode = "w+", *args, **kwargs):
-        super(Consumer, self).__init__(name, *args, **kwargs)
+        super(Consumer, self).__init__(name=name, *args, **kwargs)
         if filename:
             self.f = open(filename, mode)
 
