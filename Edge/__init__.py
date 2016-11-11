@@ -81,7 +81,7 @@ class ChunksGetter(Chunks.Producer):
         super(ChunksGetter, self).__init__(name, *args, **kwargs)
         self.base = base
         self.subs = dict()
-        self.prefixes = dict()
+        self.subprefixes = dict()
         self.names = dict()
         self.session = requests.Session()
 
@@ -115,7 +115,7 @@ class ChunksGetter(Chunks.Producer):
             self.names[name] = shard
             ret.append(name.toUri())
 
-        self.prefixes[subId] = prefixes
+        self.subprefixes[subId] = prefixes
         return ret
 
     def getSubscription(self, id):

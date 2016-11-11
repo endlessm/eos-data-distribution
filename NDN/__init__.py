@@ -121,8 +121,8 @@ class Producer(Base):
         name = Name(prefix)
         print "Un-Register prefix", name.toUri()
         try:
-            self.face.removeRegisteredPrefix(self.prefixes[name])
-            del (self.prefixes[name])
+            self.face.removeRegisteredPrefix(self._prefixes[name])
+            del (self._prefixes[name])
         except:
             print "tried to unregister a prefix that never was registred: ", prefix
             pass
@@ -141,12 +141,11 @@ class Producer(Base):
             flags = None
 
         print "Register prefix", prefix.toUri()
-        self.prefixes[prefix] = self.face.registerPrefix(prefix,
+        self._prefixes[prefix] = self.face.registerPrefix(prefix,
                                   self._onInterest,
                                   self.onRegisterFailed,
                                   self.onRegisterSuccess,
                                   flags=flags)
-        print 'prefixes', self.prefixes
         return prefix
 
     def onRegisterFailed(self, prefix):
