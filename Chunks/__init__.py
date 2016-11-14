@@ -50,8 +50,7 @@ class Producer(NDN.Producer):
         # hack to get the segment number
         seg = int(repr(name).split('%')[-1], 16)
 
-        content = "%s;" % self.chunkSize
-        content += self.getChunk(name, seg, prefix=prefix)
+        content = self.getChunk(name, seg, prefix=prefix)
         self.send(name, content)
 
 class Consumer(NDN.Consumer):
@@ -72,10 +71,7 @@ class Consumer(NDN.Consumer):
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
 
-        chunkSize = str(buf[:10]).split(';')[0]
-        skip = len(chunkSize) + 1
-        chunkSize = int(chunkSize)
-        self.f.seek(chunkSize * n)
+        self.f.seek(self.chunkSize * n)
         return self.f.write(buf[skip:])
 
     def onData(self, o, interest, data):
