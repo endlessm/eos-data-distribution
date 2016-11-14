@@ -55,11 +55,12 @@ class Producer(NDN.Producer):
         self.send(name, content)
 
 class Consumer(NDN.Consumer):
-    def __init__(self, name, filename, chunkSize = 4096, mode = "w+", *args, **kwargs):
+    def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5, *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         if filename:
             self.f = open(filename, mode)
 
+        self.pipeline = pipeline
         self.chunkSize = chunkSize
 
         self.connect('data', self.onData)
@@ -80,9 +81,14 @@ class Consumer(NDN.Consumer):
     def onData(self, o, interest, data):
         name = data.getName()
         seg = int(repr(name).split('%')[-1], 16)
-        suc = name.getSuccessor()
-
-        print "Got data packet", seg, "with name", name.toUri(), "succesor is", suc.toUri()
         self.putChunk(seg, data)
+
+        reduce (lambda n, r: self.getNext(n), range(self.pipeline), name)
+        self.getNext(name)
+
+    def getNext(self, name):
+        suc = name.getSuccessor()
+        print 'get Next', name.toUri(), suc.toUri()
         self.expressInterest(suc)
+        return suc
 
