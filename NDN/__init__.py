@@ -38,9 +38,10 @@ class Base(GObject.GObject):
                     (object,)),
     }
 
-    def __init__(self, name, face=None):
+    def __init__(self, name, face=None, tick=100):
         GObject.GObject.__init__(self)
         self.name = name
+        self.tick = tick
 
         # The default Face will connect using a Unix socket, or to "localhost".
         if type(face) == Face:
@@ -54,7 +55,7 @@ class Base(GObject.GObject):
         self._callbackCount = 0
         self._responseCount = 0
 
-        GLib.timeout_add(200, self.processEvents)
+        GLib.timeout_add(self.tick, self.processEvents)
 
     def processEvents(self):
         self.face.processEvents()
