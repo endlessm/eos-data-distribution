@@ -46,7 +46,7 @@ class Getter(NDN.Producer):
                  *args, **kwargs):
         super(Getter, self).__init__(name=name, *args, **kwargs)
 
-        self.chunks = ChunksGetter(name, *args, **kwargs)
+        self.getters = dict()
 
         self.flags = ForwardingFlags()
         self.flags.setChildInherit(True)
@@ -63,7 +63,8 @@ class Getter(NDN.Producer):
             logger.warning('Error, the requested name doesn\'t contain a sub: %s', NDN.dumpName(name))
             return False
 
-        if subid.find('/') != -1:
+        substr = str(subid.get(0))
+        try:
             # we still register, because this might be asking for an old
             # subscription that we lost track of. Note that this is racy,
             # because there is no getter associated (yet), if we have
@@ -71,11 +72,11 @@ class Getter(NDN.Producer):
             self.getters[substr].publish()
             logger.warning('Error, we got a path, expected a subid: %s', subid)
             return False
+        except:
+            pass
 
-        names = self.chunks.publish(subid)
-        print 'got interest', names
-
-        self.send(name, json.dumps(names))
+        self.getters[substr] = ChunksGetter(name=name, subId=substr)
+        return True
 
     def sendLinks(self, name, names):
         link = Link(Data(name))
@@ -83,7 +84,7 @@ class Getter(NDN.Producer):
         self.sendFinish(link)
 
 class ChunksGetter(Chunks.Producer):
-    def __init__(self, name,
+    def __init__(self, name, subId=None,
                  base = 'https://subscriptions.prod.soma.endless-cloud.com',
                  *args, **kwargs):
         super(ChunksGetter, self).__init__(name, *args, **kwargs)
@@ -92,6 +93,17 @@ class ChunksGetter(Chunks.Producer):
         self.subprefixes = dict()
         self.names = dict()
         self.session = requests.Session()
+
+        if subId:
+            self.subId = subId
+            self.registerPrefix(name)
+            names = self.publish()
+
+            # wait for registration success before sending the list of
+            # names, the actual registration is done by Chunks -> NDN
+            # classes.
+            self.connect('register-success', lambda *args, **kwargs:
+                         self.send(name, json.dumps(names)))
 
     def getChunk(self, name, n, prefix):
         """
@@ -105,10 +117,15 @@ class ChunksGetter(Chunks.Producer):
         logger.debug("getChunk %d, %s, %s, %s", n, bytes, prefix, shard)
         r = self.session.get (shard['download_uri'],
                           headers = {'Range': 'bytes=%d-%d'%bytes})
-        return r.text
+        return r.text[:self.chunkSize]
 
-    def publish(self, subId):
-        print 'asked for sub:', subId
+    def publish(self, subId=None):
+        if not subId: subId = self.subId
+
+        if not isinstance(subId, str):
+            subId = str(subId)
+
+        logger.info('asked for sub: %s', subId)
         if subId in self.subs.keys():
             logger.warning('subscription already runing for %s…ignoring new request', subId)
             return self.subs[subId]
