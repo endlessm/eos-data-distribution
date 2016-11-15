@@ -82,7 +82,8 @@ class Consumer(NDN.Consumer):
 
     def onData(self, o, interest, data):
         name = data.getName()
-        seg = int(repr(name).split('%')[-1], 16)
+        logger.debug('got data: %s', NDN.dumpName(name))
+        seg = int(name.toUri().split('%')[-1], 16)
         self.putChunk(seg, data)
 
         reduce (lambda n, r: self.getNext(n), range(self.pipeline), name)
