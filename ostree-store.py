@@ -48,6 +48,7 @@ class Store(Producer):
         super(Store, self).__init__(name=prefixes.consumer, auto=True, *args, **kwargs)
         self.tempdir = tempdir
         self.repo = repo
+        self.chunks = dict()
 
         self.store = SimpleStore.Producer(tempdir, prefixes.producer)
 
@@ -78,8 +79,18 @@ class Store(Producer):
             logger.warning('got no names, the sub is probably invalid')
             return False
 
-        self.chunks = {n: Chunks.Consumer(n, filename(n), auto=True)
-                       for n in names}
+        (self.addConsumer(n, filename(n)) for n in names)
+
+    def addConsumer(self, n, filename):
+        try:
+            consumer = self.chunks[filename]
+            logger.warning('already got consumer for this name', n.getUri())
+            return consumer
+        except:
+            pass
+
+        logger.info('spawning consumer for %s: %s', NDN.dumpName(n), filename)
+        self.chunks[filename] = Chunks.Consumer(n, filename, auto=True)
 
     def onProducerAdded(self, name, producer, d=None):
         print name, 'added as', producer
