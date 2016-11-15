@@ -40,6 +40,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("filename")
     parser.add_argument("-n", "--name")
+    parser.add_argument("-l", "--limit", default=100)
     parser.add_argument("-c", "--chunksize", type=int, default=4096)
     args = parser.parse_args()
 
@@ -47,12 +48,12 @@ if __name__ == "__main__":
         args.name = path.join(Endless.NAMES.BASE, "testchunks/", args.filename)
     args.name += "/chunked"
 
-    chunks = Chunks.Producer(args.name, args.filename, args.chunksize)
-    chunks.registerPrefix()
+    producer = Chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
+    loop = GLib.MainLoop()
 
-    while chunks._responseCount < 100:
-        chunks.face.processEvents()
-        # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
-        time.sleep(0.01)
+    def check(o, f):
+        if args.limit and producer._responseCount > args.limit:
+            loop.quit()
 
-    face.shutdown()
+    producer.connect('face-process-event', check)
+    loop.run()

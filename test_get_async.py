@@ -24,6 +24,8 @@ from pyndn import Face
 import Chunks
 import NDN
 
+from gi.repository import GLib
+
 def dump(*list):
     result = ""
     for element in list:
@@ -46,16 +48,16 @@ if __name__ == "__main__":
     face = Face()
 
     if args.no_chunks:
-        consumer = NDN.Consumer(args.name, face)
+        consumer = NDN.Consumer(args.name, face=face, auto=True)
     else:
         args.name += "/chunked/"
-        consumer = Chunks.Consumer(args.name, args.filename, face)
+        consumer = Chunks.Consumer(args.name, args.filename, face=face, auto=True)
 
-    consumer.consume(forever=True)
+    loop = GLib.MainLoop()
 
-    while args.limit and consumer._callbackCount < args.limit:
-        consumer.face.processEvents()
-        # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
-        time.sleep(0.01)
+    def check(o, f):
+        if args.limit and consumer._callbackCount > args.limit:
+            loop.quit()
 
-    face.shutdown()
+    consumer.connect('face-process-event', check)
+    loop.run()
