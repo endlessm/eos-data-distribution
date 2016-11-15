@@ -71,7 +71,7 @@ class Base(GObject.GObject):
         self._callbackCount = 0
         self._responseCount = 0
 
-        GLib.timeout_add(self.tick, self.processEvents)
+        GLib.timeout_add(tick, self.processEvents)
 
     def processEvents(self):
         self.face.processEvents()
