@@ -148,12 +148,11 @@ class Producer(Base):
 
     def registerPrefix(self, prefix = None,
                        postfix = "", flags = None):
-        if type(prefix) is str:
-            prefix = Name(prefix)
+        prefix = makeName(prefix)
+        postfix = makeName(postfix)
 
         if not prefix:
-            prefix = Name(path.join(self.name, postfix))
-
+            prefix = self.name.append(postfix)
         try:
             flags = flags or self.flags
         except:
