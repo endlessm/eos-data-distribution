@@ -78,7 +78,7 @@ class Consumer(NDN.Consumer):
 
         logger.debug('getting chunk %d: %d', n, self.chunkSize)
         self.f.seek(self.chunkSize * n)
-        return self.f.write(buf[skip:])
+        return self.f.write(buf)
 
     def onData(self, o, interest, data):
         name = data.getName()
