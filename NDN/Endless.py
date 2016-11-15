@@ -19,8 +19,10 @@
 
 # THIS FILE CONTAINS ENDLESS DEFAULTS
 
+import logging
 from os import path
 
+LOGLEVEL = logging.DEBUG
 BASE = '/endless/'
 
 class Names(dict):

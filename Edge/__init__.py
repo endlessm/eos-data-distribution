@@ -32,6 +32,15 @@ import Chunks
 from os import path
 import json
 
+from NDN import Endless
+
+import logging
+logging.basicConfig(level=Endless.LOGLEVEL)
+logger = logging.getLogger(__name__)
+
+def dump(*args, **kwargs):
+    print 'DUMP', args, kwargs
+
 class Getter(NDN.Producer):
     def __init__(self, name,
                  *args, **kwargs):
@@ -46,13 +55,12 @@ class Getter(NDN.Producer):
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subid = name.toUri().split(self.name)[1]
-        # XXX(xaiki): hack
-        if subid.startswith('/'): subid = subid[1:]
+        subid = name.getSubName(self.name.size())
+        logger.info ('subid is: %s', NDN.dumpName(subid))
 
-        print 'interest', name.toUri(), self.name, subid
+        logger.info('interest: %s, on %s for %s', NDN.dumpName(name), self.name, subid)
         if not subid:
-            print 'Error, the requested name doesn\'t contain a sub', name.toUri()
+            logger.warning('Error, the requested name doesn\'t contain a sub: %s', NDN.dumpName(name))
             return False
 
         if subid.find('/') != -1:
@@ -60,8 +68,8 @@ class Getter(NDN.Producer):
             # subscription that we lost track of. Note that this is racy,
             # because there is no getter associated (yet), if we have
             # registered, this is a noop, is subscribe.
-            self.chunks.publish(subid.split('/')[0])
-            print 'Error, we got a path, expected a subid', subid
+            self.getters[substr].publish()
+            logger.warning('Error, we got a path, expected a subid: %s', subid)
             return False
 
         names = self.chunks.publish(subid)
@@ -92,8 +100,9 @@ class ChunksGetter(Chunks.Producer):
         """
         import re
         shard = self.names[prefix]
-        print "Edge: getChunk", n, prefix, shard
-        bytes = (n*self.chunkSize, (n+1)*self.chunkSize)
+        bytes = tuple(i*self.chunkSize for i in (n, n+1))
+
+        logger.debug("getChunk %d, %s, %s, %s", n, bytes, prefix, shard)
         r = self.session.get (shard['download_uri'],
                           headers = {'Range': 'bytes=%d-%d'%bytes})
         return r.text
@@ -101,19 +110,19 @@ class ChunksGetter(Chunks.Producer):
     def publish(self, subId):
         print 'asked for sub:', subId
         if subId in self.subs.keys():
-            print 'subscription already runing for', subId, '…ignoring new request'
+            logger.warning('subscription already runing for %s…ignoring new request', subId)
             return self.subs[subId]
 
         sub = self.subs[subId] = self.getSubscription(subId)
         if not sub:
-            print 'This sub is invalid', subId
+            logger.warning('This sub is invalid: %s', subId)
             return sub
 
         prefixes = dict()
         ret = []
 
         for shard in sub['shards']:
-            print ('got shard', shard)
+            logger.debug('looking at shard: %s', shard)
             postfix = '%s/shards/%s/%s' % (subId, shard['path'], shard['sha256_csum'])
             name = self.registerPrefix(postfix=postfix)
             prefixes[postfix] = name
@@ -124,10 +133,9 @@ class ChunksGetter(Chunks.Producer):
         return ret
 
     def getSubscription(self, id):
-        print 'base: %s' %self.base
+        logger.info('base: %s', self.base)
         url = "%s/v1/%s/manifest.json" % (self.base, id)
         r = self.session.get(url)
-        print 'got:', r, self.base, id
         if r.status_code == requests.codes.ok:
             return r.json()
         else: return False

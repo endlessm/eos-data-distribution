@@ -27,6 +27,11 @@ from pyndn import Name
 from pyndn import Data
 
 import NDN
+from NDN import Endless
+
+import logging
+logging.basicConfig(level=Endless.LOGLEVEL)
+logger = logging.getLogger(__name__)
 
 class Producer(NDN.Producer):
     def __init__(self, name, filename=None, chunkSize=4096, mode="r",
@@ -40,7 +45,7 @@ class Producer(NDN.Producer):
         self.connect('interest', self.onInterest)
 
     def getChunk(self, name, n, prefix=None):
-        print 'asked for chunk', n, name.toUri()
+        logger.debug('asked for chunk %d: %s', n, NDN.dumpName(name))
         self.f.seek(self.chunkSize * n)
         return self.f.read(self.chunkSize)
 
@@ -71,6 +76,7 @@ class Consumer(NDN.Consumer):
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
 
+        logger.debug('getting chunk %d: %d', n, self.chunkSize)
         self.f.seek(self.chunkSize * n)
         return self.f.write(buf[skip:])
 
@@ -84,7 +90,7 @@ class Consumer(NDN.Consumer):
 
     def getNext(self, name):
         suc = name.getSuccessor()
-        print 'get Next', name.toUri(), suc.toUri()
+        logger.debug('get Next %s → %s', NDN.dumpName(name), NDN.dumpName(suc))
         self.expressInterest(suc)
         return suc
 

@@ -33,6 +33,10 @@ import Chunks
 from os import path
 import json
 
+import logging
+logging.basicConfig(level=Endless.LOGLEVEL)
+logger = logging.getLogger(__name__)
+
 class Store(Producer):
     def __init__(self, tempdir, repo, *args, **kwargs):
         def delget(h, a):
@@ -60,7 +64,7 @@ class Store(Producer):
         name = interest.getName()
         subid = name.toUri().split(self.prefixes.consumer)[1]
         if not subid:
-            print 'Error, the requested name doesn\'t contain a sub', name.toUri()
+            logger.warning('Error, the requested name doesn\'t contain a sub', NDN.dumpName(name))
             return False
 
         self.consumer.expressInterest(path.join(self.prefixes.producer, path.basename(subid)))
@@ -71,7 +75,7 @@ class Store(Producer):
         filename = lambda n: path.join(self.tempdir, path.basename(n) + '.shard')
 
         if not names:
-            print 'got no names, the sub is probably invalid'
+            logger.warning('got no names, the sub is probably invalid')
             return False
 
         self.chunks = {n: Chunks.Consumer(n, filename(n), auto=True)
@@ -97,7 +101,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     kwargs = args.__dict__
 
-    print 'creating store', kwargs
+    logger.info('creating store', kwargs)
     store = Store(**kwargs)
 
     GLib.MainLoop().run()

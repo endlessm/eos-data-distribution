@@ -32,6 +32,20 @@ from pyndn import Face
 from os import path
 from functools import partial
 
+from NDN import Endless
+
+import logging
+logging.basicConfig(level=Endless.LOGLEVEL)
+logger = logging.getLogger(__name__)
+
+def makeName(o):
+    if isinstance(o, Name):
+        return o
+    return Name(o)
+
+def dumpName(n):
+    return [str (n.get(i)) for i in range(n.size())]
+
 class Base(GObject.GObject):
     __gsignals__ = {
         'face-process-event': (GObject.SIGNAL_RUN_FIRST, None,
@@ -40,13 +54,15 @@ class Base(GObject.GObject):
 
     def __init__(self, name, face=None, tick=100):
         GObject.GObject.__init__(self)
-        self.name = name
+        self.name = Name(name)
         self.tick = tick
 
         # The default Face will connect using a Unix socket, or to "localhost".
         if type(face) == Face:
             self.face = face
+            logger.info('re-using face: %s', face)
         else:
+            logger.info('creating a new face')
             try:
                 self.face = Face(face)
             except:
@@ -94,7 +110,7 @@ class Producer(Base):
             self._certificateName = keyChain.getDefaultCertificateName()
         except:
             name = Name (self.name)
-            print "warning could not get default certificate name, creating a new one from %s" % name.toUri()
+            logger.warning("Could not get default certificate name, creating a new one from %s", dumpName(name))
             self._certificateName = keyChain.createIdentityAndCertificate(name)
         self._responseCount = 0
 
@@ -106,27 +122,28 @@ class Producer(Base):
     def send(self, name, content):
         data = Data(name)
         data.setContent(content)
+        logger.debug ('sending: %d, on %s', content.__len__(), dumpName(name))
         self.sendFinish(data)
 
     def sendFinish(self, data):
         self.sign(data)
-#        print 'sending data', data.__len__()
+#       logger.debug ('sending data: %d', data.__len__())
         self.face.putData(data)
 
     def _onInterest(self, *args, **kwargs):
         self._responseCount += 1
-        print ("Got interest", args, kwargs)
+        logger.info ("Got interest %s, %s", args, kwargs)
 
         self.emit('interest', *args, **kwargs)
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
-        print "Un-Register prefix", name.toUri()
+        logger.info("Un-Register prefix: %s", dumpName(name))
         try:
             self.face.removeRegisteredPrefix(self._prefixes[name])
             del (self._prefixes[name])
         except:
-            print "tried to unregister a prefix that never was registred: ", prefix
+            logger.warning("tried to unregister a prefix that never was registred: %s", prefix)
             pass
 
     def registerPrefix(self, prefix = None,
@@ -142,7 +159,7 @@ class Producer(Base):
         except:
             flags = None
 
-        print "Register prefix", prefix.toUri()
+        logger.info ("Register prefix: %s", dumpName(prefix))
         self._prefixes[prefix] = self.face.registerPrefix(prefix,
                                   self._onInterest,
                                   self.onRegisterFailed,
@@ -153,11 +170,11 @@ class Producer(Base):
     def onRegisterFailed(self, prefix):
         self._responseCount += 1
         self.emit('register-failed', prefix)
-        print("Register failed for prefix", prefix.toUri())
+        logger.warning("Register failed for prefix: %s", dumpName(prefix))
 
     def onRegisterSuccess(self, prefix, registered):
         self.emit('register-success', prefix, registered)
-        print("Register succeded for prefix", prefix.toUri(), registered)
+        logger.info("Register succeded for prefix: %s, %s", dumpName(prefix), registered)
 
 class Consumer(Base):
     __gsignals__ = {
@@ -190,7 +207,7 @@ class Consumer(Base):
     def expressInterest(self, name=None, forever=False):
         if name == None: name = self.name
         segname = self.makeInterest(name)
-        print "Express Interest name:", segname.toUri()
+        logger.info ("Express Interest name: %s", dumpName(segname))
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
         self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
 
@@ -201,9 +218,9 @@ class Consumer(Base):
     def onTimeout(self, interest, forever=False, name=None):
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
-        print "Time out for interest", interest.getName().toUri()
+        logger.info ("Time out for interest: %s", dumpName(interest.getName()))
         if forever and name:
-            print "Re-requesting Interest", name
+            logger.info ("Re-requesting Interest: %s", name)
             onTimeout = partial(self.onTimeout, forever=forever, name=name)
             self.pit[name] = self.face.expressInterest(interest.getName(),
                                                        self._onData, onTimeout)
