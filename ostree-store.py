@@ -75,11 +75,12 @@ class Store(Producer):
         names = json.loads(str(buf))
         filename = lambda n: path.join(self.tempdir, path.basename(n) + '.shard')
 
+        logger.info ('got shards: %s', names)
         if not names:
             logger.warning('got no names, the sub is probably invalid')
             return False
 
-        (self.addConsumer(n, filename(n)) for n in names)
+        [self.addConsumer(n, filename(n)) for n in names]
 
     def addConsumer(self, n, filename):
         try:
@@ -89,7 +90,7 @@ class Store(Producer):
         except:
             pass
 
-        logger.info('spawning consumer for %s: %s', NDN.dumpName(n), filename)
+        logger.info('spawning consumer for %s: %s', n, filename)
         self.chunks[filename] = Chunks.Consumer(n, filename, auto=True)
 
     def onProducerAdded(self, name, producer, d=None):
