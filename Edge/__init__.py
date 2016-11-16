@@ -100,6 +100,8 @@ class ChunksGetter(Chunks.Producer):
             self.registerPrefix(name)
             names = self.publish()
 
+            logger.info ('got names: %s', names)
+
             # wait for registration success before sending the list of
             # names, the actual registration is done by Chunks -> NDN
             # classes.
@@ -112,6 +114,8 @@ class ChunksGetter(Chunks.Producer):
         "https://subscriptions.prod.soma.endless-cloud.com/v1/10521bb3a18b573f088f84e59c9bbb6c2e2a1a67/manifest.json"
         """
         import re
+
+        logger.debug ('asked for %s: %s (%d)', name, prefix, n)
         shard = self.names[prefix]
         bytes = tuple(i*self.chunkSize for i in (n, n+1))
 
