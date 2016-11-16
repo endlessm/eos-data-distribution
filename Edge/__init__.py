@@ -145,10 +145,9 @@ class ChunksGetter(Chunks.Producer):
 
         for shard in sub['shards']:
             logger.debug('looking at shard: %s', shard)
-            postfix = '%s/shards/%s/%s' % (subId, shard['path'], shard['sha256_csum'])
-            name = Name(self.name).append(Name(postfix))
+            postfix = '%s/%s' % (shard['path'], shard['sha256_csum'])
+            name = self.registerPrefix (postfix=postfix)
             logger.debug ('created name: %s', name)
-            self.registerPrefix(name)
             prefixes[postfix] = name
             self.names[name] = shard
             ret.append(name.toUri())
