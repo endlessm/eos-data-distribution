@@ -75,7 +75,7 @@ class Getter(NDN.Producer):
         except:
             pass
 
-        self.getters[substr] = ChunksGetter(name=name, subId=substr)
+        self.getters[substr] = ChunksGetter(name=name, basename=self.name)
         return True
 
     def sendLinks(self, name, names):
@@ -84,7 +84,7 @@ class Getter(NDN.Producer):
         self.sendFinish(link)
 
 class ChunksGetter(Chunks.Producer):
-    def __init__(self, name, subId=None,
+    def __init__(self, name, basename=None,
                  base = 'https://subscriptions.prod.soma.endless-cloud.com',
                  *args, **kwargs):
         super(ChunksGetter, self).__init__(name, *args, **kwargs)
@@ -94,8 +94,8 @@ class ChunksGetter(Chunks.Producer):
         self.names = dict()
         self.session = requests.Session()
 
-        if subId:
-            self.subId = subId
+        if basename:
+            self.subid = name.getSubName(basename.size()).get(0)
             self.registerPrefix(name)
             names = self.publish()
 
