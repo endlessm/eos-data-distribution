@@ -61,9 +61,9 @@ class Getter(NDN.Producer):
         subid = getSubIdName (name, self.name)
         logger.info ('subid is: %s', subid)
 
-        logger.info('interest: %s, on %s for %s', NDN.dumpName(name), self.name, subid)
+        logger.info('interest: %s, on %s for %s', name, self.name, subid)
         if not subid:
-            logger.warning('Error, the requested name doesn\'t contain a sub: %s', NDN.dumpName(name))
+            logger.warning('Error, the requested name doesn\'t contain a sub: %s', name)
             return False
 
         substr = str(subid)
