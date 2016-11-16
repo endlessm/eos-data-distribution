@@ -147,7 +147,7 @@ class ChunksGetter(Chunks.Producer):
 
         for shard in sub['shards']:
             logger.debug('looking at shard: %s', shard)
-            postfix = '%s/%s' % (shard['path'], shard['sha256_csum'])
+            postfix = '%s/%s/%s' % (sub ['timestamp'], shard['path'], shard['sha256_csum'])
             name = self.registerPrefix (postfix=postfix)
             logger.debug ('created name: %s', name)
             prefixes[postfix] = name
