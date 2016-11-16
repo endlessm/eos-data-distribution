@@ -21,6 +21,7 @@
 
 import logging
 from os import path
+from pyndn import Name
 
 LOGLEVEL = logging.DEBUG
 BASE = '/endless/'
@@ -33,9 +34,9 @@ class Names(dict):
     def __init__(self, *args, **kwargs):
         super(Names, self).__init__(*args, **kwargs)
 
-NAMES = Names ({k: path.join(BASE, v) for k,v in {
-            'BASE': '',
-            'INSTALLED': 'installed',
-            'SOMA':  'soma/v1'
-        }.items()})
+NAMES = Names ({k: Name (path.join(BASE, v)) for k,v in {
+    'BASE': '',
+    'INSTALLED': 'installed',
+    'SOMA':  'soma/v1'
+}.items()})
 

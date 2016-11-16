@@ -44,7 +44,7 @@ class DbusConsumer(Consumer):
         self.target = target
         self.connect('data', self.getShards)
 
-        appname = lambda i: path.join(Endless.NAMES.INSTALLED, i)
+        appname = lambda i: Name (Endless.NAMES.INSTALLED).append (i)
         [self.expressInterest(name=appname(i), forever=True) for i in appids]
 
     def getShards(self, consumer, interest, data):
