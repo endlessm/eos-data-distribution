@@ -97,7 +97,6 @@ class ChunksGetter(Chunks.Producer):
 
         if basename:
             self.subid = name.getSubName(basename.size()).get(0)
-            self.registerPrefix(name)
             names = self.publish()
 
             logger.info ('got names: %s', names)
