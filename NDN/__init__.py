@@ -152,7 +152,7 @@ class Producer(Base):
         postfix = makeName(postfix)
 
         if not prefix:
-            prefix = self.name.append(postfix)
+            prefix = Name(self.name).append(postfix)
         try:
             flags = flags or self.flags
         except:
