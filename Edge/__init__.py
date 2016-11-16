@@ -41,6 +41,9 @@ logger = logging.getLogger(__name__)
 def dump(*args, **kwargs):
     print 'DUMP', args, kwargs
 
+def getSubIdName (name, basename):
+    return name.getSubName(basename.size()).get(0)
+
 class Getter(NDN.Producer):
     def __init__(self, name,
                  *args, **kwargs):
@@ -55,15 +58,15 @@ class Getter(NDN.Producer):
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subid = name.getSubName(self.name.size())
-        logger.info ('subid is: %s', NDN.dumpName(subid))
+        subid = getSubIdName (name, self.name)
+        logger.info ('subid is: %s', subid)
 
         logger.info('interest: %s, on %s for %s', NDN.dumpName(name), self.name, subid)
         if not subid:
             logger.warning('Error, the requested name doesn\'t contain a sub: %s', NDN.dumpName(name))
             return False
 
-        substr = str(subid.get(0))
+        substr = str(subid)
         try:
             # we still register, because this might be asking for an old
             # subscription that we lost track of. Note that this is racy,
@@ -96,7 +99,7 @@ class ChunksGetter(Chunks.Producer):
         self.session = requests.Session()
 
         if basename:
-            self.subid = name.getSubName(basename.size()).get(0)
+            self.subid = getSubIdName(name, basename)
             names = self.publish()
 
             logger.info ('got names: %s', names)
