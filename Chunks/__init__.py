@@ -33,6 +33,9 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
+def getSeg (name):
+    return name.get(name.size() - 1).toNumber()
+
 class Producer(NDN.Producer):
     def __init__(self, name, filename=None, chunkSize=4096, mode="r",
                  *args, **kwargs):
@@ -52,9 +55,9 @@ class Producer(NDN.Producer):
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
         name = interest.getName()
-        logger.debug ('got interest: %s', name)
+        logger.debug ('got interest: %s, %d', name, getSeg (name))
         # hack to get the segment number
-        seg = int(repr(name).split('%')[-1], 16)
+        seg = getSeg (name)
 
         content = self.getChunk(name, seg, prefix=prefix)
         self.send(name, content)
@@ -86,7 +89,7 @@ class Consumer(NDN.Consumer):
     def onData(self, o, interest, data):
         name = data.getName()
         logger.debug('got data: %s', NDN.dumpName(name))
-        seg = int(name.toUri().split('%')[-1], 16)
+        seg = getSeg (name)
         self.putChunk(seg, data)
 
         reduce (lambda n, r: self.getNext(n), range(self.pipeline), name)
