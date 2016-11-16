@@ -27,6 +27,8 @@ from NDN import Endless
 
 from os import path
 
+from gi.repository import GLib
+
 def dump(*list):
     result = ""
     for element in list:

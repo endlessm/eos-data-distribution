@@ -48,10 +48,10 @@ if __name__ == "__main__":
     face = Face()
 
     if args.no_chunks:
-        consumer = NDN.Consumer(args.name, face=face, auto=True)
+        consumer = NDN.Consumer(name=args.name, face=face, auto=True)
     else:
         args.name += "/chunked/"
-        consumer = Chunks.Consumer(args.name, args.filename, face=face, auto=True)
+        consumer = Chunks.Consumer(name=args.name, filename=args.filename, face=face, auto=True)
 
     loop = GLib.MainLoop()
 
