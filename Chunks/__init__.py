@@ -96,8 +96,8 @@ class Consumer(NDN.Consumer):
         self.getNext(name)
 
     def getNext(self, name):
-        suc = name.getSuccessor()
-        logger.debug('get Next %s → %s', NDN.dumpName(name), NDN.dumpName(suc))
+        suc = Name(name).getSuccessor()
+        logger.debug('get Next %s → %s', name, suc)
         self.expressInterest(suc)
         return suc
 
