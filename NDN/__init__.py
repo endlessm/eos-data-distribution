@@ -203,9 +203,10 @@ class Consumer(Base):
     def makeInterest(self, name):
         return Name(name)
 
-    def expressInterest(self, name=None, forever=False):
+    def expressInterest(self, name=None, forever=False, postfix=None):
         if name == None: name = self.name
         segname = self.makeInterest(name)
+        if postfix: segname.append (postfix)
         logger.info ("Express Interest name: %s", dumpName(segname))
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
         self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)

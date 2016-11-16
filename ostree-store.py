@@ -50,6 +50,7 @@ class Store(Producer):
         self.tempdir = tempdir
         self.repo = repo
         self.chunks = dict()
+        self.subconsumers = dict()
 
         self.store = SimpleStore.Producer(tempdir, prefixes.producer)
 
@@ -69,7 +70,14 @@ class Store(Producer):
             logger.warning('Error, the requested name doesn\'t contain a sub', NDN.dumpName(name))
             return False
 
-        self.consumer.expressInterest(path.join(self.prefixes.producer, path.basename(subid)))
+        try:
+            logger.warning ('We already have a consumer for this sub: %s', subid)
+            return self.subconsumers [subid]
+        except:
+            pass
+
+        self.subconsumers [subid] = self.consumer.expressInterest(self.prefixes.producer, postfix=subid)
+        return self.subconsumers [subid]
 
     def getShards(self, consumer, interest, data):
         buf = self.dataToBytes(data)
