@@ -52,6 +52,7 @@ class Producer(NDN.Producer):
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
         name = interest.getName()
+        logger.debug ('got interest: %s', name)
         # hack to get the segment number
         seg = int(repr(name).split('%')[-1], 16)
 
@@ -63,6 +64,8 @@ class Consumer(NDN.Consumer):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         if filename:
             self.f = open(filename, mode)
+
+        logger.debug ('creating consumer: %s, %s', name, filename)
 
         self.pipeline = pipeline
         self.chunkSize = chunkSize
@@ -76,7 +79,7 @@ class Consumer(NDN.Consumer):
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
 
-        logger.debug('getting chunk %d: %d', n, self.chunkSize)
+        logger.debug('getting chunk %d: %d: %s', n, self.chunkSize, self.f)
         self.f.seek(self.chunkSize * n)
         return self.f.write(buf)
 
