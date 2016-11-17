@@ -77,7 +77,7 @@ class Consumer(NDN.Consumer):
 
     def consume(self, name=None, start=0, *args, **kwargs):
         if not name: name = self.name
-        self.expressInterest(name=Name(name).appendSegment(0), *args, **kwargs)
+        self.expressInterest(name=Name(name).appendSegment(0), forever=True, *args, **kwargs)
 
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
@@ -97,6 +97,6 @@ class Consumer(NDN.Consumer):
     def getNext(self, name):
         suc = Name(name).getSuccessor()
         logger.debug('get Next %s → %s', name, suc)
-        self.expressInterest(suc)
+        self.expressInterest(suc, forever=True)
         return suc
 
