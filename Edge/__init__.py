@@ -24,8 +24,6 @@ from pyndn import Face
 
 from pyndn import ForwardingFlags
 
-import requests
-
 import NDN
 import Chunks
 
@@ -33,6 +31,12 @@ from os import path
 import json
 
 from NDN import Endless
+
+import gi
+gi.require_version('Soup', '2.4')
+
+from gi.repository import GLib
+from gi.repository import Soup
 
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
@@ -96,7 +100,7 @@ class ChunksGetter(Chunks.Producer):
         self.subs = dict()
         self.subprefixes = dict()
         self.names = dict()
-        self.session = requests.Session()
+        self.session = Soup.Session ()
 
         if basename:
             self.subid = getSubIdName(name, basename)
@@ -122,9 +126,11 @@ class ChunksGetter(Chunks.Producer):
         bytes = tuple(i*self.chunkSize for i in (n, n+1))
 
         logger.debug("getChunk %d, %s, %s, %s", n, bytes, prefix, shard)
-        r = self.session.get (shard['download_uri'],
-                          headers = {'Range': 'bytes=%d-%d'%bytes})
-        return r.text[:self.chunkSize]
+        msg = Soup.Message.new ('GET', shard['download_uri'])
+        msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
+        r = self.session.send_message (msg)
+
+        return msg.response_body.data
 
     def publish(self, subId=None):
         if not subId: subId = self.subid
@@ -160,9 +166,11 @@ class ChunksGetter(Chunks.Producer):
     def getSubscription(self, id):
         logger.info('base: %s', self.base)
         url = "%s/v1/%s/manifest.json" % (self.base, id)
-        r = self.session.get(url)
-        if r.status_code == requests.codes.ok:
-            return r.json()
+        msg = Soup.Message.new ("GET", url)
+        r = self.session.send_message (msg)
+
+        if msg.status_code == Soup.Status.OK:
+            return json.loads(msg.response_body.data)
         else: return False
 
 if __name__ == '__main__':
