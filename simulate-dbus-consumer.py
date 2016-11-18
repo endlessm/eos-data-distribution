@@ -42,14 +42,12 @@ class DbusConsumer(Consumer):
         Consumer.__init__(self, name=name, *args, **kwargs)
 
         self.target = target
-        self.connect('data', self.getShards)
+        self.connect('data', self.notifyEKN)
 
         appname = lambda i: Name (Endless.NAMES.INSTALLED).append (i)
         [self.expressInterest(name=appname(i), forever=True) for i in appids]
 
-    def getShards(self, consumer, interest, data):
-        buf = self.dataToBytes(data)
-        names = json.loads(str(buf))
+    def notifyEKN(self, consumer, interest, data):
         print "GOT NAMES, all the names, the best names", names
 
 if __name__ == "__main__":
