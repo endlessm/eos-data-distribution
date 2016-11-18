@@ -22,8 +22,6 @@ from os import path
 import json
 
 from pyndn import Name
-from pyndn import Data
-from pyndn import Face
 from pyndn import ForwardingFlags
 
 from endless_ndn import NDN, Chunks
@@ -78,11 +76,6 @@ class Getter(NDN.Producer):
 
         self.getters[substr] = ChunksGetter(name=name, basename=self.name, face=self.face)
         return True
-
-    def sendLinks(self, name, names):
-        link = Link(Data(name))
-        [link.addDelegation(0, Name(n)) for n in names]
-        self.sendFinish(link)
 
 class ChunksGetter(Chunks.Producer):
     def __init__(self, name, basename=None,
