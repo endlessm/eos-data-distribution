@@ -71,8 +71,9 @@ class Store(Producer):
             return False
 
         try:
+            ret =  self.subconsumers [subid]
             logger.warning ('We already have a consumer for this sub: %s', subid)
-            return self.subconsumers [subid]
+            return ret
         except:
             pass
 
