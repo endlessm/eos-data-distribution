@@ -6,9 +6,21 @@ APPIDS="10521bb3a18b573f088f84e59c9bbb6c2e2a1a67"
 
 title="printf '\033]2;%s\033\\'"
 
-run_router="$title 'router'; python ${BASE_PATH}/edge-router-avahi.py 2>&1 | tee ${BASE_PATH}/router.log"
-run_store="$title 'store'; python ${BASE_PATH}/ostree-store.py -r repo -t ${TEMP_DIR} 2>&1 | tee ${BASE_PATH}/store.log"
-run_dbus_consumer="$title 'dbus'; python ${BASE_PATH}/simulate-dbus-consumer.py $APPIDS 2>&1 | tee ${BASE_PATH}/dbus.log"
+profile () {
+        n=$1
+        shift 1
+        echo "python -m flamegraph -o $n.log $n.py $@"
+}
+
+run () {
+        t=$1
+        shift 1
+        echo "$title '$t'; $(profile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log"
+}
+
+run_router="$(run router edge-router-avahi)"
+run_store="$(run store ostree-store -r repo -t ${TEMP_DIR})"
+run_dbus_consumer="$(run dbus simulate-dbus-consumer $APPIDS)"
 
 nfd-stop
 rm -rf ${TEMP_DIR}/*
