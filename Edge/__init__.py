@@ -101,6 +101,9 @@ class ChunksGetter(Chunks.Producer):
         self.subprefixes = dict()
         self.names = dict()
         self.session = Soup.Session ()
+        self.session.props.max_conns = 100
+        self.session.props.max_conns_per_host = 100
+        self.msgs = dict ()
 
         if basename:
             self.subid = getSubIdName(name, basename)
@@ -153,15 +156,28 @@ class ChunksGetter(Chunks.Producer):
 
         for shard in sub['shards']:
             logger.debug('looking at shard: %s', shard)
-            postfix = '%s/%s/%s' % (sub ['timestamp'], shard['path'], shard['sha256_csum'])
+            postfix = '%s/%s/%s' % (sub ['timestamp'], shard['sha256_csum'], shard['path'])
             name = self.registerPrefix (postfix=postfix)
             logger.debug ('created name: %s', name)
+            msg = Soup.Message.new ('GET', shard['download_uri'])
+            streamToData = partial (self.streamToData, name=name)
+            self.session.send_async (msg, None, streamToData)
+
             prefixes[postfix] = name
             self.names[name] = shard
+            self.msgs [name] = msg
             ret.append(name.toUri())
 
         self.subprefixes[subId] = prefixes
         return ret
+
+    def streamToData (self, session, task, name):
+        name = Name (name).appendSegment (0)
+        istream = session.send_finish (task)
+        buf = bytearray (self.chunkSize)
+        while istream.read (buf, None):
+            self.send(name, buf)
+            name = Name (name).getSuccessor()
 
     def getSubscription(self, id):
         logger.info('base: %s', self.base)
