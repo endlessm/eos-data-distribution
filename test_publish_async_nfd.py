@@ -25,8 +25,6 @@ from pyndn import Face
 import Chunks
 from NDN import Endless
 
-from os import path
-
 from gi.repository import GLib
 
 def dump(*list):
@@ -47,7 +45,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.name:
-        args.name = path.join(Endless.NAMES.BASE, "testchunks/", args.filename)
+        args.name = Name(Endless.NAMES.BASE).append("testchunks/").append(args.filename)
     args.name += "/chunked"
 
     producer = Chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
