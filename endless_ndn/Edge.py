@@ -116,15 +116,16 @@ class ChunksGetter(Chunks.Producer):
         Convert data requests to urls like:
         "https://subscriptions.prod.soma.endless-cloud.com/v1/10521bb3a18b573f088f84e59c9bbb6c2e2a1a67/manifest.json"
         """
-        import re
 
         logger.debug ('asked for %s: %s (%d)', name, prefix, n)
         shard = self.names[prefix]
-        bytes = tuple(i*self.chunkSize for i in (n, n+1))
 
-        logger.debug("getChunk %d, %s, %s, %s", n, bytes, prefix, shard)
+        start_bytes = (n*self.chunkSize)
+        end_bytes = ((n+1)*self.chunkSize) - 1
+
+        logger.debug("getChunk %d, %d-%d, %s, %s", n, start_bytes, end_bytes, prefix, shard)
         msg = Soup.Message.new ('GET', shard['download_uri'])
-        msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
+        msg.request_headers.append ('Range', 'bytes=%d-%d' % (start_bytes, end_bytes))
         r = self.session.send_message (msg)
 
         return msg.response_body.data
