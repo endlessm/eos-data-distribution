@@ -83,7 +83,7 @@ class Store(Producer):
     def getShards(self, consumer, interest, data):
         buf = self.dataToBytes(data)
         names = json.loads(str(buf))
-        filename = lambda n: path.join(self.tempdir, path.basename(n) + '.shard')
+        filename = lambda n: path.join(self.tempdir, path.basename(n))
 
         logger.info ('got shards: %s', names)
         if not names:
