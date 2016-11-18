@@ -125,15 +125,7 @@ class ChunksGetter(Chunks.Producer):
         import re
 
         logger.debug ('asked for %s: %s (%d)', name, prefix, n)
-        shard = self.names[prefix]
-        bytes = tuple(i*self.chunkSize for i in (n, n+1))
-
-        logger.debug("getChunk %d, %s, %s, %s", n, bytes, prefix, shard)
-        msg = Soup.Message.new ('GET', shard['download_uri'])
-        msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
-        r = self.session.send_message (msg)
-
-        return msg.response_body.data
+        return True
 
     def publish(self, subId=None):
         if not subId: subId = self.subid
