@@ -32,7 +32,7 @@ from pyndn import Face
 from os import path
 from functools import partial
 
-from NDN import Endless
+from endless_ndn.NDN import Endless
 
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)

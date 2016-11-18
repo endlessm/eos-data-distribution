@@ -3,7 +3,7 @@ import time
 
 from os import path, utime
 
-import SimpleStore
+from endless_ndn import SimpleStore
 
 def touch(fname, times=None):
     with open(fname, 'a'):

@@ -21,8 +21,7 @@ import time
 from pyndn import Name
 from pyndn import Face
 
-import Chunks
-import NDN
+from endless_ndn import Chunks, NDN
 
 from gi.repository import GLib
 

@@ -29,7 +29,7 @@ from pyndn import Name
 from pyndn import Data
 from pyndn import Face
 
-import NDN
+from endless_ndn import NDN
 
 from os import path
 from functools import partial

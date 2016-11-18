@@ -21,9 +21,9 @@ import re
 
 from os import path, walk
 from pyndn import Face
-from DirTools import Monitor
 
-from Chunks import Pool
+from endless_ndn.DirTools import Monitor
+from endless_ndn.NDN import Pool
 
 r = re.compile(r'^/+')
 

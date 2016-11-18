@@ -17,7 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import SimpleStore
+from os import path
+import json
 
 import gi
 
@@ -27,12 +28,8 @@ from gi.repository import GObject
 from gi.repository import GLib
 #from gi.repository import OSTree
 
-from NDN import Consumer, Producer, Endless
-import Chunks
-import Edge
-
-from os import path
-import json
+from endless_ndn.NDN import Consumer, Producer, Endless
+from endless_ndn import Chunks, Edge, SimpleStore
 
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)

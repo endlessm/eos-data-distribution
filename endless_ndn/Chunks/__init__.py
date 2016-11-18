@@ -26,8 +26,8 @@ from gi.repository import GLib
 from pyndn import Name
 from pyndn import Data
 
-import NDN
-from NDN import Endless
+from endless_ndn import NDN
+from endless_ndn.NDN import Endless
 
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)

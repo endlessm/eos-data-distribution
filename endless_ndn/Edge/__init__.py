@@ -18,19 +18,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-from pyndn import Name
-from pyndn import Data
-from pyndn import Face
-
-from pyndn import ForwardingFlags
-
-import NDN
-import Chunks
-
 from os import path
 import json
 
-from NDN import Endless
+from pyndn import Name
+from pyndn import Data
+from pyndn import Face
+from pyndn import ForwardingFlags
+
+from endless_ndn import NDN, Chunks
+from endless_ndn.NDN import Endless
 
 import gi
 gi.require_version('Soup', '2.4')

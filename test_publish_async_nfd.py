@@ -22,8 +22,8 @@ from pyndn import Name
 from pyndn import Data
 from pyndn import Face
 
-import Chunks
-from NDN import Endless
+from endless_ndn import Chunks
+from endless_ndn.NDN import Endless
 
 from os import path
 

@@ -18,19 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import netifaces
 import gi
 
 from gi.repository import GLib
 from gi.repository import GObject
 #from gi.repository import Gio
 
-from MDNS import ServiceDiscovery
-import netifaces
-
-from Chunks import Producer
-from NDN import Endless
-
-import Edge
+from endless_ndn.MDNS import ServiceDiscovery
+from endless_ndn.Chunks import Producer
+from endless_ndn.NDN import Endless
+from endless_ndn import Edge
 
 SERVICES = ["_nfd._tcp", "_nfd._udp"]
 

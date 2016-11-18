@@ -1,5 +1,5 @@
 import pytest
-import DirTools
+from endless_ndn import DirTools
 
 from gi.repository import GLib
 
