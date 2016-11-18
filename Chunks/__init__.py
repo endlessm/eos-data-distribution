@@ -60,7 +60,8 @@ class Producer(NDN.Producer):
         seg = getSeg (name)
 
         content = self.getChunk(name, seg, prefix=prefix)
-        self.send(name, content)
+        if content != True:
+            self.send(name, content)
 
 class Consumer(NDN.Consumer):
     def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5, *args, **kwargs):
