@@ -27,9 +27,6 @@ from endless_ndn.NDN import Pool
 
 r = re.compile(r'^/+')
 
-def dump(*args, **kwargs):
-    print 'DUMPING', args, kwargs
-
 
 class Base(Pool.MixPool):
 

@@ -18,6 +18,7 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 from os import path
+import pprint
 
 import gi
 gi.require_version('Gio', '2.0')
@@ -32,19 +33,13 @@ from endless_ndn.SimpleStore import Producer as SimpleStoreProducer
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
-def dump(*list):
-    result = ""
-    for element in list:
-        result += (element if type(element) is str else str(element)) + " "
-    print(result)
-
 def mount_added_cb(monitor, mount, store):
     drive = mount.get_drive()
     root = mount.get_root()
     base = path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
     if drive:
-        dump(drive.get_name())
+        pprint.pprint(drive.get_name())
 
     if path.exists(base):
         print ("Starting import")

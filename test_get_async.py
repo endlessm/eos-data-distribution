@@ -25,12 +25,6 @@ from endless_ndn import Chunks, NDN
 
 from gi.repository import GLib
 
-def dump(*list):
-    result = ""
-    for element in list:
-        result += (element if type(element) is str else str(element)) + " "
-    print(result)
-
 if __name__ == "__main__":
     import sys
     import argparse

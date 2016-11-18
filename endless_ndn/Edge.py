@@ -39,9 +39,6 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
-def dump(*args, **kwargs):
-    print 'DUMP', args, kwargs
-
 def getSubIdName (name, basename):
     return name.getSubName(basename.size()).get(0)
 

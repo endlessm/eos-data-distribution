@@ -31,12 +31,6 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-def dump(*list, **kwargs):
-    result = ""
-    for element in list:
-        result += (element if type(element) is str else str(element)) + " "
-    print(result)
-
 class DbusConsumer(Consumer):
     def __init__(self, name, target, appids, *args, **kwargs):
         Consumer.__init__(self, name=name, *args, **kwargs)
