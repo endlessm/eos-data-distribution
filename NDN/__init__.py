@@ -123,6 +123,7 @@ class Producer(Base):
         data.setContent(content)
         logger.debug ('sending: %d, on %s', content.__len__(), dumpName(name))
         self.sendFinish(data)
+        return name
 
     def sendFinish(self, data):
         self.sign(data)
