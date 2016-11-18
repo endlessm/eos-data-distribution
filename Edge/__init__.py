@@ -82,7 +82,7 @@ class Getter(NDN.Producer):
         except:
             pass
 
-        self.getters[substr] = ChunksGetter(name=name, basename=self.name)
+        self.getters[substr] = ChunksGetter(name=name, basename=self.name, face=self.face)
         return True
 
     def sendLinks(self, name, names):
