@@ -146,7 +146,7 @@ class ChunksGetter(Chunks.Producer):
             logger.warning('subscription already runing for %s…ignoring new request', subId)
             return self.subs[subId]
 
-        sub = self.subs[subId] = self.getSubscription(subId)
+        sub = self.getSubscription(subId)
         if not sub:
             logger.warning('This sub is invalid: %s', subId)
             return sub
@@ -169,15 +169,18 @@ class ChunksGetter(Chunks.Producer):
             ret.append(name.toUri())
 
         self.subprefixes[subId] = prefixes
+        self.subs [subId] = ret
         return ret
 
     def streamToData (self, session, task, name):
         name = Name (name).appendSegment (0)
         istream = session.send_finish (task)
+        name = Name (name).appendSegment (0)
         buf = bytearray (self.chunkSize)
         while istream.read (buf, None):
             self.send(name, buf)
-            name = Name (name).getSuccessor()
+            name = name.getSuccessor()
+            count +=1
 
     def getSubscription(self, id):
         logger.info('base: %s', self.base)
