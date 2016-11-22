@@ -53,7 +53,7 @@ class Base(Pool.MixPool):
             basename = r.sub('', filename.split(self.split)[1])
         else:
             basename = filename
-        return path.join(self.prefix, basename)
+        return path.join(self.prefix.toUri (), basename)
 
     def unpublish(self, basedir):
         [self.unpublish_name(n) for n in self.dirpubs[basedir]]
