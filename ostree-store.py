@@ -58,7 +58,6 @@ class Store(Producer):
         self.store.connect('producer-removed', self.onProducerRemoved)
 
         self.consumer = Consumer(name=prefixes.consumer, *args, **kwargs)
-
         self.consumer.connect('data', self.getShards)
 
         self.connect('interest', self.onInterest)

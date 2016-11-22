@@ -98,12 +98,15 @@ class ChunksGetter(Chunks.Producer):
         name.append ('shards')
         super(ChunksGetter, self).__init__(name, *args, **kwargs)
         self.base = base
+
         self.subs = dict()
         self.subprefixes = dict()
         self.names = dict()
+
         self.session = Soup.Session ()
         self.session.props.max_conns = 100
         self.session.props.max_conns_per_host = 100
+
         self.msgs = dict ()
 
         if basename:
