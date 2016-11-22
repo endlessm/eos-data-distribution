@@ -92,8 +92,9 @@ class Consumer(NDN.Consumer):
         logger.debug('got data: %s', NDN.dumpName(name))
         seg = getSeg (name)
 
-        # write async
-        GLib.idle_add (lambda *args: idleWrapper (self.putChunk, seg, data))
+        #TODO: write async
+        self.getNext (name)
+        self.putChunk (seg, data)
 
     def getNext(self, name):
         suc = Name(name).getSuccessor()
