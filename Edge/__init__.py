@@ -28,6 +28,7 @@ import NDN
 import Chunks
 
 from os import path
+from functools import partial
 import json
 
 from NDN import Endless
@@ -122,9 +123,10 @@ class ChunksGetter(Chunks.Producer):
         Convert data requests to urls like:
         "https://subscriptions.prod.soma.endless-cloud.com/v1/10521bb3a18b573f088f84e59c9bbb6c2e2a1a67/manifest.json"
         """
-        import re
-
         logger.debug ('asked for %s: %s (%d)', name, prefix, n)
+
+        shard = self.names[prefix]
+        self.soupGet (name, n, shard ['download_uri'])
         return True
 
     def publish(self, subId=None):
@@ -151,28 +153,13 @@ class ChunksGetter(Chunks.Producer):
             postfix = '%s/%s/%s' % (sub ['timestamp'], shard['sha256_csum'], shard['path'])
             name = self.registerPrefix (postfix=postfix)
             logger.debug ('created name: %s', name)
-            msg = Soup.Message.new ('GET', shard['download_uri'])
-            streamToData = partial (self.streamToData, name=name)
-            self.session.send_async (msg, None, streamToData)
-
             prefixes[postfix] = name
             self.names[name] = shard
-            self.msgs [name] = msg
             ret.append(name.toUri())
 
         self.subprefixes[subId] = prefixes
         self.subs [subId] = ret
         return ret
-
-    def streamToData (self, session, task, name):
-        name = Name (name).appendSegment (0)
-        istream = session.send_finish (task)
-        name = Name (name).appendSegment (0)
-        buf = bytearray (self.chunkSize)
-        while istream.read (buf, None):
-            self.send(name, buf)
-            name = name.getSuccessor()
-            count +=1
 
     def getSubscription(self, id):
         logger.info('base: %s', self.base)
@@ -183,6 +170,26 @@ class ChunksGetter(Chunks.Producer):
         if msg.status_code == Soup.Status.OK:
             return json.loads(msg.response_body.data)
         else: return False
+
+    def soupGet (self, name, n, uri):
+        msg = Soup.Message.new ('GET', uri)
+        bytes = (n*self.chunkSize, (n+1)*self.chunkSize - 1)
+        msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
+
+        streamToData = partial (self.streamToData, name=name, n=n)
+        self.session.send_async (msg, None, streamToData)
+        return msg
+
+    def streamToData (self, session, task, name, n):
+        istream = session.send_finish (task)
+        name = Name (name)
+        if n == 0 and False:
+            name.appendSegment (0)
+
+        buf = bytearray (self.chunkSize)
+        while istream.read (buf, None):
+            self.send(name, buf)
+            name = name.getSuccessor()
 
 if __name__ == '__main__':
     from gi.repository import GLib
