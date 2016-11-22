@@ -33,6 +33,10 @@ ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
 from SimpleStore import Producer as SimpleStoreProducer
 
+import logging
+logging.basicConfig(level=Endless.LOGLEVEL)
+logger = logging.getLogger(__name__)
+
 def dump(*list):
     result = ""
     for element in list:
@@ -48,10 +52,10 @@ def mount_added_cb(monitor, mount, store):
         dump(drive.get_name())
 
     if path.exists(base):
-        print ("Starting import")
+        logger.info ("Starting import")
         store.publish_all_names(base)
     else:
-        print ("No NDN data found !")
+        logger.warning ("No NDN data found !")
 
 def mount_removed_cb(monitor, mount, store):
     root = mount.get_root()
@@ -61,7 +65,7 @@ def mount_removed_cb(monitor, mount, store):
 if __name__ == '__main__':
     loop = GLib.MainLoop()
     monitor = Gio.VolumeMonitor.get()
-    store = SimpleStoreProducer(prefix=Endless.NAME.SOMA, split=ENDLESS_NDN_CACHE_PATH)
+    store = SimpleStoreProducer(prefix=Endless.NAMES.SOMA, split=ENDLESS_NDN_CACHE_PATH)
 
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)
