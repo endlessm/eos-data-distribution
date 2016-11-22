@@ -71,14 +71,16 @@ class Store(Producer):
             return False
 
         try:
-            ret =  self.subconsumers [subid]
-            logger.warning ('We already have a consumer for this sub: %s', subid)
+            ret = self.subconsumers [subid]
+            logger.warning ('We already have a consumer for this sub: %s → %s', subid, ret)
             return ret
         except:
             pass
 
-        self.subconsumers [subid] = self.consumer.expressInterest(self.prefixes.producer, postfix=subid)
-        return self.subconsumers [subid]
+        sub = self.consumer.expressInterest(self.prefixes.producer, postfix=subid, forever=True)
+        logger.info ('getting new interest registred: %s', sub)
+        self.subconsumers [subid] = sub
+        return sub
 
     def getShards(self, consumer, interest, data):
         buf = self.dataToBytes(data)
