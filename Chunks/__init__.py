@@ -97,7 +97,7 @@ class Consumer(NDN.Consumer):
         self.putChunk (seg, data)
 
     def getNext(self, name):
-        suc = Name(name).getSuccessor()
+        suc = name.getSuccessor()
         logger.debug('get Next %s → %s', name, suc)
         self.expressInterest(suc, forever=True)
         return suc
