@@ -104,6 +104,7 @@ class ChunksGetter(Chunks.Producer):
         self.names = dict()
 
         self.session = Soup.Session ()
+        self.session.props.ssl_strict = False
         self.session.props.max_conns = 100
         self.session.props.max_conns_per_host = 100
 
