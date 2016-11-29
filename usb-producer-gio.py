@@ -25,9 +25,11 @@ from gi.repository import Gio
 from gi.repository import GLib
 
 from os import path
-from Chunks import Producer
 
 from NDN import Endless
+
+import pprint
+pp = pprint.PrettyPrinter ()
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
@@ -37,19 +39,13 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
-def dump(*list):
-    result = ""
-    for element in list:
-        result += (element if type(element) is str else str(element)) + " "
-    print(result)
-
 def mount_added_cb(monitor, mount, store):
     drive = mount.get_drive()
     root = mount.get_root()
     base = path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
     if drive:
-        dump(drive.get_name())
+        pp.pprint(drive.get_name())
 
     if path.exists(base):
         logger.info ("Starting import")
@@ -60,7 +56,7 @@ def mount_added_cb(monitor, mount, store):
 def mount_removed_cb(monitor, mount, store):
     root = mount.get_root()
     p = root.get_path()
-    print [store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)]
+    pp.pprint ([store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)])
 
 if __name__ == '__main__':
     loop = GLib.MainLoop()
