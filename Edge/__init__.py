@@ -93,7 +93,7 @@ class Getter(NDN.Producer):
 
 class ChunksGetter(Chunks.Producer):
     def __init__(self, name, basename=None,
-                 base = 'https://subscriptions.prod.soma.endless-cloud.com',
+                 base = Endless.SOMA_SUB_BASE,
                  *args, **kwargs):
         name.append ('shards')
         super(ChunksGetter, self).__init__(name, *args, **kwargs)
