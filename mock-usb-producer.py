@@ -37,7 +37,8 @@ if __name__ == '__main__':
     parser.add_argument("dir")
     args = parser.parse_args()
 
-    input ("Press Enter key to start Store on %s"%args.dir)
     store = SimpleStoreProducer(prefix=Endless.NAMES.SOMA, split=args.dir)
-    logger.info('creating store', args.__dict__)
+    logger.info('creating store: %s', args.__dict__)
+    store.publish_all_names(path.realpath (args.dir))
+
     GLib.MainLoop().run()
