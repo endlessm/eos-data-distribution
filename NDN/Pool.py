@@ -31,6 +31,11 @@ from pyndn import Face
 
 import NDN
 
+from NDN import Endless
+import logging
+logging.basicConfig(level=Endless.LOGLEVEL)
+logger = logging.getLogger(__name__)
+
 from os import path
 from functools import partial
 
@@ -56,7 +61,8 @@ class Producer(Pool):
         super(Producer, self).__init__(klass=klass, *args, **kwargs)
 
     def add(self, *args, **kwargs):
-        kwargs['face'] = self.face
+        logger.info ('adding producer: %s %s', args, kwargs)
+        # kwargs['face'] = self.face
         (name, filename) = args
         producer = self.klass(*args, **kwargs)
         producer.registerPrefix()
@@ -68,6 +74,7 @@ class Producer(Pool):
                     self.remove(name))
 
     def remove(self, name):
+        logger.info ('removing producer: %s', name)
         producer = self.pool[name]
         producer.removeRegisteredPrefix(name)
         self.emit('removed', name)
@@ -77,6 +84,7 @@ class Consumer(Pool):
         super(Consumer, self).__init__(klass=klass, *args, **kwargs)
 
     def add(self, *args, **kwargs):
+        logger.info ('adding consumer: %s %s', args, kwargs)
         kwargs['face'] = self.face
         (name, filename) = args
         consumer = self.klass(*args, **kwargs)
@@ -85,6 +93,7 @@ class Consumer(Pool):
         self.emit('added', name, consumer)
 
     def remove(self, name):
+        logger.info ('removing consumer: %s', name)
         consumer = self.pool[name]
         consumer.removePendingInterest(name)
         self.emit('removed', name)
@@ -108,6 +117,9 @@ class MixPool(GObject.GObject):
         self.producer = Producer(klass=producerKlass, *args, **kwargs)
         self.consumer = Consumer(klass=consumerKlass, *args, **kwargs)
 
+        self.producers = dict()
+        self.consumers = dict()
+
         self.producer.connect('removed', lambda p, d=None: self.emit('producer-removed', p))
         self.producer.connect('added', lambda p, P, d=None: self.emit('producer-added', p, P))
         self.consumer.connect('removed', lambda p, d=None: self.emit('consumer-removed', p))
@@ -118,3 +130,15 @@ class MixPool(GObject.GObject):
 
     def get_consumer(self):
         return self.consumer
+
+    def add_producer(self, *args, **kwargs):
+        return self.producer.add (*args, **kwargs)
+
+    def add_consumer(self, *args, **kwargs):
+        return self.consumer.add (*args, **kwargs)
+
+    def remove_producer(self, *args, **kwargs):
+        return self.producer.remove (*args, **kwargs)
+
+    def remove_consumer(self, *args, **kwargs):
+        self.consumer.remove (*args, **kwargs)
