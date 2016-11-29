@@ -34,7 +34,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("dir", required=True)
+    parser.add_argument("dir")
     args = parser.parse_args()
 
     input ("Press Enter key to start Store on %s"%args.dir)
