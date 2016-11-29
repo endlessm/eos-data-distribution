@@ -165,8 +165,8 @@ class ChunksGetter(Chunks.Producer):
         return ret
 
     def getSubscription(self, id):
-        logger.info('base: %s', self.base)
         url = "%s/v1/%s/manifest.json" % (self.base, id)
+        logger.info('base: %s → url: %s', self.base, url)
         msg = Soup.Message.new ("GET", url)
         r = self.session.send_message (msg)
 
