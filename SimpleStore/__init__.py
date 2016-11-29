@@ -27,12 +27,7 @@ from Chunks import Pool
 
 r = re.compile(r'^/+')
 
-def dump(*args, **kwargs):
-    print 'DUMPING', args, kwargs
-
-
 class Base(Pool.MixPool):
-
     def __init__(self, base=None, prefix='/', ext='.shard', split=None, *args, **kwargs):
         super(Base, self).__init__(*args, **kwargs)
         self.base = base
@@ -43,7 +38,6 @@ class Base(Pool.MixPool):
         # XXX(xaiki): this is a lot of bookeeping, can probably be reduced
         self.dirs = dict()
         self.dirpubs = dict()
-        self.producers = dict()
         self.filenames = dict()
 
         if base: self.publish_all_names(base)
@@ -65,10 +59,9 @@ class Base(Pool.MixPool):
 
     def unpublish_name(self, name, basedir=None):
         print 'remove', name
-        self.producer.remove(name)
+        self.remove_producer(name)
         filename = self.filenames[name]
         del self.filenames[name]
-        del self.producers[filename]
 
         if basedir:
             del self.dirpubs[basedir][n]
@@ -83,8 +76,7 @@ class Base(Pool.MixPool):
             return
 
         name = self._path_to_name(filename)
-        producer = self.producer.add(name, filename)
-        self.producers[filename] = name
+        producer = self.add_producer(name, filename)
         self.filenames[name] = filename
         if basedir:
             try:
