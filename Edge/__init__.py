@@ -64,25 +64,31 @@ class Getter(NDN.Producer):
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
         subid = getSubIdName (name, self.name)
-        logger.info ('subid is: %s', subid)
+        substr = str(subid)
 
-        logger.info('interest: %s, on %s for %s', name, self.name, subid)
         if not subid:
             logger.warning('Error, the requested name doesn\'t contain a sub: %s', name)
             return False
 
-        substr = str(subid)
+
         try:
             # we still register, because this might be asking for an old
             # subscription that we lost track of. Note that this is racy,
             # because there is no getter associated (yet), if we have
             # registered, this is a noop, is subscribe.
-            self.getters[substr].publish()
+            getter = self.getters[substr]
+            if getter.subIsRunning (substr):
+                # we're getting interests that are for the chunk getters
+                return False
+
+            getter.publish()
             logger.warning('Error, we got a path, expected a subid: %s', subid)
             return False
         except:
             pass
 
+        logger.info ('subid is: %s', subid)
+        logger.info('interest: %s, on %s for %s', name, self.name, subid)
         self.getters[substr] = ChunksGetter(name=name, basename=self.name, face=self.face)
         return True
 
@@ -133,6 +139,9 @@ class ChunksGetter(Chunks.Producer):
         self.soupGet (name, n, shard ['download_uri'])
         return True
 
+    def subIsRunning (self, sub):
+        return sub in self.subs.keys()
+
     def publish(self, subId=None):
         if not subId: subId = self.subid
 
@@ -140,7 +149,7 @@ class ChunksGetter(Chunks.Producer):
             subId = str(subId)
 
         logger.info('asked for sub: %s', subId)
-        if subId in self.subs.keys():
+        if self.subIsRunning (subId):
             logger.warning('subscription already runing for %s…ignoring new request', subId)
             return self.subs[subId]
 
