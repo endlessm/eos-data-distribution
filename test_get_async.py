@@ -45,14 +45,14 @@ if __name__ == "__main__":
         args.filename = args.name.split('/')[-1]
 
     if args.no_chunks:
-        consumer = NDN.Consumer(name=args.name, face=face, auto=True)
+        consumer = NDN.Consumer(name=args.name, auto=True)
     else:
         args.name += "/chunked/"
         consumer = Chunks.Consumer(name=args.name, filename=args.filename, auto=True)
 
     loop = GLib.MainLoop()
 
-    def check(o, f):
+    def check(*a):
         if args.limit and consumer._callbackCount > args.limit:
             loop.quit()
 

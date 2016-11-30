@@ -49,7 +49,7 @@ if __name__ == "__main__":
     producer = Chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
     loop = GLib.MainLoop()
 
-    def check(o, f):
+    def check(*a):
         if args.limit and producer._responseCount > args.limit:
             loop.quit()
 
