@@ -19,8 +19,6 @@
 
 import time
 from pyndn import Name
-from pyndn import Data
-from pyndn import Face
 
 import Chunks
 from NDN import Endless
