@@ -40,5 +40,5 @@ NAMES = Names ({k: Name (path.join(BASE, v)) for k,v in {
     'SOMA':  'soma/v1'
 }.items()})
 
-SOMA_SUB_BASE = 'https://subscriptions.dev-blue.soma.endless-cloud.com'
+SOMA_SUB_BASE = 'https://subscriptions.prod-blue.soma.endless-cloud.com'
 # SOMA_SUB_BASE = 'https://subscriptions.prod.soma.endless-cloud.com'
