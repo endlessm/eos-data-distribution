@@ -36,7 +36,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename")
-    parser.add_argument("-l", "--limit", default=3)
+    parser.add_argument("-l", "--limit", type=int, default=3)
     parser.add_argument("-n", "--no-chunks", action='store_true')
     parser.add_argument("name")
 
