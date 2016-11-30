@@ -29,7 +29,7 @@ from gi.repository import GLib
 
 from NDN import Consumer, Producer, Endless
 import Chunks
-import Edge
+from Edge import getSubIdName
 
 from os import path
 import json
@@ -64,7 +64,7 @@ class Store(Producer):
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subid = Edge.getSubIdName (name, self.prefixes.consumer)
+        subid = getSubIdName (name, self.prefixes.consumer)
         if not subid:
             logger.warning('Error, the requested name doesn\'t contain a sub', NDN.dumpName(name))
             return False
