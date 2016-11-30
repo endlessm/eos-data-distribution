@@ -23,11 +23,10 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
+from pyndn.node import Node
 from pyndn.security import KeyChain
-
-from pyndn import Name
-from pyndn import Data
-from pyndn import Face
+from pyndn.transport.unix_transport import UnixTransport
+from pyndn import Name, Data, Face
 
 from os import path
 from functools import partial
@@ -46,39 +45,70 @@ def makeName(o):
 def dumpName(n):
     return [str (n.get(i)) for i in range(n.size())]
 
-class Base(GObject.GObject):
-    __gsignals__ = {
-        'face-process-event': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object,)),
-    }
 
-    def __init__(self, name, face=None, tick=100):
+class GLibUnixTransport(UnixTransport):
+    _watch_id = 0
+
+    def connect(self, connectionInfo, elementListener, onConnected):
+        super(GLibUnixTransport, self).connect(connectionInfo, elementListener, onConnected)
+
+        fd = self._socket.fileno()
+        io_channel = GLib.IOChannel.unix_new(fd)
+        self._watch_id = GLib.io_add_watch(io_channel, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self._socket_ready)
+
+    def _socket_ready(self, channel, cond):
+        nBytesRead = self._socket.recv_into(self._buffer)
+        if nBytesRead <= 0:
+            # Since we checked for data ready, we don't expect this.
+            return
+
+        self._elementReader.onReceivedData(self._bufferView[0:nBytesRead])
+        return GLib.SOURCE_CONTINUE
+
+    def close(self):
+        super(GLibUnixTransport, self).close()
+
+        if self._watch_id != 0:
+            GLib.source_remove(self._watch_id)
+            self._watch_id = 0
+
+
+class GLibUnixFace(Face):
+    def __init__(self):
+        transport = GLibUnixTransport()
+        file_path = self._getUnixSocketFilePathForLocalhost()
+        connection_info = UnixTransport.ConnectionInfo(file_path)
+
+        self._node = Node(transport, connection_info)
+        self._commandKeyChain = None
+        self._commandCertificateName = Name()
+
+    def callLater(self, delayMilliseconds, callback):
+        # Wrapper to ensure we remove the source.
+        def wrap():
+            callback()
+            return GLib.SOURCE_REMOVE
+
+        GLib.timeout_add(delayMilliseconds, wrap)
+
+
+class Base(GObject.GObject):
+    def __init__(self, name, face=None):
         GObject.GObject.__init__(self)
         self.name = Name(name)
-        self.tick = tick
 
-        # The default Face will connect using a Unix socket, or to "localhost".
-        if type(face) == Face:
+        if face is not None:
+            assert isinstance(face, GLibUnixFace)
             self.face = face
-            logger.info('re-using face: %s', face)
         else:
-            logger.info('creating a new face')
-            try:
-                self.face = Face(face)
-            except:
-                self.face = Face()
-            GLib.timeout_add (tick, self.processEvents)
+            self.face = GLibUnixFace()
 
         self._callbackCount = 0
         self._responseCount = 0
 
-    def processEvents(self):
-        self.face.processEvents()
-        self.emit('face-process-event', self.face)
-        return True
-
     def dataToBytes(self, data):
         return bytearray(data.getContent().buf())
+
 
 class Producer(Base):
     __gsignals__ = {

@@ -59,5 +59,5 @@ if __name__ == "__main__":
         if args.limit and consumer._callbackCount > args.limit:
             loop.quit()
 
-    consumer.connect('face-process-event', check)
+    consumer.connect('data', check)
     loop.run()
