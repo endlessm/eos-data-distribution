@@ -36,7 +36,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename")
-    parser.add_argument("-l", "--limit", default=3)
+    parser.add_argument("-l", "--limit", type=int, default=3)
     parser.add_argument("-n", "--no-chunks", action='store_true')
     parser.add_argument("name")
 
@@ -45,14 +45,14 @@ if __name__ == "__main__":
         args.filename = args.name.split('/')[-1]
 
     if args.no_chunks:
-        consumer = NDN.Consumer(name=args.name, face=face, auto=True)
+        consumer = NDN.Consumer(name=args.name, auto=True)
     else:
         args.name += "/chunked/"
         consumer = Chunks.Consumer(name=args.name, filename=args.filename, auto=True)
 
     loop = GLib.MainLoop()
 
-    def check(o, f):
+    def check(*a):
         if args.limit and consumer._callbackCount > args.limit:
             loop.quit()
 

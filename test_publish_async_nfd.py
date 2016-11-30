@@ -38,7 +38,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("filename")
     parser.add_argument("-n", "--name")
-    parser.add_argument("-l", "--limit", default=100)
+    parser.add_argument("-l", "--limit", type=int, default=100)
     parser.add_argument("-c", "--chunksize", type=int, default=4096)
     args = parser.parse_args()
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     producer = Chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
     loop = GLib.MainLoop()
 
-    def check(o, f):
+    def check(*a):
         if args.limit and producer._responseCount > args.limit:
             loop.quit()
 
