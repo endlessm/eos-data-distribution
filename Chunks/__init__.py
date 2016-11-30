@@ -83,8 +83,8 @@ class Consumer(NDN.Consumer):
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
 
-        logger.debug('getting chunk %d: %d: %s', n, self.chunkSize, self.f)
-        self.f.seek(self.chunkSize * n)
+        logger.debug('writing chunk %d: %d: %s', n, self.chunkSize, self.f)
+        s = self.f.seek(self.chunkSize * n)
         return self.f.write(buf)
 
     def onData(self, o, interest, data):
