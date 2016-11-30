@@ -53,5 +53,5 @@ if __name__ == "__main__":
         if args.limit and producer._responseCount > args.limit:
             loop.quit()
 
-    producer.connect('face-process-event', check)
+    producer.connect('interest', check)
     loop.run()
