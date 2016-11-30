@@ -181,18 +181,17 @@ class ChunksGetter(Chunks.Producer):
         msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
 
         logger.info ('range %s', bytes)
-        streamToData = partial (self.streamToData, name=name, n=n, bytes=bytes)
+        streamToData = partial (self.streamToData, name=name, n=n)
         self.session.send_async (msg, None, streamToData)
         return msg
 
-    def streamToData (self, session, task, name, n, bytes):
+    def streamToData (self, session, task, name, n):
         istream = session.send_finish (task)
         if n == 0 and False:
             Name (name).appendSegment (0)
 
         logger.info ('sending on name: %s', name)
-        buf = bytearray (bytes [1] - bytes [0] +1)
-        istream.read_all (buf, None)
+        buf = istream.read_bytes(self.chunkSize, None).get_data()
         self.send(name, buf)
 
 if __name__ == '__main__':
