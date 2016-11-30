@@ -180,20 +180,20 @@ class ChunksGetter(Chunks.Producer):
         bytes = (n*self.chunkSize, (n+1)*self.chunkSize - 1)
         msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
 
-        streamToData = partial (self.streamToData, name=name, n=n)
+        logger.info ('range %s', bytes)
+        streamToData = partial (self.streamToData, name=name, n=n, bytes=bytes)
         self.session.send_async (msg, None, streamToData)
         return msg
 
-    def streamToData (self, session, task, name, n):
+    def streamToData (self, session, task, name, n, bytes):
         istream = session.send_finish (task)
-        name = Name (name)
         if n == 0 and False:
-            name.appendSegment (0)
+            Name (name).appendSegment (0)
 
-        buf = bytearray (self.chunkSize)
-        while istream.read (buf, None):
-            self.send(name, buf)
-            name = name.getSuccessor()
+        logger.info ('sending on name: %s', name)
+        buf = bytearray (bytes [1] - bytes [0] +1)
+        istream.read_all (buf, None)
+        self.send(name, buf)
 
 if __name__ == '__main__':
     from gi.repository import GLib
