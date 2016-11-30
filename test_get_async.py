@@ -19,7 +19,6 @@
 
 import time
 from pyndn import Name
-from pyndn import Face
 
 import Chunks
 import NDN
@@ -45,13 +44,11 @@ if __name__ == "__main__":
     if not args.filename:
         args.filename = args.name.split('/')[-1]
 
-    face = Face()
-
     if args.no_chunks:
         consumer = NDN.Consumer(name=args.name, face=face, auto=True)
     else:
         args.name += "/chunked/"
-        consumer = Chunks.Consumer(name=args.name, filename=args.filename, face=face, auto=True)
+        consumer = Chunks.Consumer(name=args.name, filename=args.filename, auto=True)
 
     loop = GLib.MainLoop()
 
