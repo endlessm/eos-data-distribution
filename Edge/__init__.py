@@ -190,14 +190,17 @@ class ChunksGetter(Chunks.Producer):
         msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
 
         logger.info ('range %s', bytes)
-        streamToData = partial (self.streamToData, name=name, n=n)
+        streamToData = partial (self.streamToData, name=name, n=n, msg=msg)
         self.session.send_async (msg, None, streamToData)
         return msg
 
-    def streamToData (self, session, task, name, n):
+    def streamToData (self, session, task, name, n, msg):
+        s = msg.status_code
+        if not (s == Soup.Status.OK or s == Soup.Status.PARTIAL_CONTENT):
+            return False
+
+        logger.info ('reply is: %s', msg.status_code)
         istream = session.send_finish (task)
-        if n == 0 and False:
-            Name (name).appendSegment (0)
 
         logger.info ('sending on name: %s', name)
         buf = istream.read_bytes(self.chunkSize, None).get_data()
