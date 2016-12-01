@@ -49,6 +49,11 @@ def getSize (name):
     return int (str (s).split ('size%3D') [1], 16)
 
 class Producer(NDN.Producer):
+    __gsignals__ = {
+        'progress': (GObject.SIGNAL_RUN_FIRST, None,
+                  (int,)),
+    }
+
     def __init__(self, name, filename=None, chunkSize=4096, mode="r",
                  size=None, *args, **kwargs):
         if size:
@@ -74,6 +79,8 @@ class Producer(NDN.Producer):
             logger.debug ('asked for a chunk outside of file')
             return True
 
+        self.emit ('progress', pos*100/self.size)
+
         self.f.seek(pos)
         return self.f.read(self.chunkSize)
 
@@ -94,6 +101,11 @@ class Producer(NDN.Producer):
             self.send(name, content)
 
 class Consumer(NDN.Consumer):
+    __gsignals__ = {
+        'progress': (GObject.SIGNAL_RUN_FIRST, None,
+                  (int,)),
+    }
+
     def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5,
                  *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
@@ -134,6 +146,9 @@ class Consumer(NDN.Consumer):
         #TODO: write async
         suc = self.getNext (name)
         self.got += self.putChunk (seg, data)
+
+        self.emit ('progress', self.got*100/self.size)
+
         if self.got >= self.size:
             logger.debug ('fully retrieved: %d', self.size)
             self.removePendingInterest (suc)
