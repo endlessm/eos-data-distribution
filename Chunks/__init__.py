@@ -24,7 +24,6 @@ from gi.repository import GObject
 from gi.repository import GLib
 
 from pyndn import Name
-from pyndn import Data
 
 import NDN
 from NDN import Endless
