@@ -21,15 +21,18 @@ run () {
 run_router="$(run router edge-router-avahi)"
 run_store="$(run store ostree-store -r repo -t ${TEMP_DIR})"
 run_dbus_consumer="$(run dbus simulate-dbus-consumer $APPIDS)"
+run_usb_mock="$(run usb mock-usb-producer /vagrant/DL)"
 
-nfd-stop
+nfd-stop; killall tmux;
 rm -rf ${TEMP_DIR}/*
 
 export PYTHONPATH=${BASE_PATH}
 
 tmux new -d -s my-session 'nfd-start; sleep infinity' \; \
-     split-window -d "$run_router" \; \
-     split-window -d "$run_store" \; \
+     split-window -d "$run_usb_mock" \; \
      split-window -d "$run_dbus_consumer" \; \
+     split-window -d "$run_store" \; \
      select-layout tiled \; \
      attach \;
+
+#      \split-window -d "$run_router" \; \
