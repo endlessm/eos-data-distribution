@@ -76,7 +76,7 @@ class Producer(NDN.Producer):
         pos = self.chunkSize * n
         if pos >= self.size:
             logger.debug ('asked for a chunk outside of file')
-            return True
+            return False
 
         self.emit ('progress', pos*100/self.size)
 
@@ -96,8 +96,12 @@ class Producer(NDN.Producer):
         logger.debug ('got interest: %s, %d', name, seg)
 
         content = self.getChunk(name, seg, prefix=prefix)
-        if content != True:
-            self.send(name, content)
+        if content == True:
+            return
+        if content == False:
+            return self.nack (name)
+
+        return self.send(name, content)
 
 class Consumer(NDN.Consumer):
     __gsignals__ = {
