@@ -28,10 +28,10 @@ from Chunks import Pool
 r = re.compile(r'^/+')
 
 class Base(Pool.MixPool):
-    def __init__(self, base=None, prefix='/', ext='.shard', split=None, *args, **kwargs):
+    def __init__(self, base=None, prefix='/', exts=['.shard', '.json'], split=None, *args, **kwargs):
         super(Base, self).__init__(*args, **kwargs)
         self.base = base
-        self.ext = ext
+        self.exts = exts
         self.split = split or base
         self.prefix = prefix
 
@@ -71,8 +71,8 @@ class Base(Pool.MixPool):
 
     def publish_name(self, filename, basedir=None):
         print 'publish', filename, self.prefix
-        if not filename.endswith(self.ext):
-            print('ignoring', filename)
+        if not reduce (lambda p, c: p or filename.endswith (c), self.exts):
+            print('ignoring', filename, self.exts)
             return
 
         name = self._path_to_name(filename)
