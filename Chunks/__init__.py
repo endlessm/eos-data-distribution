@@ -29,17 +29,37 @@ from pyndn import Data
 import NDN
 from NDN import Endless
 
+import os
+
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 def getSeg (name):
-    return name.get(name.size() - 1).toNumber()
+    seg = name.get(-1)
+    if str (seg) == 'chunked':
+        return -1
+    return seg.toNumber ()
+
+def appendSize (name, size):
+    return name.append ('size=%s'%hex (size))
+
+def getSize (name):
+    s = name.get (-2)
+    return int (str (s).split ('size%3D') [1], 16)
 
 class Producer(NDN.Producer):
     def __init__(self, name, filename=None, chunkSize=4096, mode="r",
-                 *args, **kwargs):
+                 size=None, *args, **kwargs):
+        if size:
+            self.size = size
+        elif not filename:
+            raise ValueError
+        else:
+            self.size = os.path.getsize (filename)
+
         super(Producer, self).__init__(name=name, *args, **kwargs)
+        appendSize (self.name, self.size)
         self.chunkSize = chunkSize
 
         if filename:
@@ -49,28 +69,42 @@ class Producer(NDN.Producer):
 
     def getChunk(self, name, n, prefix=None):
         logger.debug('asked for chunk %d: %s', n, NDN.dumpName(name))
-        self.f.seek(self.chunkSize * n)
+        pos = self.chunkSize * n
+        if pos >= self.size:
+            logger.debug ('asked for a chunk outside of file')
+            return True
+
+        self.f.seek(pos)
         return self.f.read(self.chunkSize)
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
         name = interest.getName()
-        logger.debug ('got interest: %s, %d', name, getSeg (name))
         # hack to get the segment number
         seg = getSeg (name)
+        if seg == -1:
+            seg = 0
+            appendSize (name, self.size)
+            name.appendSegment (0)
+
+        logger.debug ('got interest: %s, %d', name, seg)
 
         content = self.getChunk(name, seg, prefix=prefix)
         if content != True:
             self.send(name, content)
 
 class Consumer(NDN.Consumer):
-    def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5, *args, **kwargs):
+    def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5,
+                 *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
+
         if filename:
             self.f = open(filename, mode)
 
         logger.debug ('creating consumer: %s, %s', name, filename)
 
+        self.size = None
+        self.got = 0
         self.pipeline = pipeline
         self.chunkSize = chunkSize
 
@@ -78,23 +112,31 @@ class Consumer(NDN.Consumer):
 
     def consume(self, name=None, start=0, *args, **kwargs):
         if not name: name = self.name
-        self.expressInterest(name=Name(name).appendSegment(0), forever=True, *args, **kwargs)
+        self.expressInterest(name=Name(name), forever=True, *args, **kwargs)
 
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
 
         logger.debug('writing chunk %d: %d: %s', n, self.chunkSize, self.f)
-        s = self.f.seek(self.chunkSize * n)
-        return self.f.write(buf)
+        start = self.chunkSize * n
+        s = self.f.seek(start)
+        self.f.write(buf)
+        return self.f.tell () - start
 
     def onData(self, o, interest, data):
         name = data.getName()
         logger.debug('got data: %s', NDN.dumpName(name))
         seg = getSeg (name)
+        if not self.size:
+            self.size = getSize (name)
+            print 'size', self.size
 
         #TODO: write async
-        self.getNext (name)
-        self.putChunk (seg, data)
+        suc = self.getNext (name)
+        self.got += self.putChunk (seg, data)
+        if self.got >= self.size:
+            logger.debug ('fully retrieved: %d', self.size)
+            self.removePendingInterest (suc)
 
     def getNext(self, name):
         suc = name.getSuccessor()
