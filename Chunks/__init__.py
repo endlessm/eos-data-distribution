@@ -23,6 +23,13 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
+try:
+    gi.require_version('Notify', '0.7')
+    from gi.repository import Notify
+    Notify.init ("NDN Chunks")
+except:
+    Notify = False
+
 from pyndn import Name
 
 import NDN
@@ -138,6 +145,8 @@ class Consumer(NDN.Consumer):
         self.pipeline = pipeline
         self.chunkSize = chunkSize
 
+        self.notification = None
+
         self.connect('data', self.onData)
 
     def consume(self, name=None, start=0, *args, **kwargs):
@@ -178,3 +187,13 @@ class Consumer(NDN.Consumer):
         self.expressInterest(suc, forever=True)
         return suc
 
+    def notifyChunk (self, title, subtitle=None):
+        if not Notify:
+            self.connect ('progress', lambda o, p: logger.info ("%s: progress %d/100"%(title,p)))
+            self.connect ('complete', lambda *a: logger.info ("%s: done"%title))
+            return logger.info ("Notification: %s - %s", title, subtitle)
+
+        self.notification = Notify.Notification.new (title, subtitle)
+        self.connect ('progress', lambda o, p: self.notification.update (title, "progress %d/100"%p))
+        self.connect ('complete', lambda o, *a: self.notification.update (title, 'done'))
+        self.notification.show ()
