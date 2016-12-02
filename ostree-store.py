@@ -115,7 +115,8 @@ class Store(NDN.Producer):
     def checkSub (self, consumer, filename, subid):
         self.subs [subid] [filename] = True
 
-        if reduce (lambda p, c: p and c, self.subs [subid], True):
+        logger.info ('shard complete: %s → %s', filename, subid)
+        if all (self.subs [subid]):
             logger.info ('all shards have been downloaded: %s', self.subs [subid])
             self.send (self.interests [subid], json.dumps (self.subs [subid]))
 
