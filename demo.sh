@@ -6,16 +6,22 @@ APPIDS="10521bb3a18b573f088f84e59c9bbb6c2e2a1a67"
 
 title="printf '\033]2;%s\033\\'"
 
-profile () {
+flamegraph () {
         n=$1
         shift 1
         echo "python -m flamegraph -o $n.log $n.py $@"
 }
 
+cprofile ()  {
+        n=$1
+        shift 1
+        echo "python -m cProfile -o $n.cprof $n.py $@"
+}
+
 run () {
         t=$1
         shift 1
-        echo "$title '$t'; $(profile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log"
+        echo "$title '$t'; $(cprofile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log"
 }
 
 run_router="$(run router edge-router-avahi)"
