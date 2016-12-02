@@ -20,12 +20,10 @@
 
 from pyndn import Name
 from pyndn import Data
-from pyndn import Face
-
-from pyndn import ForwardingFlags
 
 import NDN
 import Chunks
+import HTTP
 
 from os import path
 from functools import partial
@@ -56,162 +54,42 @@ class Getter(NDN.Producer):
 
         self.getters = dict()
 
-        self.flags = ForwardingFlags()
-        self.flags.setChildInherit(True)
-
         self.connect('interest', self.onInterest)
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subid = getSubIdName (name, self.name)
-        substr = str(subid)
-
-        if not subid:
-            logger.warning('Error, the requested name doesn\'t contain a sub: %s', name)
+        chunked = str (name.get (-1))
+        if not chunked == 'chunked':
+            logger.debug ('ignoring non-chunked request: %s',  name)
             return False
 
+        name = name.getPrefix (-1)
+
+        filename = str (name.get (-1))
+        filepath = name.getSubName (Endless.NAMES.SOMA.size ())
+        key = str (name)
 
         try:
-            # we still register, because this might be asking for an old
-            # subscription that we lost track of. Note that this is racy,
-            # because there is no getter associated (yet), if we have
-            # registered, this is a noop, is subscribe.
-            getter = self.getters[substr]
-            if getter.subIsRunning (substr):
-                # we're getting interests that are for the chunk getters
+            getter = self.getters [key]
+        except:
+            if filename.endswith ('.json'):
+                getter = self.getters [key] = HTTP.Producer (name, "%s%s"%(Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
+            elif filename.endswith ('.shard'):
+                url = "http://" + str(filepath).replace ('/shards/', '')
+                getter = self.getters [key] = HTTP.Producer (name, url, face=face, auto=True)
+            else:
+                logger.debug ('ignoring request: %s → %s', filename, name)
                 return False
 
-            getter.publish()
-            logger.warning('Error, we got a path, expected a subid: %s', subid)
-            return False
-        except:
-            pass
-
-        logger.info ('subid is: %s', subid)
-        logger.info('interest: %s, on %s for %s', name, self.name, subid)
-        self.getters[substr] = ChunksGetter(name=name, basename=self.name, face=self.face)
-        return True
-
-    def sendLinks(self, name, names):
-        link = Link(Data(name))
-        [link.addDelegation(0, Name(n)) for n in names]
-        self.sendFinish(link)
-
-class ChunksGetter(Chunks.Producer):
-    def __init__(self, name, basename=None,
-                 base = Endless.SOMA_SUB_BASE,
-                 *args, **kwargs):
-        name.append ('shards')
-        super(ChunksGetter, self).__init__(name, *args, **kwargs)
-        self.base = base
-
-        self.subs = dict()
-        self.subprefixes = dict()
-        self.names = dict()
-
-        self.session = Soup.Session ()
-        self.session.props.ssl_strict = False
-        self.session.props.max_conns = 100
-        self.session.props.max_conns_per_host = 100
-
-        self.msgs = dict ()
-
-        if basename:
-            self.subid = getSubIdName(name, basename)
-            names = self.publish()
-
-            logger.info ('got names: %s', names)
-
-            # wait for registration success before sending the list of
-            # names, the actual registration is done by Chunks -> NDN
-            # classes.
-            self.connect('register-success', lambda *args, **kwargs:
-                         self.send(name, json.dumps(names)))
-
-    def getChunk(self, name, n, prefix):
-        """
-        Convert data requests to urls like:
-        "https://subscriptions.prod.soma.endless-cloud.com/v1/10521bb3a18b573f088f84e59c9bbb6c2e2a1a67/manifest.json"
-        """
-        logger.debug ('asked for %s: %s (%d)', name, prefix, n)
-
-        shard = self.names[prefix]
-        self.soupGet (name, n, shard ['download_uri'])
-        return True
-
-    def subIsRunning (self, sub):
-        return sub in self.subs.keys()
-
-    def publish(self, subId=None):
-        if not subId: subId = self.subid
-
-        if not isinstance(subId, str):
-            subId = str(subId)
-
-        logger.info('asked for sub: %s', subId)
-        if self.subIsRunning (subId):
-            logger.warning('subscription already runing for %s…ignoring new request', subId)
-            return self.subs[subId]
-
-        sub = self.getSubscription(subId)
-        if not sub:
-            logger.warning('This sub is invalid: %s', subId)
-            return sub
-
-        prefixes = dict()
-        ret = []
-
-        for shard in sub['shards']:
-            logger.debug('looking at shard: %s', shard)
-            postfix = '%s/%s/%s' % (sub ['timestamp'], shard['sha256_csum'], shard['path'])
-            name = self.registerPrefix (postfix=postfix)
-            logger.debug ('created name: %s', name)
-            prefixes[postfix] = name
-            self.names[name] = shard
-            ret.append(name.toUri())
-
-        self.subprefixes[subId] = prefixes
-        self.subs [subId] = ret
-        return ret
-
-    def getSubscription(self, id):
-        url = "%s/v1/%s/manifest.json" % (self.base, id)
-        logger.info('base: %s → url: %s', self.base, url)
-        msg = Soup.Message.new ("GET", url)
-        r = self.session.send_message (msg)
-
-        if msg.status_code == Soup.Status.OK:
-            return json.loads(msg.response_body.data)
-        else: return False
-
-    def soupGet (self, name, n, uri):
-        msg = Soup.Message.new ('GET', uri)
-        bytes = (n*self.chunkSize, (n+1)*self.chunkSize - 1)
-        msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
-
-        logger.info ('range %s', bytes)
-        streamToData = partial (self.streamToData, name=name, n=n, msg=msg)
-        self.session.send_async (msg, None, streamToData)
-        return msg
-
-    def streamToData (self, session, task, name, n, msg):
-        s = msg.status_code
-        if not (s == Soup.Status.OK or s == Soup.Status.PARTIAL_CONTENT):
-            return False
-
-        logger.info ('reply is: %s', msg.status_code)
-        istream = session.send_finish (task)
-
-        logger.info ('sending on name: %s', name)
-        buf = istream.read_bytes(self.chunkSize, None).get_data()
-        self.send(name, buf)
+        return getter
 
 if __name__ == '__main__':
     from gi.repository import GLib
     import time
 
     EG = Getter(NDN.Endless.NAMES.SOMA)
-    print EG.publish('10521bb3a18b573f088f84e59c9bbb6c2e2a1a67')
+    name = Name (NDN.Endless.NAMES.SOMA).append ('10521bb3a18b573f088f84e59c9bbb6c2e2a1a67')
+    print Chunks.Consumer(name, filename='test.json', auto=True)
 
     GLib.MainLoop().run()
 
