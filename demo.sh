@@ -29,10 +29,11 @@ rm -rf ${TEMP_DIR}/*
 export PYTHONPATH=${BASE_PATH}
 
 tmux new -d -s my-session 'nfd-start; sleep infinity' \; \
+     split-window -d "$run_router" \; \
      split-window -d "$run_usb_mock" \; \
      split-window -d "$run_dbus_consumer" \; \
      split-window -d "$run_store" \; \
      select-layout tiled \; \
      attach \;
 
-#      \split-window -d "$run_router" \; \
+#
