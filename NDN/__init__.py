@@ -107,7 +107,7 @@ class Base(GObject.GObject):
         self._responseCount = 0
 
     def dataToBytes(self, data):
-        return bytearray(data.getContent().buf())
+        return data.getContent().toBuffer()
 
 
 class Producer(Base):
