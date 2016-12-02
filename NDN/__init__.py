@@ -257,9 +257,9 @@ class Consumer(Base):
     def onTimeout(self, interest, forever=False, name=None):
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
-        logger.info ("Time out for interest: %s", interest.getName())
+        logger.debug ("Time out for interest: %s", interest.getName())
         if forever and name:
-            logger.info ("Re-requesting Interest: %s", name)
+            logger.debug ("Re-requesting Interest: %s", name)
             onTimeout = partial(self.onTimeout, forever=forever, name=name)
-            self.pit[name] = self.face.expressInterest(interest.getName(),
+            self.pit[name] = self.face.expressInterest(interest,
                                                        self._onData, onTimeout)
