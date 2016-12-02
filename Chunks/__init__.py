@@ -50,7 +50,9 @@ def getSize (name):
 class Producer(NDN.Producer):
     __gsignals__ = {
         'progress': (GObject.SIGNAL_RUN_FIRST, None,
-                  (int,)),
+                     (int,)),
+        'complete': (GObject.SIGNAL_RUN_FIRST, None,
+                     (int,))
     }
 
     def __init__(self, name, filename=None, chunkSize=4096, mode="r",
@@ -75,6 +77,7 @@ class Producer(NDN.Producer):
         logger.debug('asked for chunk %d: %s', n, NDN.dumpName(name))
         pos = self.chunkSize * n
         if pos >= self.size:
+            self.emit ('complete', self.size)
             logger.debug ('asked for a chunk outside of file')
             return False
 
@@ -106,7 +109,9 @@ class Producer(NDN.Producer):
 class Consumer(NDN.Consumer):
     __gsignals__ = {
         'progress': (GObject.SIGNAL_RUN_FIRST, None,
-                  (int,)),
+                     (int,)),
+        'complete': (GObject.SIGNAL_RUN_FIRST, None,
+                     (str,))
     }
 
     def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5,
@@ -153,6 +158,7 @@ class Consumer(NDN.Consumer):
         self.emit ('progress', self.got*100/self.size)
 
         if self.got >= self.size:
+            self.emit ('complete', self.filename)
             logger.debug ('fully retrieved: %d', self.size)
             self.removePendingInterest (suc)
 
