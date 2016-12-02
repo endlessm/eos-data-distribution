@@ -115,8 +115,9 @@ class Consumer(NDN.Consumer):
         'complete': (GObject.SIGNAL_RUN_FIRST, None,
                      (str,))
     }
-
-    def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5,
+    def __init__(self, name, filename, chunkSize = 4096,
+                 mode = os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK,
+                 pipeline=5,
                  *args, **kwargs):
         name = Name (name).append ('chunked')
         super(Consumer, self).__init__(name=name, *args, **kwargs)
@@ -128,7 +129,7 @@ class Consumer(NDN.Consumer):
 
         if filename:
             self.filename = filename
-            self.f = open(filename, mode)
+            self.f = os.open(filename, mode)
 
         logger.debug ('creating consumer: %s, %s', name, filename)
 
@@ -148,9 +149,8 @@ class Consumer(NDN.Consumer):
 
         logger.debug('writing chunk %d/%d', n, self.size/self.chunkSize)
         start = self.chunkSize * n
-        s = self.f.seek(start)
-        self.f.write(buf)
-        return self.f.tell () - start
+        s = os.lseek (self.f, start, os.SEEK_SET)
+        return os.write (self.f, buf)
 
     def onData(self, o, interest, data):
         name = data.getName()
@@ -167,7 +167,7 @@ class Consumer(NDN.Consumer):
         self.emit ('progress', self.got*100/self.size)
 
         if self.got >= self.size:
-            self.f.close ()
+            os.close (self.f)
             self.emit ('complete', self.filename)
             logger.debug ('fully retrieved: %d', self.size)
             self.removePendingInterest (suc)
