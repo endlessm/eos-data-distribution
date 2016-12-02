@@ -248,6 +248,7 @@ class Consumer(Base):
         logger.info ("Express Interest name: %s", dumpName(segname))
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
         self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
+        return segname
 
     def removePendingInterest(self, name):
         self.face.removePendingInterest(self.pit[name])
