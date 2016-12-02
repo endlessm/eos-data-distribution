@@ -60,6 +60,7 @@ class Producer(NDN.Producer):
         if size:
             self.size = size
         elif not filename:
+            logger.critical ('need to provide a size or filename argument: %s', name)
             raise ValueError
         else:
             self.size = os.path.getsize (filename)
