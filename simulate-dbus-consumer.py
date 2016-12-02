@@ -48,7 +48,7 @@ class DbusConsumer(Consumer):
         [self.expressInterest(name=appname(i), forever=True) for i in appids]
 
     def notifyEKN(self, consumer, interest, data):
-        print "GOT NAMES, all the names, the best names", names
+        print "GOT NAMES, all the names, the best names"
 
 if __name__ == "__main__":
     import sys
