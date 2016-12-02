@@ -53,6 +53,7 @@ class Store(NDN.Producer):
         self.repo = repo
         self.consumers = dict ()
         self.subs = dict ()
+        self.interests = dict ()
 
         self.store = SimpleStore.Producer(tempdir, prefixes.producer)
 
@@ -78,6 +79,7 @@ class Store(NDN.Producer):
         except:
             pass
 
+        self.interests [str (subid)] = name
         sub = Chunks.Consumer (subname,
                                filename=path.join (self.tempdir, manifest_path),
                                auto=True)
@@ -115,6 +117,7 @@ class Store(NDN.Producer):
 
         if reduce (lambda p, c: p and c, self.subs [subid], True):
             logger.info ('all subs have been downloaded: %s', self.subs [subid])
+            self.send (self.interests [subid], json.dumps (self.subs [subid]))
 
     def onProducerAdded(self, name, producer, d=None):
         print name, 'added as', producer
