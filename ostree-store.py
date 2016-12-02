@@ -27,18 +27,20 @@ from gi.repository import GObject
 from gi.repository import GLib
 #from gi.repository import OSTree
 
-from NDN import Consumer, Producer, Endless
+from NDN import Endless
+import NDN
 import Chunks
 from Edge import getSubIdName
 
 from os import path
 import json
+import re
 
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
-class Store(Producer):
+class Store(NDN.Producer):
     def __init__(self, tempdir, repo, *args, **kwargs):
         def delget(h, a):
             ret = h[a]
@@ -49,60 +51,70 @@ class Store(Producer):
         super(Store, self).__init__(name=prefixes.consumer, auto=True, *args, **kwargs)
         self.tempdir = tempdir
         self.repo = repo
-        self.chunks = dict()
-        self.subconsumers = dict()
+        self.consumers = dict ()
+        self.subs = dict ()
 
         self.store = SimpleStore.Producer(tempdir, prefixes.producer)
 
         self.store.connect('producer-added', self.onProducerAdded)
         self.store.connect('producer-removed', self.onProducerRemoved)
 
-        self.consumer = Consumer(name=prefixes.consumer, *args, **kwargs)
-        self.consumer.connect('data', self.getShards)
-
         self.connect('interest', self.onInterest)
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
         subid = getSubIdName (name, self.prefixes.consumer)
+        manifest_path = path.join (str (subid), 'manifest.json')
+        subname = "%s/%s"%(self.prefixes.producer, manifest_path)
+
         if not subid:
             logger.warning('Error, the requested name doesn\'t contain a sub', NDN.dumpName(name))
             return False
 
         try:
-            ret = self.subconsumers [subid]
+            ret = self.consumers [subname]
             logger.warning ('We already have a consumer for this sub: %s → %s', subid, ret)
             return ret
         except:
             pass
 
-        sub = self.consumer.expressInterest(self.prefixes.producer, postfix=subid, forever=True)
-        logger.info ('getting new interest registred: %s', sub)
-        self.subconsumers [subid] = sub
+        sub = Chunks.Consumer (subname,
+                               filename=path.join (self.tempdir, manifest_path),
+                               auto=True)
+        sub.connect ('complete', self.getShards, str (subid))
+
+        self.consumers [subname] = sub
         return sub
 
-    def getShards(self, consumer, interest, data):
-        buf = self.dataToBytes(data)
-        names = json.loads(str(buf))
-        filename = lambda n: path.join(self.tempdir, path.basename(n))
+    def getShards(self, consumer, filename, subid):
+        logger.info ('got shards: %s : %s', consumer, filename)
 
-        logger.info ('got shards: %s', names)
-        if not names:
-            logger.warning('got no names, the sub is probably invalid')
-            return False
+        f = open (filename, 'r')
+        manifest = json.loads (f.read())
 
-        [self.addConsumer(n, filename(n)) for n in names]
-
-    def addConsumer(self, n, filename):
         try:
-            consumer = self.chunks[filename]
-            logger.warning('already got consumer for this name', n.getUri())
-            return consumer
+            return self.subs [subid]
         except:
             pass
 
-        logger.info('spawning consumer for %s: %s', n, filename)
-        self.chunks[filename] = Chunks.Consumer(n, filename, auto=True)
+        self.subs [subid] = dict ()
+
+        for shard in manifest['shards']:
+            logger.debug('looking at shard: %s', shard)
+            postfix = 'shards/%s' % (re.sub ('https?://', '', shard ['download_uri']))
+            subname = "%s/%s"%(Endless.NAMES.SOMA, postfix)
+            filename = path.join (self.tempdir, postfix)
+            sub = Chunks.Consumer (subname, filename=filename, auto=True)
+            sub.connect ('complete', self.checkSub, subid)
+            self.subs [subid] [filename] = False
+
+            self.consumers [subname] = sub
+
+    def checkSub (self, consumer, filename, subid):
+        self.subs [subid] [filename] = True
+
+        if reduce (lambda p, c: p and c, self.subs [subid], True):
+            logger.info ('all subs have been downloaded: %s', self.subs [subid])
 
     def onProducerAdded(self, name, producer, d=None):
         print name, 'added as', producer
