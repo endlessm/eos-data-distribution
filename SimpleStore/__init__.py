@@ -71,7 +71,7 @@ class Base(Pool.MixPool):
 
     def publish_name(self, filename, basedir=None):
         print 'publish', filename, self.prefix
-        if not reduce (lambda p, c: p or filename.endswith (c), self.exts):
+        if not filename.endswith (self.exts):
             print('ignoring', filename, self.exts)
             return
 
