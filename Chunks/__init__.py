@@ -127,6 +127,7 @@ class Consumer(NDN.Consumer):
             pass
 
         if filename:
+            self.filename = filename
             self.f = open(filename, mode)
 
         logger.debug ('creating consumer: %s, %s', name, filename)
