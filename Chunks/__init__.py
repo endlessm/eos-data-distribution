@@ -167,6 +167,7 @@ class Consumer(NDN.Consumer):
         self.emit ('progress', self.got*100/self.size)
 
         if self.got >= self.size:
+            self.f.close ()
             self.emit ('complete', self.filename)
             logger.debug ('fully retrieved: %d', self.size)
             self.removePendingInterest (suc)
