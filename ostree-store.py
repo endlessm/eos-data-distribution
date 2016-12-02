@@ -65,7 +65,8 @@ class Store(NDN.Producer):
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
         subid = getSubIdName (name, self.prefixes.consumer)
-        manifest_path = path.join (str (subid), 'manifest.json')
+        ssubid = str (subid)
+        manifest_path = path.join (ssubid, 'manifest.json')
         subname = "%s/%s"%(self.prefixes.producer, manifest_path)
 
         if not subid:
@@ -79,11 +80,13 @@ class Store(NDN.Producer):
         except:
             pass
 
-        self.interests [str (subid)] = name
+        self.interests [ssubid] = name
         sub = Chunks.Consumer (subname,
                                filename=path.join (self.tempdir, manifest_path),
                                auto=True)
-        sub.connect ('complete', self.getShards, str (subid))
+
+        sub.notifyChunk ("Getting Metadata %s" % ssubid)
+        sub.connect ('complete', self.getShards, ssubid)
 
         self.consumers [subname] = sub
         return sub
@@ -107,6 +110,7 @@ class Store(NDN.Producer):
             subname = "%s/%s"%(Endless.NAMES.SOMA, postfix)
             filename = path.join (self.tempdir, postfix)
             sub = Chunks.Consumer (subname, filename=filename, auto=True)
+            sub.notifyChunk ("Downloading %s"%filename)
             sub.connect ('complete', self.checkSub, subid)
             self.subs [subid] [filename] = False
 
