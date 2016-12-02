@@ -28,7 +28,7 @@ from Chunks import Pool
 r = re.compile(r'^/+')
 
 class Base(Pool.MixPool):
-    def __init__(self, base=None, prefix='/', exts=['.shard', '.json'], split=None, *args, **kwargs):
+    def __init__(self, base=None, prefix='/', exts=('.shard', '.json'), split=None, *args, **kwargs):
         super(Base, self).__init__(*args, **kwargs)
         self.base = base
         self.exts = exts
