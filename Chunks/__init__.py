@@ -80,7 +80,7 @@ class Producer(NDN.Producer):
         pos = self.chunkSize * n
         if pos >= self.size:
             self.emit ('complete', self.size)
-            logger.debug ('asked for a chunk outside of file')
+            logger.debug ('asked for a chunk outside of file: %d, %d', pos, self.size)
             return False
 
         self.emit ('progress', pos*100/self.size)
@@ -98,7 +98,7 @@ class Producer(NDN.Producer):
             appendSize (name, self.size)
             name.appendSegment (0)
 
-        logger.debug ('got interest: %s, %d', name, seg)
+        logger.debug ('got interest: %s, %d/%d', name, seg, self.size/self.chunkSize)
 
         content = self.getChunk(name, seg, prefix=prefix)
         if content == True:
@@ -146,7 +146,7 @@ class Consumer(NDN.Consumer):
     def putChunk(self, n, data):
         buf = self.dataToBytes(data)
 
-        logger.debug('writing chunk %d: %d: %s', n, self.chunkSize, self.f)
+        logger.debug('writing chunk %d/%d', n, self.size/self.chunkSize)
         start = self.chunkSize * n
         s = self.f.seek(start)
         self.f.write(buf)

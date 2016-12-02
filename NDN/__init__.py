@@ -170,7 +170,7 @@ class Producer(Base):
 
     def _onInterest(self, *args, **kwargs):
         self._responseCount += 1
-        logger.info ("Got interest %s, %s", args, kwargs)
+        logger.debug ("Got interest %s, %s", args, kwargs)
 
         self.emit('interest', *args, **kwargs)
 
@@ -245,7 +245,7 @@ class Consumer(Base):
         if name == None: name = self.name
         segname = self.makeInterest(name)
         if postfix: segname.append (postfix)
-        logger.info ("Express Interest name: %s", dumpName(segname))
+        logger.debug ("Express Interest name: %s", dumpName(segname))
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
         self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
         return segname

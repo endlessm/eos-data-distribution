@@ -116,7 +116,7 @@ class Store(NDN.Producer):
         self.subs [subid] [filename] = True
 
         if reduce (lambda p, c: p and c, self.subs [subid], True):
-            logger.info ('all subs have been downloaded: %s', self.subs [subid])
+            logger.info ('all shards have been downloaded: %s', self.subs [subid])
             self.send (self.interests [subid], json.dumps (self.subs [subid]))
 
     def onProducerAdded(self, name, producer, d=None):
