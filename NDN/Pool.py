@@ -64,8 +64,7 @@ class Producer(Pool):
         logger.info ('adding producer: %s %s', args, kwargs)
         # kwargs['face'] = self.face
         (name, filename) = args
-        producer = self.klass(*args, **kwargs)
-        producer.registerPrefix()
+        producer = self.klass(auto=True, *args, **kwargs)
         self.pool[name] = producer
 
         producer.connect('register-success', lambda n, p, d=None:
@@ -87,8 +86,7 @@ class Consumer(Pool):
         logger.info ('adding consumer: %s %s', args, kwargs)
         kwargs['face'] = self.face
         (name, filename) = args
-        consumer = self.klass(*args, **kwargs)
-        consumer.expressInterest()
+        consumer = self.klass(auto=True, *args, **kwargs)
         self.pool[name] = consumer
         self.emit('added', name, consumer)
 
