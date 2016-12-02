@@ -139,7 +139,7 @@ class Producer(Base):
             self._certificateName = keyChain.getDefaultCertificateName()
         except:
             name = Name (self.name)
-            logger.warning("Could not get default certificate name, creating a new one from %s", dumpName(name))
+            logger.warning("Could not get default certificate name, creating a new one from %s", name)
             self._certificateName = keyChain.createIdentityAndCertificate(name)
         self._responseCount = 0
 
@@ -159,7 +159,7 @@ class Producer(Base):
     def send(self, name, content):
         data = Data(name)
         data.setContent(content)
-        logger.debug ('sending: %d, on %s', content.__len__(), dumpName(name))
+        logger.debug ('sending: %d, on %s', content.__len__(), name)
         self.sendFinish(data)
         return name
 
@@ -176,7 +176,7 @@ class Producer(Base):
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
-        logger.info("Un-Register prefix: %s", dumpName(name))
+        logger.info("Un-Register prefix: %s", name)
         try:
             self.face.removeRegisteredPrefix(self._prefixes[name])
             del (self._prefixes[name])
@@ -196,7 +196,7 @@ class Producer(Base):
         except:
             flags = None
 
-        logger.info ("Register prefix: %s", dumpName(prefix))
+        logger.info ("Register prefix: %s", prefix)
         self._prefixes[prefix] = self.face.registerPrefix(prefix,
                                   self._onInterest,
                                   self.onRegisterFailed,
@@ -207,11 +207,11 @@ class Producer(Base):
     def onRegisterFailed(self, prefix):
         self._responseCount += 1
         self.emit('register-failed', prefix)
-        logger.warning("Register failed for prefix: %s", dumpName(prefix))
+        logger.warning("Register failed for prefix: %s", prefix)
 
     def onRegisterSuccess(self, prefix, registered):
         self.emit('register-success', prefix, registered)
-        logger.info("Register succeded for prefix: %s, %s", dumpName(prefix), registered)
+        logger.info("Register succeded for prefix: %s, %s", prefix, registered)
 
 class Consumer(Base):
     __gsignals__ = {
@@ -245,7 +245,7 @@ class Consumer(Base):
         if name == None: name = self.name
         segname = self.makeInterest(name)
         if postfix: segname.append (postfix)
-        logger.debug ("Express Interest name: %s", dumpName(segname))
+        logger.debug ("Express Interest name: %s", segname)
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
         self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
         return segname
@@ -257,7 +257,7 @@ class Consumer(Base):
     def onTimeout(self, interest, forever=False, name=None):
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
-        logger.info ("Time out for interest: %s", dumpName(interest.getName()))
+        logger.info ("Time out for interest: %s", interest.getName())
         if forever and name:
             logger.info ("Re-requesting Interest: %s", name)
             onTimeout = partial(self.onTimeout, forever=forever, name=name)

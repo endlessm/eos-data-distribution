@@ -76,7 +76,7 @@ class Producer(NDN.Producer):
         self.connect('interest', self.onInterest)
 
     def getChunk(self, name, n, prefix=None):
-        logger.debug('asked for chunk %d: %s', n, NDN.dumpName(name))
+        logger.debug('asked for chunk %d: %s', n, name)
         pos = self.chunkSize * n
         if pos >= self.size:
             self.emit ('complete', self.size)
@@ -154,7 +154,7 @@ class Consumer(NDN.Consumer):
 
     def onData(self, o, interest, data):
         name = data.getName()
-        logger.debug('got data: %s', NDN.dumpName(name))
+        logger.debug('got data: %s', name)
         seg = getSeg (name)
         if not self.size:
             self.size = getSize (name)
