@@ -41,7 +41,7 @@ logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 class Store(NDN.Producer):
-    def __init__(self, tempdir, repo, *args, **kwargs):
+    def __init__(self, tempdir, *args, **kwargs):
         def delget(h, a):
             ret = h[a]
             del h[a]
@@ -50,7 +50,6 @@ class Store(NDN.Producer):
         self.prefixes = prefixes = Endless.Names({p: delget(kwargs, '%s_prefix'%p)  for p in ['consumer', 'producer']})
         super(Store, self).__init__(name=prefixes.consumer, auto=True, *args, **kwargs)
         self.tempdir = tempdir
-        self.repo = repo
         self.consumers = dict ()
         self.subs = dict ()
         self.interests = dict ()
@@ -137,7 +136,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--tempdir", required=True)
-    parser.add_argument("-r", "--repo", required=True)
     parser.add_argument("-c", "--consumer-prefix", default=Endless.NAMES.INSTALLED)
     parser.add_argument("-p", "--producer-prefix", default=Endless.NAMES.SOMA)
 
