@@ -121,6 +121,11 @@ class Consumer(NDN.Consumer):
         name += "/chunked"
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
+        try:
+            os.makedirs (os.path.dirname (filename))
+        except:
+            pass
+
         if filename:
             self.f = open(filename, mode)
 
