@@ -65,6 +65,7 @@ class Producer(NDN.Producer):
         else:
             self.size = os.path.getsize (filename)
 
+        name += "/chunked"
         super(Producer, self).__init__(name=name, *args, **kwargs)
         appendSize (self.name, self.size)
         self.chunkSize = chunkSize
@@ -117,6 +118,7 @@ class Consumer(NDN.Consumer):
 
     def __init__(self, name, filename, chunkSize = 4096, mode = "w+", pipeline=5,
                  *args, **kwargs):
+        name += "/chunked"
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
         if filename:

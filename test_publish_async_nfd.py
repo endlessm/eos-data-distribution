@@ -44,7 +44,6 @@ if __name__ == "__main__":
 
     if not args.name:
         args.name = Name(Endless.NAMES.BASE).append("testchunks/").append(args.filename)
-    args.name = Name (args.name).append ('chunked')
 
     producer = Chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
     loop = GLib.MainLoop()

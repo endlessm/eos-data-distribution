@@ -47,7 +47,6 @@ if __name__ == "__main__":
     if args.no_chunks:
         consumer = NDN.Consumer(name=args.name, auto=True)
     else:
-        args.name += "/chunked/"
         consumer = Chunks.Consumer(name=args.name, filename=args.filename, auto=True)
 
     loop = GLib.MainLoop()
