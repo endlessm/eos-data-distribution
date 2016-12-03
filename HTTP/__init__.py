@@ -41,6 +41,22 @@ def makeSession ():
 
     return session
 
+def read_from_stream_async(istream, callback, cancellable=None, chunk_size=4096):
+    chunks = []
+
+    def got_data(istream, res):
+        gbytes = istream.read_bytes_finish(res)
+        chunks.append(gbytes.get_data())
+        if gbytes.get_size() == 0:
+            callback(''.join(chunks))
+        else:
+            read_bytes_async()
+
+    def read_bytes_async():
+        istream.read_bytes_async(chunk_size, 0, cancellable, got_data)
+
+    read_bytes_async()
+
 class Producer (Chunks.Producer):
     def __init__(self, name, url, session = None,
                  *args, **kwargs):
@@ -63,32 +79,26 @@ class Producer (Chunks.Producer):
         super(Producer, self).__init__(name, size=size, *args, **kwargs)
 
     def getChunk(self, name, n, prefix):
-        logger.debug ('asked for %s: %s (%d)', name, prefix, n)
-
         self.soupGet (name, n, self.url)
         return True
 
     def soupGet (self, name, n, uri):
         msg = Soup.Message.new ('GET', uri)
-        bytes = (n*self.chunkSize, (n+1)*self.chunkSize - 1)
-        msg.request_headers.append ('Range', 'bytes=%d-%d'%bytes)
-
-        logger.info ('range %s', bytes)
-        streamToData = partial (self.streamToData, name=name, n=n, msg=msg)
-        self.session.send_async (msg, None, streamToData)
+        req_range = (n*self.chunkSize, (n+1)*self.chunkSize - 1)
+        msg.request_headers.append ('Range', 'bytes=%d-%d' % req_range)
+        logger.info('asked for %s (%d)', name, n)
+        logger.info('range %s', req_range)
+        gotStream = partial (self.gotStream, name=name, n=n, msg=msg, req_range=req_range)
+        self.session.send_async(msg, None, gotStream)
         return msg
 
-    def streamToData (self, session, task, name, n, msg):
+    def gotStream(self, session, task, name, n, msg, req_range):
         s = msg.status_code
         if not (s == Soup.Status.OK or s == Soup.Status.PARTIAL_CONTENT):
             return False
 
-        logger.info ('reply is: %s', msg.status_code)
-        istream = session.send_finish (task)
-
-        logger.info ('sending on name: %s', name)
-        buf = istream.read_bytes(self.chunkSize, None).get_data()
-        self.send(name, buf)
+        istream = session.send_finish(task)
+        read_from_stream_async(istream, lambda buf: self.send(name, buf))
 
 if __name__ == '__main__':
     from gi.repository import GLib
