@@ -93,9 +93,8 @@ class Producer (Chunks.Producer):
         return msg
 
     def gotStream(self, session, task, name, n, msg, req_range):
-        s = msg.status_code
-        if not (s == Soup.Status.OK or s == Soup.Status.PARTIAL_CONTENT):
-            return False
+        if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
+            return
 
         istream = session.send_finish(task)
         read_from_stream_async(istream, lambda buf: self.send(name, buf))
