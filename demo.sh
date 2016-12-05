@@ -1,6 +1,7 @@
 #!/bin/sh
 
-BASE_PATH="/vagrant"
+BASE_PATH=$1
+
 TEMP_DIR="${BASE_PATH}/tmp"
 APPIDS="10521bb3a18b573f088f84e59c9bbb6c2e2a1a67"
 
@@ -21,7 +22,7 @@ cprofile ()  {
 run () {
         t=$1
         shift 1
-        echo "$title '$t'; $(cprofile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log"
+        echo "$title '$t'; $(cprofile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log; sleep infinity"
 }
 
 run_router="$(run router edge-router-avahi)"
@@ -30,11 +31,13 @@ run_dbus_consumer="$(run dbus simulate-dbus-consumer $APPIDS)"
 run_usb_mock="$(run usb mock-usb-producer /vagrant/DL)"
 
 nfd-stop; killall tmux;
+nfd-start;
+
 rm -rf ${TEMP_DIR}/*
 
 export PYTHONPATH=${BASE_PATH}
 
-tmux new -d -s my-session 'nfd-start; sleep infinity' \; \
+tmux new -d -s my-session 'watch -d nfd-status; sleep infinity' \; \
      split-window -d "$run_router" \; \
      select-layout tiled \; \
      split-window -d "$run_usb_mock" \; \
