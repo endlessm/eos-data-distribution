@@ -36,8 +36,11 @@ export PYTHONPATH=${BASE_PATH}
 
 tmux new -d -s my-session 'nfd-start; sleep infinity' \; \
      split-window -d "$run_router" \; \
+     select-layout tiled \; \
      split-window -d "$run_usb_mock" \; \
+     select-layout tiled \; \
      split-window -d "$run_dbus_consumer" \; \
+     select-layout tiled \; \
      split-window -d "$run_store" \; \
      select-layout tiled \; \
      attach \;
