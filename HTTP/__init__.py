@@ -60,8 +60,9 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=4096)
 class Producer (Chunks.Producer):
     def __init__(self, name, url, session = None,
                  *args, **kwargs):
+        logger.info ("%s %s", name, url)
         self.url = url
-        
+
         self.session = session
         if not self.session:
             self.session = makeSession ()

@@ -53,6 +53,7 @@ class Store(NDN.Producer):
         self.consumers = dict ()
         self.subs = dict ()
         self.interests = dict ()
+        self.notifications = dict ()
 
         self.store = SimpleStore.Producer(tempdir, prefixes.producer)
 
@@ -119,7 +120,7 @@ class Store(NDN.Producer):
         self.subs [subid] [filename] = True
 
         logger.info ('shard complete: %s → %s', filename, subid)
-        if all (self.subs [subid]):
+        if all (self.subs [subid].values ()):
             logger.info ('all shards have been downloaded: %s', self.subs [subid])
             self.send (self.interests [subid], json.dumps (self.subs [subid]))
 

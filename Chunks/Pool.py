@@ -21,7 +21,6 @@ import Chunks
 from NDN import Pool
 
 class MixPool(Pool.MixPool):
-
     def __init__(self, producerKlass = Chunks.Producer,
                  consumerKlass = Chunks.Consumer,
                  *args, **kwargs):

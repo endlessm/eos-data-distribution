@@ -164,7 +164,7 @@ class Producer(Base):
         return name
 
     def sendFinish(self, data):
-        self.sign(data)
+#        self.sign(data)
 #       logger.debug ('sending data: %d', data.__len__())
         self.face.putData(data)
 

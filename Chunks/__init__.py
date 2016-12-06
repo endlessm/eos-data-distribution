@@ -18,6 +18,7 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import gi
+
 gi.require_version('GLib', '2.0')
 
 from gi.repository import GObject
