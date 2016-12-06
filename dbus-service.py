@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import json
+from shutil import copyfile
+from os import path
+
 from pyndn import Name
 from pyndn import Face
 
@@ -29,9 +33,6 @@ from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
 
-from os import path
-import json
-
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
 <method name='DownloadSubscription'>
@@ -41,6 +42,28 @@ IFACE = '''<node>
 </node>'''
 
 IFACE_INFO = Gio.DBusNodeInfo.new_for_xml(IFACE).interfaces[0]
+
+def apply_subscription_update(subscription_id, src_manifest_path, shards):
+    user_subscriptions_folder = path.expanduser('~/.local/share/com.endlessm.subscriptions/%s/' % (subscription_id, ))
+
+    # now look at this manifest, that i just found
+    with open(src_manifest_path, 'r') as f:
+        manifest_obj = json.load(f)
+
+    # Place the new shards into the zone...
+    for src_shard_path in shards:
+        shard_filename = path.basename(src_shard_path)
+        dst_shard_path = path.join(user_subscriptions_folder, shard_filename)
+        if path.exists(dst_shard_path):
+            # Skip existing shards...
+            continue
+        copyfile(src_shard_path, dst_shard_path)
+
+    # Place the new manifest into the zone...
+    new_manifest_path = path.join(user_subscriptions_folder, 'manifest.json.new')
+    copyfile(src_manifest_path, new_manifest_path)
+
+    # Let ekn's downloader apply updates itself.
 
 class DBusService(object):
     def __init__(self):
@@ -57,11 +80,19 @@ class DBusService(object):
 
         # We have to fill in a name here even though we never use it...
         self._consumer = Consumer(name='dummy')
+        self._consumer.connect('data', self._on_data)
 
     def _on_method_call(self, connection, sender, object_path,
                         interface_name, method_name, parameters, invocation):
         # Dispatch.
         getattr(self, 'impl_%s' % (method_name, ))(invocation, parameters)
+
+    def _on_data(self, consumer, interest, response):
+        subscription_reply = json.loads(consumer.dataToBytes(response).tobytes())
+
+        apply_subscription_update(subscription_reply['subscription_id'],
+                                  subscription_reply['manifest_path'],
+                                  subscription_reply['shards'])
 
     def impl_DownloadSubscription(self, invocation, parameters):
         subscription_id, = parameters.unpack()

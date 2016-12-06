@@ -91,10 +91,10 @@ class Store(NDN.Producer):
         self.consumers [subname] = sub
         return sub
 
-    def getShards(self, consumer, filename, subid):
-        logger.info ('got shards: %s : %s', consumer, filename)
+    def getShards(self, consumer, manifest_filename, subid):
+        logger.info ('got shards: %s : %s', consumer, manifest_filename)
 
-        f = open (filename, 'r')
+        f = open (manifest_filename, 'r')
         manifest = json.loads (f.read())
 
         try:
@@ -107,23 +107,31 @@ class Store(NDN.Producer):
         for shard in manifest['shards']:
             logger.debug('looking at shard: %s', shard)
             postfix = 'shards/%s' % (re.sub ('https?://', '', shard ['download_uri']))
-            subname = "%s/%s"%(Endless.NAMES.SOMA, postfix)
-            filename = path.join (self.tempdir, postfix)
-            sub = Chunks.Consumer (subname, filename=filename, auto=True)
-            sub.notifyChunk ("Downloading %s"%filename)
-            sub.connect ('complete', self.checkSub, subid)
-            self.subs [subid] [filename] = False
+            subname = "%s/%s" % (Endless.NAMES.SOMA, postfix)
+            shard_filename = path.join (self.tempdir, postfix)
+            sub = Chunks.Consumer (subname, filename=shard_filename, auto=True)
+            sub.notifyChunk ("Downloading %s" % shard_filename)
+            sub.connect ('complete', self.checkSub, manifest_filename, subid)
+            self.subs [subid] [shard_filename] = False
 
             self.consumers [subname] = sub
 
-    def checkSub (self, consumer, filename, subid):
-        self.subs [subid] [filename] = True
+    def checkSub (self, consumer, shard_filename, manifest_filename, subid):
+        self.subs [subid] [shard_filename] = True
 
-        logger.info ('shard complete: %s → %s', filename, subid)
-        if all (self.subs [subid].values ()):
+        logger.info ('shard complete: %s → %s', shard_filename, subid)
+        if all (self.subs [subid].values()):
             logger.info ('all shards have been downloaded: %s', self.subs [subid])
-            logger.info ('ALL DONE, answering on: %s', self.interests[subid])            
-            self.send (self.interests [subid], json.dumps (self.subs [subid]))
+
+            shard_filenames = [path.realpath(shard_filename) for shard_filename in self.subs[subid]]
+
+            response = {
+                "subscription_id": subid,
+                "manifest_path": manifest_filename,
+                "shards": shard_filenames,
+            }
+
+            self.send (self.interests [subid], json.dumps (response))
 
     def onProducerAdded(self, name, producer, d=None):
         print name, 'added as', producer
