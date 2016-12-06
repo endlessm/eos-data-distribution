@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BASE_PATH=$1
+BASE_PATH="."
 
 TEMP_DIR="${BASE_PATH}/tmp"
 APPIDS="10521bb3a18b573f088f84e59c9bbb6c2e2a1a67"
@@ -31,7 +31,7 @@ run_dbus_consumer="$(run dbus simulate-dbus-consumer $APPIDS)"
 run_usb_mock="$(run usb mock-usb-producer /vagrant/DL)"
 
 nfd-stop; killall tmux;
-nfd-start;
+nfd-start
 
 rm -rf ${TEMP_DIR}/*
 
