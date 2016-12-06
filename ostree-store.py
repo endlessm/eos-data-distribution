@@ -122,6 +122,7 @@ class Store(NDN.Producer):
         logger.info ('shard complete: %s → %s', filename, subid)
         if all (self.subs [subid].values ()):
             logger.info ('all shards have been downloaded: %s', self.subs [subid])
+            logger.info ('ALL DONE, answering on: %s', self.interests[subid])            
             self.send (self.interests [subid], json.dumps (self.subs [subid]))
 
     def onProducerAdded(self, name, producer, d=None):

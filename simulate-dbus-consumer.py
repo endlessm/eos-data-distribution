@@ -31,6 +31,10 @@ from gi.repository import GLib
 from os import path
 import json
 
+import logging
+logging.basicConfig(level=Endless.LOGLEVEL)
+logger = logging.getLogger(__name__)
+
 def dump(*list, **kwargs):
     result = ""
     for element in list:
@@ -48,7 +52,7 @@ class DbusConsumer(Consumer):
         [self.expressInterest(name=appname(i), forever=True) for i in appids]
 
     def notifyEKN(self, consumer, interest, data):
-        print "GOT NAMES, all the names, the best names"
+        logger.info ("GOT NAMES, all the names, the best names")
 
 if __name__ == "__main__":
     import sys

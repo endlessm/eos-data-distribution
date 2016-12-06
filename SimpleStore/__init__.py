@@ -43,9 +43,9 @@ class Base(Pool.MixPool):
         if base: self.publish_all_names(base)
 
     def _path_to_name(self, filename):
-        if self.split:
+        try:
             basename = r.sub('', filename.split(self.split)[1])
-        else:
+        except:
             basename = filename
         return path.join(self.prefix.toUri (), basename)
 
