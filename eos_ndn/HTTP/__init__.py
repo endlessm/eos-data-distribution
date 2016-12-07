@@ -80,26 +80,29 @@ class Producer(Chunks.Producer):
 
         super(Producer, self).__init__(name, size=size, *args, **kwargs)
 
-    def getChunk(self, name, n, prefix):
-        self.soupGet(name, n, self.url)
-        return True
+    def sendChunk(self, n, data_template):
+        self.soupGet(self.url, n, data_template)
 
-    def soupGet(self, name, n, uri):
+    def soupGet(self, uri, n, data_template):
         msg = Soup.Message.new('GET', uri)
         req_range = (n * self.chunkSize, (n + 1) * self.chunkSize - 1)
         msg.request_headers.append('Range', 'bytes=%d-%d' % req_range)
         logger.info('asked for %s (%d)', name, n)
         logger.info('range %s', req_range)
-        gotStream = partial(self.gotStream, name=name, n=n, msg=msg, req_range=req_range)
+        gotStream = partial(self.gotStream, data_template=data_template)
         self.session.send_async(msg, None, gotStream)
         return msg
 
-    def gotStream(self, session, task, name, n, msg, req_range):
+    def gotStream(self, session, task, data_template):
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
             return
 
         istream = session.send_finish(task)
-        read_from_stream_async(istream, lambda buf: self.send(name, buf))
+        read_from_stream_async(istream, lambda buf: self.gotBuf(data_template, buf))
+
+    def gotBuf(self, data, buf):
+        data.setContent(buf)
+        self.sendFinish(data)
 
 
 if __name__ == '__main__':

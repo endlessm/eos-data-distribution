@@ -26,7 +26,7 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-from pyndn import Name
+from pyndn import Name, Data, MetaInfo, ContentType
 
 from .. import NDN
 from ..NDN import Endless
@@ -34,20 +34,9 @@ from ..NDN import Endless
 logger = logging.getLogger(__name__)
 
 
-def getSeg(name):
-    seg = name.get(-1)
-    if str(seg) == 'chunked':
-        return -1
-    return seg.toNumber()
-
-
-def appendSize(name, size):
-    return name.append('size=%s' % hex(size))
-
-
-def getSize(name):
-    s = name.get(-2)
-    return int(str(s).split('size%3D')[1], 16)
+def get_chunk_component(name):
+    # The chunk component of a name is the last part...
+    return name.get(-1)
 
 
 class Producer(NDN.Producer):
@@ -62,9 +51,7 @@ class Producer(NDN.Producer):
         else:
             self.size = os.path.getsize(filename)
 
-        name = Name(name).append('chunked')
         super(Producer, self).__init__(name=name, *args, **kwargs)
-        appendSize(self.name, self.size)
         self.chunkSize = chunkSize
 
         if filename:
@@ -72,8 +59,7 @@ class Producer(NDN.Producer):
 
         self.connect('interest', self.onInterest)
 
-    def getChunk(self, name, n, prefix=None):
-        logger.debug('asked for chunk %d: %s', n, name)
+    def _getChunk(self, n):
         pos = self.chunkSize * n
         if pos >= self.size:
             self.emit('complete', self.size)
@@ -85,32 +71,44 @@ class Producer(NDN.Producer):
         self.f.seek(pos)
         return self.f.read(self.chunkSize)
 
+    def sendChunk(self, data, n):
+        content = self._getChunk(n)
+        if content is None:
+            data.setType(ContentType.NACK)
+        else:
+            data.setContent(content)
+        self.sendFinish(data)
+
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         # Make and sign a Data packet.
         name = interest.getName()
-        # hack to get the segment number
-        seg = getSeg(name)
-        if seg == -1:
+
+        chunk_component = get_chunk_component(name)
+        if chunk_component.isSegment():
+            # If we have a segment component, then the client is asking for
+            # a specific chunk here.
+            seg = chunk_component.toSegment()
+        else:
+            # If not, then the user is asking for the barebones file. Return
+            # to them the first segment.
             seg = 0
-            appendSize(name, self.size)
-            name.appendSegment(0)
+            name.appendSegment(seg)
 
-        logger.debug('got interest: %s, %d/%d', name, seg, self.size / self.chunkSize)
+        final_block_id = self.size / self.chunkSize
+        meta_info = MetaInfo()
+        meta_info.setFinalBlockId(Name.Component.fromSegment(final_block_id))
+        data = Data(name)
+        data.setMetaInfo(meta_info)
 
-        content = self.getChunk(name, seg, prefix=prefix)
-        if content == True:
-            return
-        if content == False:
-            return self.nack(name)
+        logger.debug('got interest: %s, %d/%d', name, seg, final_block_id)
 
-        return self.send(name, content)
+        self.sendChunk(data, seg)
 
 
 class Consumer(NDN.Consumer):
     __gsignals__ = {'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )), 'complete': (GObject.SIGNAL_RUN_FIRST, None, (str, ))}
 
-    def __init__(self, name, filename, chunkSize=4096, mode=os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK, pipeline=5, *args, **kwargs):
-        name = Name(name).append('chunked')
+    def __init__(self, name, filename, chunkSize=4096, mode=os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK, *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
         try:
@@ -124,9 +122,6 @@ class Consumer(NDN.Consumer):
 
         logger.debug('creating consumer: %s, %s', name, filename)
 
-        self.size = None
-        self.got = 0
-        self.pipeline = pipeline
         self.chunkSize = chunkSize
 
         self.connect('data', self.onData)
@@ -135,35 +130,28 @@ class Consumer(NDN.Consumer):
         if not name: name = self.name
         self.expressInterest(name=Name(name), forever=True, *args, **kwargs)
 
-    def putChunk(self, n, data):
+    def saveChunk(self, n, data):
         buf = data.getContent().toBuffer()
-        logger.debug('writing chunk %d/%d', n, self.size / self.chunkSize)
         start = self.chunkSize * n
         s = os.lseek(self.f, start, os.SEEK_SET)
         return os.write(self.f, buf)
 
     def onData(self, o, interest, data):
+        meta_info = data.getMetaInfo()
+        final_block_id = meta_info.getFinalBlockId().toSegment()
+
         name = data.getName()
         logger.debug('got data: %s', name)
-        seg = getSeg(name)
-        if not self.size:
-            self.size = getSize(name)
-            print 'size', self.size
 
-        #TODO: write async
-        suc = self.getNext(name)
-        self.got += self.putChunk(seg, data)
+        seg = get_chunk_component(name).toSegment()
+        self.saveChunk(seg, data)
 
-        self.emit('progress', self.got * 100 / self.size)
+        self.emit('progress', float(seg / final_block_id) * 100)
 
-        if self.got >= self.size:
+        if seg < final_block_id:
+            next_chunk = name.getSuccessor()
+            self.expressInterest(next_chunk, forever=True)
+        else:
             os.close(self.f)
             self.emit('complete', self.filename)
-            logger.debug('fully retrieved: %d', self.size)
-            self.removePendingInterest(suc)
-
-    def getNext(self, name):
-        suc = name.getSuccessor()
-        logger.debug('get Next %s → %s', name, suc)
-        self.expressInterest(suc, forever=True)
-        return suc
+            logger.debug('fully retrieved: %s', self.filename)

@@ -30,7 +30,7 @@ from gi.repository import GLib
 from pyndn.node import Node
 from pyndn.security import KeyChain
 from pyndn.transport.unix_transport import UnixTransport
-from pyndn import Name, Data, Face, MetaInfo, ContentType
+from pyndn import Name, Data, Face, MetaInfo
 
 from . import Endless
 
@@ -134,14 +134,6 @@ class Producer(Base):
 
     def sign(self, data):
         return self._keyChain.sign(data, self._certificateName)
-
-    def nack(self, name):
-        logger.debug('NACK %s', name)
-        info = MetaInfo()
-        info.setType(ContentType.NACK)
-        data = Data(name)
-        data.setMetaInfo(info)
-        self.sendFinish(data)
 
     def send(self, name, content):
         data = Data(name)
