@@ -40,6 +40,7 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
+
 class Store(NDN.Producer):
     def __init__(self, tempdir, *args, **kwargs):
         def delget(h, a):
@@ -47,13 +48,13 @@ class Store(NDN.Producer):
             del h[a]
             return ret
 
-        self.prefixes = prefixes = Endless.Names({p: delget(kwargs, '%s_prefix'%p)  for p in ['consumer', 'producer']})
+        self.prefixes = prefixes = Endless.Names({p: delget(kwargs, '%s_prefix' % p) for p in ['consumer', 'producer']})
         super(Store, self).__init__(name=prefixes.consumer, auto=True, *args, **kwargs)
         self.tempdir = tempdir
-        self.consumers = dict ()
-        self.subs = dict ()
-        self.interests = dict ()
-        self.notifications = dict ()
+        self.consumers = dict()
+        self.subs = dict()
+        self.interests = dict()
+        self.notifications = dict()
 
         self.store = SimpleStore.Producer(tempdir, prefixes.producer)
 
@@ -64,64 +65,62 @@ class Store(NDN.Producer):
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subid = getSubIdName (name, self.prefixes.consumer)
-        ssubid = str (subid)
-        manifest_path = path.join (ssubid, 'manifest.json')
-        subname = "%s/%s"%(self.prefixes.producer, manifest_path)
+        subid = getSubIdName(name, self.prefixes.consumer)
+        ssubid = str(subid)
+        manifest_path = path.join(ssubid, 'manifest.json')
+        subname = "%s/%s" % (self.prefixes.producer, manifest_path)
 
         if not subid:
             logger.warning('Error, the requested name doesn\'t contain a sub', NDN.dumpName(name))
             return False
 
         try:
-            ret = self.consumers [subname]
-            logger.warning ('We already have a consumer for this sub: %s → %s', subid, ret)
+            ret = self.consumers[subname]
+            logger.warning('We already have a consumer for this sub: %s → %s', subid, ret)
             return ret
         except:
             pass
 
-        self.interests [ssubid] = name
-        sub = Chunks.Consumer (subname,
-                               filename=path.join (self.tempdir, manifest_path),
-                               auto=True)
+        self.interests[ssubid] = name
+        sub = Chunks.Consumer(subname, filename=path.join(self.tempdir, manifest_path), auto=True)
 
-        sub.notifyChunk ("Getting Metadata %s" % ssubid)
-        sub.connect ('complete', self.getShards, ssubid)
+        sub.notifyChunk("Getting Metadata %s" % ssubid)
+        sub.connect('complete', self.getShards, ssubid)
 
-        self.consumers [subname] = sub
+        self.consumers[subname] = sub
         return sub
 
     def getShards(self, consumer, manifest_filename, subid):
-        logger.info ('got shards: %s : %s', consumer, manifest_filename)
+        logger.info('got shards: %s : %s', consumer, manifest_filename)
 
-        f = open (manifest_filename, 'r')
-        manifest = json.loads (f.read())
+        f = open(manifest_filename, 'r')
+        manifest = json.loads(f.read())
 
         try:
-            return self.subs [subid]
+            return self.subs[subid]
         except:
             pass
 
-        self.subs [subid] = dict ()
+        self.subs[subid] = dict()
 
         for shard in manifest['shards']:
             logger.debug('looking at shard: %s', shard)
-            postfix = 'shards/%s' % (re.sub ('https?://', '', shard ['download_uri']))
+            postfix = 'shards/%s' % (re.sub('https?://', '', shard['download_uri']))
             subname = "%s/%s" % (Endless.NAMES.SOMA, postfix)
-            shard_filename = path.join (self.tempdir, postfix)
-            sub = Chunks.Consumer (subname, filename=shard_filename, auto=True)
-            sub.notifyChunk ("Downloading %s" % shard_filename)
-            sub.connect ('complete', self.checkSub, manifest_filename, subid)
-            self.subs [subid] [shard_filename] = False
+            shard_filename = path.join(self.tempdir, postfix)
+            sub = Chunks.Consumer(subname, filename=shard_filename, auto=True)
+            sub.notifyChunk("Downloading %s" % shard_filename)
+            sub.connect('complete', self.checkSub, manifest_filename, subid)
+            self.subs[subid][shard_filename] = False
 
-            self.consumers [subname] = sub
+            self.consumers[subname] = sub
 
-    def checkSub (self, consumer, shard_filename, manifest_filename, subid):
-        self.subs [subid] [shard_filename] = True
+    def checkSub(self, consumer, shard_filename, manifest_filename, subid):
+        self.subs[subid][shard_filename] = True
 
-        logger.info ('shard complete: %s → %s', shard_filename, subid)
-        if all (self.subs [subid].values()):
-            Endless.notify_log (logger.info, 'all shards have been downloaded: %s' % self.subs [subid])
+        logger.info('shard complete: %s → %s', shard_filename, subid)
+        if all(self.subs[subid].values()):
+            Endless.notify_log(logger.info, 'all shards have been downloaded: %s' % self.subs[subid])
 
             shard_filenames = [path.realpath(shard_filename) for shard_filename in self.subs[subid]]
 
@@ -131,13 +130,14 @@ class Store(NDN.Producer):
                 "shards": shard_filenames,
             }
 
-            self.send (self.interests [subid], json.dumps (response))
+            self.send(self.interests[subid], json.dumps(response))
 
     def onProducerAdded(self, name, producer, d=None):
         print name, 'added as', producer
 
     def onProducerRemoved(self, name, d=None):
         print name, 'removed'
+
 
 if __name__ == '__main__':
     import sys

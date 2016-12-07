@@ -43,6 +43,7 @@ IFACE = '''<node>
 
 IFACE_INFO = Gio.DBusNodeInfo.new_for_xml(IFACE).interfaces[0]
 
+
 def apply_subscription_update(subscription_id, src_manifest_path, shards):
     user_subscriptions_folder = path.expanduser('~/.local/share/com.endlessm.subscriptions/%s/' % (subscription_id, ))
 
@@ -65,40 +66,34 @@ def apply_subscription_update(subscription_id, src_manifest_path, shards):
 
     # Let ekn's downloader apply updates itself.
 
+
 class DBusService(object):
     def __init__(self):
         self.con = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
-        Gio.bus_own_name_on_connection(self.con,
-                                       'com.endlessm.EknSubscriptionsDownloader',
-                                       Gio.BusNameOwnerFlags.NONE,
-                                       None, None)
+        Gio.bus_own_name_on_connection(self.con, 'com.endlessm.EknSubscriptionsDownloader', Gio.BusNameOwnerFlags.NONE, None, None)
 
-        self.con.register_object(object_path='/com/endlessm/EknSubscriptionsDownloader',
-                                 interface_info=IFACE_INFO,
-                                 method_call_closure=self._on_method_call)
+        self.con.register_object(object_path='/com/endlessm/EknSubscriptionsDownloader', interface_info=IFACE_INFO, method_call_closure=self._on_method_call)
 
         # We have to fill in a name here even though we never use it...
         self._consumer = Consumer(name='dummy')
         self._consumer.connect('data', self._on_data)
 
-    def _on_method_call(self, connection, sender, object_path,
-                        interface_name, method_name, parameters, invocation):
+    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
         # Dispatch.
         getattr(self, 'impl_%s' % (method_name, ))(invocation, parameters)
 
     def _on_data(self, consumer, interest, response):
         subscription_reply = json.loads(consumer.dataToBytes(response).tobytes())
 
-        apply_subscription_update(subscription_reply['subscription_id'],
-                                  subscription_reply['manifest_path'],
-                                  subscription_reply['shards'])
+        apply_subscription_update(subscription_reply['subscription_id'], subscription_reply['manifest_path'], subscription_reply['shards'])
 
     def impl_DownloadSubscription(self, invocation, parameters):
         subscription_id, = parameters.unpack()
         name = Name(Endless.NAMES.INSTALLED).append(subscription_id)
         self._consumer.expressInterest(name, forever=True)
         invocation.return_value(None)
+
 
 if __name__ == "__main__":
     service = DBusService()

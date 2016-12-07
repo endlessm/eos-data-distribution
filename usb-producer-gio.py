@@ -29,7 +29,7 @@ from os import path
 from NDN import Endless
 
 import pprint
-pp = pprint.PrettyPrinter ()
+pp = pprint.PrettyPrinter()
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
@@ -38,6 +38,7 @@ from SimpleStore import Producer as SimpleStoreProducer
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
+
 
 def mount_added_cb(monitor, mount, store):
     drive = mount.get_drive()
@@ -48,15 +49,17 @@ def mount_added_cb(monitor, mount, store):
         pp.pprint(drive.get_name())
 
     if path.exists(base):
-        logger.info ("Starting import")
+        logger.info("Starting import")
         store.publish_all_names(base)
     else:
-        logger.warning ("No NDN data found !")
+        logger.warning("No NDN data found !")
+
 
 def mount_removed_cb(monitor, mount, store):
     root = mount.get_root()
     p = root.get_path()
-    pp.pprint ([store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)])
+    pp.pprint([store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)])
+
 
 if __name__ == '__main__':
     loop = GLib.MainLoop()

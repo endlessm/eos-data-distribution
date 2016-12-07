@@ -27,6 +27,7 @@ from Chunks import Pool
 
 r = re.compile(r'^/+')
 
+
 class Base(Pool.MixPool):
     def __init__(self, base=None, prefix='/', exts=('.shard', '.json'), split=None, *args, **kwargs):
         super(Base, self).__init__(*args, **kwargs)
@@ -47,7 +48,7 @@ class Base(Pool.MixPool):
             basename = r.sub('', filename.split(self.split)[1])
         except:
             basename = filename
-        return path.join(self.prefix.toUri (), basename)
+        return path.join(self.prefix.toUri(), basename)
 
     def unpublish(self, basedir):
         [self.unpublish_name(n) for n in self.dirpubs[basedir]]
@@ -71,7 +72,7 @@ class Base(Pool.MixPool):
 
     def publish_name(self, filename, basedir=None):
         print 'publish', filename, self.prefix
-        if not filename.endswith (self.exts):
+        if not filename.endswith(self.exts):
             print('ignoring', filename, self.exts)
             return
 
@@ -95,15 +96,15 @@ class Base(Pool.MixPool):
     def publish_all_names(self, basedir):
         self.walk_dir(basedir)
         monitor = Monitor(basedir)
-        [monitor.connect(s, self._publish_name, basedir)
-         for s in monitor.filterSignals(['created', 'moved-in', 'renamed'])]
-        [monitor.connect(s, self._unpublish_name, basedir)
-         for s in monitor.filterSignals(['moved-out', 'renamed'])]
+        [monitor.connect(s, self._publish_name, basedir) for s in monitor.filterSignals(['created', 'moved-in', 'renamed'])]
+        [monitor.connect(s, self._unpublish_name, basedir) for s in monitor.filterSignals(['moved-out', 'renamed'])]
         self.dirs[basedir] = monitor
+
 
 class Producer(Base):
     def __init__(self, *args, **kwargs):
         super(Producer, self).__init__(*args, **kwargs)
+
 
 class Consumer(Base):
     def __init__(self, *args, **kwargs):

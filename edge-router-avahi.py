@@ -36,8 +36,10 @@ SERVICES = ["_nfd._tcp", "_nfd._udp"]
 
 gatways, ips = None, None
 
+
 def flatten(l):
     return [i for s in l for i in s]
+
 
 class EdgeRouter(Edge.Getter):
     def __init__(self, name, *args, **kwargs):
@@ -73,10 +75,7 @@ class EdgeRouter(Edge.Getter):
 
     def refresh_network(self):
         self.gateways = netifaces.gateways()
-        self.ips = flatten(
-            map(lambda a: [x['addr'] for x in a],
-                [flatten(netifaces.ifaddresses(i).values())
-                 for i in netifaces.interfaces()]))
+        self.ips = flatten(map(lambda a: [x['addr'] for x in a], [flatten(netifaces.ifaddresses(i).values()) for i in netifaces.interfaces()]))
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
         self.refresh_network()
@@ -100,9 +99,10 @@ class EdgeRouter(Edge.Getter):
         print "network changed"
         gatways = netifaces.gateways()
 
+
 if __name__ == "__main__":
-#    nm = Gio.NetworkMonitor.get_default()
-#    nm.connect('network-changed', network_changed_cb)
+    #    nm = Gio.NetworkMonitor.get_default()
+    #    nm.connect('network-changed', network_changed_cb)
     er = EdgeRouter(Endless.NAMES.SOMA)
 
     loop = GLib.MainLoop()

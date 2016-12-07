@@ -41,15 +41,17 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
+
 def dump(*args, **kwargs):
     print 'DUMP', args, kwargs
 
-def getSubIdName (name, basename):
+
+def getSubIdName(name, basename):
     return name.getSubName(basename.size()).get(0)
 
+
 class Getter(NDN.Producer):
-    def __init__(self, name,
-                 *args, **kwargs):
+    def __init__(self, name, *args, **kwargs):
         super(Getter, self).__init__(name=name, *args, **kwargs)
 
         self.getters = dict()
@@ -58,38 +60,38 @@ class Getter(NDN.Producer):
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        chunked = str (name.get (-1))
+        chunked = str(name.get(-1))
         if not chunked == 'chunked':
-            logger.debug ('ignoring non-chunked request: %s',  name)
+            logger.debug('ignoring non-chunked request: %s', name)
             return False
 
-        name = name.getPrefix (-1)
+        name = name.getPrefix(-1)
 
-        filename = str (name.get (-1))
-        filepath = name.getSubName (Endless.NAMES.SOMA.size ())
-        key = str (name)
+        filename = str(name.get(-1))
+        filepath = name.getSubName(Endless.NAMES.SOMA.size())
+        key = str(name)
 
         try:
-            getter = self.getters [key]
+            getter = self.getters[key]
         except:
-            if filename.endswith ('.json'):
-                getter = self.getters [key] = HTTP.Producer (name, "%s%s"%(Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
-            elif filename.endswith ('.shard'):
-                url = "http://" + str(filepath).replace ('/shards/', '')
-                getter = self.getters [key] = HTTP.Producer (name, url, face=face, auto=True)
+            if filename.endswith('.json'):
+                getter = self.getters[key] = HTTP.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
+            elif filename.endswith('.shard'):
+                url = "http://" + str(filepath).replace('/shards/', '')
+                getter = self.getters[key] = HTTP.Producer(name, url, face=face, auto=True)
             else:
-                logger.debug ('ignoring request: %s → %s', filename, name)
+                logger.debug('ignoring request: %s → %s', filename, name)
                 return False
 
         return getter
+
 
 if __name__ == '__main__':
     from gi.repository import GLib
     import time
 
     EG = Getter(NDN.Endless.NAMES.SOMA)
-    name = Name (NDN.Endless.NAMES.SOMA).append ('10521bb3a18b573f088f84e59c9bbb6c2e2a1a67')
+    name = Name(NDN.Endless.NAMES.SOMA).append('10521bb3a18b573f088f84e59c9bbb6c2e2a1a67')
     print Chunks.Consumer(name, filename='test.json', auto=True)
 
     GLib.MainLoop().run()
-

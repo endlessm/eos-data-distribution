@@ -1,15 +1,11 @@
 from gi.repository import Gio
 from gi.repository import GObject
 
-EventToSignal = {Gio.FileMonitorEvent.__dict__[i]: i.lower().replace('_', '-')
-                 for i in Gio.FileMonitorEvent.__dict__
-                 if not i.startswith('__')}
+EventToSignal = {Gio.FileMonitorEvent.__dict__[i]: i.lower().replace('_', '-') for i in Gio.FileMonitorEvent.__dict__ if not i.startswith('__')}
+
 
 class Monitor(GObject.GObject):
-    __gsignals__ = {
-        v: (GObject.SIGNAL_RUN_FIRST, None,
-                    (str, object, object, object, object, object)) for k, v in EventToSignal.items()
-    }
+    __gsignals__ = {v: (GObject.SIGNAL_RUN_FIRST, None, (str, object, object, object, object, object)) for k, v in EventToSignal.items()}
 
     def __init__(self, dir, flags=Gio.FileMonitorFlags.NONE, userdata=None):
         GObject.GObject.__init__(self)
@@ -57,9 +53,11 @@ class Monitor(GObject.GObject):
         if o: f = o
         return self.monitorAll(f)
 
+
 if __name__ == '__main__':
+
     def cb_changed(M, p, m, f, o, evt, d=None, e=None):
-        print ('signal', e, p, f, o, evt)
+        print('signal', e, p, f, o, evt)
 
     from gi.repository import GLib
     m = Monitor('./tmp')

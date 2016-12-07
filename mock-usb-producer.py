@@ -39,6 +39,6 @@ if __name__ == '__main__':
 
     store = SimpleStoreProducer(prefix=Endless.NAMES.SOMA, split=path.realpath(args.dir))
     logger.info('creating store: %s', args.__dict__)
-    store.publish_all_names(path.realpath (args.dir))
+    store.publish_all_names(path.realpath(args.dir))
 
     GLib.MainLoop().run()

@@ -37,13 +37,15 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
+
 def makeName(o):
     if isinstance(o, Name):
         return o
     return Name(o)
 
+
 def dumpName(n):
-    return [str (n.get(i)) for i in range(n.size())]
+    return [str(n.get(i)) for i in range(n.size())]
 
 
 class GLibUnixTransport(UnixTransport):
@@ -111,14 +113,7 @@ class Base(GObject.GObject):
 
 
 class Producer(Base):
-    __gsignals__ = {
-        'register-failed': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object,)),
-        'register-success': (GObject.SIGNAL_RUN_FIRST, None,
-                    (object, object)),
-        'interest': (GObject.SIGNAL_RUN_FIRST, None,
-                     (object, object, object, object, object))
-    }
+    __gsignals__ = {'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )), 'register-success': (GObject.SIGNAL_RUN_FIRST, None, (object, object)), 'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))}
 
     def __init__(self, auto=False, *args, **kwargs):
         super(Producer, self).__init__(*args, **kwargs)
@@ -138,7 +133,7 @@ class Producer(Base):
         try:
             self._certificateName = keyChain.getDefaultCertificateName()
         except:
-            name = Name (self.name)
+            name = Name(self.name)
             logger.warning("Could not get default certificate name, creating a new one from %s", name)
             self._certificateName = keyChain.createIdentityAndCertificate(name)
         self._responseCount = 0
@@ -148,29 +143,29 @@ class Producer(Base):
     def sign(self, data):
         return self._keyChain.sign(data, self._certificateName)
 
-    def nack (self,name):
-        logger.debug ('NACK %s', name)
-        info = MetaInfo ()
-        info.setType (ContentType.NACK)
-        data = Data (name)
-        data.setMetaInfo (info)
-        self.sendFinish (data)
+    def nack(self, name):
+        logger.debug('NACK %s', name)
+        info = MetaInfo()
+        info.setType(ContentType.NACK)
+        data = Data(name)
+        data.setMetaInfo(info)
+        self.sendFinish(data)
 
     def send(self, name, content):
         data = Data(name)
         data.setContent(content)
-        logger.debug ('sending: %d, on %s', content.__len__(), name)
+        logger.debug('sending: %d, on %s', content.__len__(), name)
         self.sendFinish(data)
         return name
 
     def sendFinish(self, data):
-#        self.sign(data)
-#       logger.debug ('sending data: %d', data.__len__())
+        #        self.sign(data)
+        #       logger.debug ('sending data: %d', data.__len__())
         self.face.putData(data)
 
     def _onInterest(self, *args, **kwargs):
         self._responseCount += 1
-        logger.debug ("Got interest %s, %s", args, kwargs)
+        logger.debug("Got interest %s, %s", args, kwargs)
 
         self.emit('interest', *args, **kwargs)
 
@@ -184,8 +179,7 @@ class Producer(Base):
             logger.warning("tried to unregister a prefix that never was registred: %s", prefix)
             pass
 
-    def registerPrefix(self, prefix = None,
-                       postfix = "", flags = None):
+    def registerPrefix(self, prefix=None, postfix="", flags=None):
         prefix = makeName(prefix)
         postfix = makeName(postfix)
 
@@ -196,12 +190,8 @@ class Producer(Base):
         except:
             flags = None
 
-        logger.info ("Register prefix: %s", prefix)
-        self._prefixes[prefix] = self.face.registerPrefix(prefix,
-                                  self._onInterest,
-                                  self.onRegisterFailed,
-                                  self.onRegisterSuccess,
-                                  flags=flags)
+        logger.info("Register prefix: %s", prefix)
+        self._prefixes[prefix] = self.face.registerPrefix(prefix, self._onInterest, self.onRegisterFailed, self.onRegisterSuccess, flags=flags)
         return prefix
 
     def onRegisterFailed(self, prefix):
@@ -213,19 +203,18 @@ class Producer(Base):
         self.emit('register-success', prefix, registered)
         logger.info("Register succeded for prefix: %s, %s", prefix, registered)
 
+
 class Consumer(Base):
     __gsignals__ = {
-        'data': (GObject.SIGNAL_RUN_FIRST, None,
-                 (object, object)),
-        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None,
-                 (object,)),
+        'data': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
+        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
     }
 
     def __init__(self, auto=False, *args, **kwargs):
         super(Consumer, self).__init__(*args, **kwargs)
 
         self.pit = dict()
-#        self.generateKeys()
+        #        self.generateKeys()
         self._prefixes = dict()
         if auto: self.consume()
 
@@ -244,8 +233,8 @@ class Consumer(Base):
     def expressInterest(self, name=None, forever=False, postfix=None):
         if name == None: name = self.name
         segname = self.makeInterest(name)
-        if postfix: segname.append (postfix)
-        logger.debug ("Express Interest name: %s", segname)
+        if postfix: segname.append(postfix)
+        logger.debug("Express Interest name: %s", segname)
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
         self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
         return segname
@@ -257,9 +246,8 @@ class Consumer(Base):
     def onTimeout(self, interest, forever=False, name=None):
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
-        logger.debug ("Time out for interest: %s", interest.getName())
+        logger.debug("Time out for interest: %s", interest.getName())
         if forever and name:
-            logger.info ("Re-requesting Interest: %s", name)
+            logger.info("Re-requesting Interest: %s", name)
             onTimeout = partial(self.onTimeout, forever=forever, name=name)
-            self.pit[name] = self.face.expressInterest(interest,
-                                                       self._onData, onTimeout)
+            self.pit[name] = self.face.expressInterest(interest, self._onData, onTimeout)

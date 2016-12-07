@@ -3,7 +3,8 @@ import DirTools
 
 from gi.repository import GLib
 
-ITER_COUNT=10
+ITER_COUNT = 10
+
 
 class TestClass:
     @pytest.mark.timeout(timeout=3, method='thread')
@@ -12,7 +13,7 @@ class TestClass:
         self.__called = 0
 
         def cb_changed(M, p, m, f, o, evt, d=None, e=None):
-            print ('signal', e, p, f, o, evt, d)
+            print('signal', e, p, f, o, evt, d)
             assert e == 'created'
             self.__called += 1
 
@@ -24,4 +25,3 @@ class TestClass:
         GLib.timeout_add_seconds(2, lambda: loop.quit())
         loop.run()
         assert self.__called == ITER_COUNT
-

@@ -33,13 +33,15 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
-def makeSession ():
-    session = Soup.Session ()
+
+def makeSession():
+    session = Soup.Session()
     session.props.ssl_strict = False
     session.props.max_conns = 100
     session.props.max_conns_per_host = 100
 
     return session
+
 
 def read_from_stream_async(istream, callback, cancellable=None, chunk_size=4096):
     chunks = []
@@ -57,39 +59,39 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=4096)
 
     read_bytes_async()
 
-class Producer (Chunks.Producer):
-    def __init__(self, name, url, session = None,
-                 *args, **kwargs):
-        logger.info ("%s %s", name, url)
+
+class Producer(Chunks.Producer):
+    def __init__(self, name, url, session=None, *args, **kwargs):
+        logger.info("%s %s", name, url)
         self.url = url
 
         self.session = session
         if not self.session:
-            self.session = makeSession ()
+            self.session = makeSession()
 
         try:
             size = kwargs['size']
         except:
             # go out make a request to get size
-            msg = Soup.Message.new ("GET", url)
-            msg.request_headers.append ('Range', 'bytes=0-0')
-            self.session.send (msg, None)
-            CR = msg.response_headers.get_one ('Content-Range')
-            size = int (CR.split ('/') [1])
+            msg = Soup.Message.new("GET", url)
+            msg.request_headers.append('Range', 'bytes=0-0')
+            self.session.send(msg, None)
+            CR = msg.response_headers.get_one('Content-Range')
+            size = int(CR.split('/')[1])
 
         super(Producer, self).__init__(name, size=size, *args, **kwargs)
 
     def getChunk(self, name, n, prefix):
-        self.soupGet (name, n, self.url)
+        self.soupGet(name, n, self.url)
         return True
 
-    def soupGet (self, name, n, uri):
-        msg = Soup.Message.new ('GET', uri)
-        req_range = (n*self.chunkSize, (n+1)*self.chunkSize - 1)
-        msg.request_headers.append ('Range', 'bytes=%d-%d' % req_range)
+    def soupGet(self, name, n, uri):
+        msg = Soup.Message.new('GET', uri)
+        req_range = (n * self.chunkSize, (n + 1) * self.chunkSize - 1)
+        msg.request_headers.append('Range', 'bytes=%d-%d' % req_range)
         logger.info('asked for %s (%d)', name, n)
         logger.info('range %s', req_range)
-        gotStream = partial (self.gotStream, name=name, n=n, msg=msg, req_range=req_range)
+        gotStream = partial(self.gotStream, name=name, n=n, msg=msg, req_range=req_range)
         self.session.send_async(msg, None, gotStream)
         return msg
 
@@ -99,6 +101,7 @@ class Producer (Chunks.Producer):
 
         istream = session.send_finish(task)
         read_from_stream_async(istream, lambda buf: self.send(name, buf))
+
 
 if __name__ == '__main__':
     from gi.repository import GLib
@@ -111,12 +114,11 @@ if __name__ == '__main__':
     parser.add_argument("url")
 
     args = parser.parse_args()
-    if args.name: 
+    if args.name:
         name = args.name
     else:
-        name = re.sub ('https?://', '', args.url)
+        name = re.sub('https?://', '', args.url)
 
-    producer = Producer (name, args.url, auto=True)
+    producer = Producer(name, args.url, auto=True)
 
     GLib.MainLoop().run()
-

@@ -20,10 +20,7 @@
 import Chunks
 from NDN import Pool
 
+
 class MixPool(Pool.MixPool):
-    def __init__(self, producerKlass = Chunks.Producer,
-                 consumerKlass = Chunks.Consumer,
-                 *args, **kwargs):
-        super(MixPool, self).__init__(producerKlass=producerKlass,
-                                      consumerKlass=consumerKlass,
-                                      *args, **kwargs)
+    def __init__(self, producerKlass=Chunks.Producer, consumerKlass=Chunks.Consumer, *args, **kwargs):
+        super(MixPool, self).__init__(producerKlass=producerKlass, consumerKlass=consumerKlass, *args, **kwargs)

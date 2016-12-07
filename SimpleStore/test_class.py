@@ -5,9 +5,11 @@ from os import path, utime
 
 import SimpleStore
 
+
 def touch(fname, times=None):
     with open(fname, 'a'):
         utime(fname, times)
+
 
 class TestClass:
     @pytest.fixture
@@ -28,4 +30,3 @@ class TestClass:
         p.unpublish(tmpdirpath)
         assert p.producers.keys() == []
         assert p.dirs.keys().__len__() == 0
-

@@ -35,11 +35,13 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
+
 def dump(*list, **kwargs):
     result = ""
     for element in list:
         result += (element if type(element) is str else str(element)) + " "
     print(result)
+
 
 class DbusConsumer(Consumer):
     def __init__(self, name, target, appids, *args, **kwargs):
@@ -48,11 +50,12 @@ class DbusConsumer(Consumer):
         self.target = target
         self.connect('data', self.notifyEKN)
 
-        appname = lambda i: Name (Endless.NAMES.INSTALLED).append (i)
+        appname = lambda i: Name(Endless.NAMES.INSTALLED).append(i)
         [self.expressInterest(name=appname(i), forever=True) for i in appids]
 
     def notifyEKN(self, consumer, interest, data):
-        logger.info ("GOT NAMES, all the names, the best names")
+        logger.info("GOT NAMES, all the names, the best names")
+
 
 if __name__ == "__main__":
     import sys
