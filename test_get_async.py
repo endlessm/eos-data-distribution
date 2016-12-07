@@ -30,7 +30,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename")
-    parser.add_argument("-l", "--limit", type=int, default=3)
+    parser.add_argument("-l", "--limit", type=int, default=0)
     parser.add_argument("-n", "--no-chunks", action='store_true')
     parser.add_argument("name")
 
@@ -49,5 +49,9 @@ if __name__ == "__main__":
         if args.limit and consumer._callbackCount > args.limit:
             loop.quit()
 
+    def complete(*a):
+        loop.quit()
+
     consumer.connect('data', check)
+    consumer.connect('complete', complete)
     loop.run()
