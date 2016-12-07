@@ -38,6 +38,4 @@ class Names(dict):
 
 NAMES = Names({k: Name(path.join(BASE, v)) for k, v in {'BASE': '', 'INSTALLED': 'installed', 'SOMA': 'soma/v1'}.items()})
 
-SOMA_SUB_BASE = 'https://subscriptions.prod-blue.soma.endless-cloud.com/v1'
-
-# SOMA_SUB_BASE = 'https://subscriptions.prod.soma.endless-cloud.com'
+SOMA_SUB_BASE = 'https://subscriptions.prod.soma.endless-cloud.com'
