@@ -26,7 +26,7 @@ from os import path
 from pyndn import Name
 from pyndn import Data
 
-from .. import NDN, Chunks, HTTP
+from .. import chunks, NDN, HTTP
 from ..NDN import Endless
 
 import gi
@@ -84,6 +84,6 @@ if __name__ == '__main__':
 
     EG = Getter(NDN.Endless.NAMES.SOMA)
     name = Name(NDN.Endless.NAMES.SOMA).append('10521bb3a18b573f088f84e59c9bbb6c2e2a1a67')
-    print Chunks.Consumer(name, filename='test.json', auto=True)
+    print chunks.Consumer(name, filename='test.json', auto=True)
 
     GLib.MainLoop().run()

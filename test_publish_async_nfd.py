@@ -20,7 +20,7 @@
 import time
 from pyndn import Name
 
-from eos_ndn import Chunks
+from eos_ndn import chunks
 from eos_ndn.NDN import Endless
 
 from gi.repository import GLib
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     if not args.name:
         args.name = Name(Endless.NAMES.BASE).append("testchunks/").append(args.filename)
 
-    producer = Chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
+    producer = chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
     loop = GLib.MainLoop()
 
     def check(*a):

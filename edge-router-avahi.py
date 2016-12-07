@@ -27,7 +27,7 @@ from gi.repository import GObject
 import netifaces
 
 from eos_ndn.MDNS import ServiceDiscovery
-from eos_ndn.Chunks import Producer
+from eos_ndn.chunks import Producer
 from eos_ndn.NDN import Endless
 from eos_ndn import Edge
 

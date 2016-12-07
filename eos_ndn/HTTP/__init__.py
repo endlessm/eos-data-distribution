@@ -21,7 +21,7 @@
 import logging
 from functools import partial
 
-from .. import Chunks
+from .. import chunks
 from ..NDN import Endless
 
 import gi
@@ -58,7 +58,7 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=4096)
     read_bytes_async()
 
 
-class Producer(Chunks.Producer):
+class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
         logger.info("%s %s", name, url)
         self.url = url

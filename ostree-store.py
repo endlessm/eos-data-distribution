@@ -27,7 +27,7 @@ import gi
 from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_ndn import NDN, Chunks, SimpleStore
+from eos_ndn import chunks, NDN, SimpleStore
 from eos_ndn.NDN import Endless
 from eos_ndn.Edge import getSubIdName
 
@@ -74,7 +74,7 @@ class Store(NDN.Producer):
             pass
 
         self.interests[ssubid] = name
-        sub = Chunks.Consumer(subname, filename=path.join(self.tempdir, manifest_path), auto=True)
+        sub = chunks.Consumer(subname, filename=path.join(self.tempdir, manifest_path), auto=True)
 
         sub.connect('complete', self.getShards, ssubid)
 
@@ -99,7 +99,7 @@ class Store(NDN.Producer):
             postfix = 'shards/%s' % (re.sub('https?://', '', shard['download_uri']))
             subname = "%s/%s" % (Endless.NAMES.SOMA, postfix)
             shard_filename = path.join(self.tempdir, postfix)
-            sub = Chunks.Consumer(subname, filename=shard_filename, auto=True)
+            sub = chunks.Consumer(subname, filename=shard_filename, auto=True)
             sub.connect('complete', self.checkSub, manifest_filename, subid)
             self.subs[subid][shard_filename] = False
 

@@ -23,7 +23,7 @@ from os import path, walk
 from pyndn import Face
 
 from ..DirTools import Monitor
-from ..Chunks import Pool
+from ..chunks import Pool
 
 r = re.compile(r'^/+')
 

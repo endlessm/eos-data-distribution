@@ -20,7 +20,7 @@
 import time
 from pyndn import Name
 
-from eos_ndn import NDN, Chunks
+from eos_ndn import chunks, NDN
 
 from gi.repository import GLib
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     if args.no_chunks:
         consumer = NDN.Consumer(name=args.name, auto=True)
     else:
-        consumer = Chunks.Consumer(name=args.name, filename=args.filename, auto=True)
+        consumer = chunks.Consumer(name=args.name, filename=args.filename, auto=True)
 
     loop = GLib.MainLoop()
 
