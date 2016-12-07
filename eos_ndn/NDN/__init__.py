@@ -107,9 +107,6 @@ class Base(GObject.GObject):
         self._callbackCount = 0
         self._responseCount = 0
 
-    def dataToBytes(self, data):
-        return data.getContent().toBuffer()
-
 
 class Producer(Base):
     __gsignals__ = {'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )), 'register-success': (GObject.SIGNAL_RUN_FIRST, None, (object, object)), 'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))}

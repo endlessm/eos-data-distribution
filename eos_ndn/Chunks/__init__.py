@@ -136,8 +136,7 @@ class Consumer(NDN.Consumer):
         self.expressInterest(name=Name(name), forever=True, *args, **kwargs)
 
     def putChunk(self, n, data):
-        buf = self.dataToBytes(data)
-
+        buf = data.getContent().toBuffer()
         logger.debug('writing chunk %d/%d', n, self.size / self.chunkSize)
         start = self.chunkSize * n
         s = os.lseek(self.f, start, os.SEEK_SET)
