@@ -30,8 +30,7 @@ run_store="$(run store ostree-store -t ${TEMP_DIR})"
 run_dbus_consumer="$(run dbus simulate-dbus-consumer $APPIDS)"
 run_usb_mock="$(run usb mock-usb-producer ${BASE_PATH}/DL)"
 
-nfd-stop; killall tmux;
-nfd-start && sleep 2
+killall tmux;
 
 rm -rf ${TEMP_DIR}/*
 
