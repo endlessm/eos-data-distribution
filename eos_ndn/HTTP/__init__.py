@@ -29,7 +29,6 @@ gi.require_version('Soup', '2.4')
 
 from gi.repository import Soup
 
-logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 
