@@ -36,13 +36,6 @@ logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 
-def dump(*list, **kwargs):
-    result = ""
-    for element in list:
-        result += (element if type(element) is str else str(element)) + " "
-    print(result)
-
-
 class DbusConsumer(Consumer):
     def __init__(self, name, target, appids, *args, **kwargs):
         Consumer.__init__(self, name=name, *args, **kwargs)

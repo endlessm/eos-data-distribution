@@ -29,7 +29,6 @@ from os import path
 from NDN import Endless
 
 import pprint
-pp = pprint.PrettyPrinter()
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
@@ -46,7 +45,7 @@ def mount_added_cb(monitor, mount, store):
     base = path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
     if drive:
-        pp.pprint(drive.get_name())
+        pprint.pprint(drive.get_name())
 
     if path.exists(base):
         logger.info("Starting import")
@@ -58,7 +57,7 @@ def mount_added_cb(monitor, mount, store):
 def mount_removed_cb(monitor, mount, store):
     root = mount.get_root()
     p = root.get_path()
-    pp.pprint([store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)])
+    pprint.pprint([store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)])
 
 
 if __name__ == '__main__':
