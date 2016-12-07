@@ -40,13 +40,6 @@ import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
-try:
-    gi.require_version('Notify', '0.7')
-    from gi.repository import Notify
-    Notify.init ("NDN Store")
-except:
-    Notify = False
-
 class Store(NDN.Producer):
     def __init__(self, tempdir, *args, **kwargs):
         def delget(h, a):
@@ -128,11 +121,8 @@ class Store(NDN.Producer):
 
         logger.info ('shard complete: %s → %s', shard_filename, subid)
         if all (self.subs [subid].values()):
-            logger.info ('all shards have been downloaded: %s', self.subs [subid])
-            if Notify:
-                notification = Notify.Notification.new('all shards have been downloaded')
-                notification.show()
-        
+            Endless.notify_log (logger.info, 'all shards have been downloaded: %s' % self.subs [subid])
+
             shard_filenames = [path.realpath(shard_filename) for shard_filename in self.subs[subid]]
 
             response = {
