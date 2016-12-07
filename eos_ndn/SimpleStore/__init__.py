@@ -18,8 +18,8 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import re
-
 from os import path, walk
+
 from pyndn import Face
 
 from ..DirTools import Monitor

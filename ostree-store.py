@@ -17,24 +17,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import gi
+import json
+import logging
+import re
+from os import path
 
-#gi.require_version('OSTree', '1.0')
+import gi
 
 from gi.repository import GObject
 from gi.repository import GLib
-#from gi.repository import OSTree
 
 from eos_ndn import NDN, Chunks, SimpleStore
 from eos_ndn.NDN import Endless
 from eos_ndn.Edge import getSubIdName
 
-from os import path
-import json
-import re
-
-import logging
-logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 

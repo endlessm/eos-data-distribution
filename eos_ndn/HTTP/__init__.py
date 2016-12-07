@@ -18,6 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import logging
+from functools import partial
+
 from .. import Chunks
 from ..NDN import Endless
 
@@ -26,9 +29,6 @@ gi.require_version('Soup', '2.4')
 
 from gi.repository import Soup
 
-from functools import partial
-
-import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 

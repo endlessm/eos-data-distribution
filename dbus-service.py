@@ -21,17 +21,17 @@ import json
 from shutil import copyfile
 from os import path
 
-from pyndn import Name
-from pyndn import Face
-
-from eos_ndn.NDN import Consumer, Endless
-
 import gi
 gi.require_version('GLib', '2.0')
 
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
+
+from pyndn import Name
+from pyndn import Face
+
+from eos_ndn.NDN import Consumer, Endless
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>

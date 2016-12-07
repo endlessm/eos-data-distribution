@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import logging
+from os import path
+from functools import partial
+
 import gi
 gi.require_version('GLib', '2.0')
 
@@ -28,13 +32,8 @@ from pyndn.security import KeyChain
 from pyndn.transport.unix_transport import UnixTransport
 from pyndn import Name, Data, Face, MetaInfo, ContentType
 
-from os import path
-from functools import partial
-
 from . import Endless
 
-import logging
-logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 

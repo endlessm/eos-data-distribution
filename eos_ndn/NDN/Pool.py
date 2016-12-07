@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import logging
+from os import path
+from functools import partial
+
 import gi
 gi.require_version('GLib', '2.0')
 
@@ -32,12 +36,7 @@ from pyndn import Face
 from .. import NDN
 from ..NDN import Endless
 
-import logging
-logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
-
-from os import path
-from functools import partial
 
 SIGNALS = ['added', 'removed']
 

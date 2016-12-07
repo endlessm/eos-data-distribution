@@ -17,11 +17,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+from os import path
+
 import gi
 gi.require_version('GLib', '2.0')
 from gi.repository import GLib
-
-from os import path
 
 from eos_ndn.NDN import Endless
 from eos_ndn.SimpleStore import Producer as SimpleStoreProducer

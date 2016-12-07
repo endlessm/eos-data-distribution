@@ -17,8 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import gi
+import logging
+import os
 
+import gi
 gi.require_version('GLib', '2.0')
 
 from gi.repository import GObject
@@ -29,10 +31,6 @@ from pyndn import Name
 from .. import NDN
 from ..NDN import Endless
 
-import os
-
-import logging
-logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 

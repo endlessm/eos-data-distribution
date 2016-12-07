@@ -18,15 +18,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import json
+import logging
+from functools import partial
+from os import path
+
 from pyndn import Name
 from pyndn import Data
 
-from eos_ndn import NDN, Chunks, HTTP
-from eos_ndn.NDN import Endless
-
-from os import path
-from functools import partial
-import json
+from .. import NDN, Chunks, HTTP
+from ..NDN import Endless
 
 import gi
 gi.require_version('Soup', '2.4')
@@ -34,8 +35,6 @@ gi.require_version('Soup', '2.4')
 from gi.repository import GLib
 from gi.repository import Soup
 
-import logging
-logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
 

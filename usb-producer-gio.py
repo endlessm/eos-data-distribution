@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import logging
+import pprint
+from os import path
+
 import gi
 gi.require_version('Gio', '2.0')
 gi.require_version('GLib', '2.0')
@@ -24,17 +28,11 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gio
 from gi.repository import GLib
 
-from os import path
-
-from NDN import Endless
-
-import pprint
+from eos_ndn.NDN import Endless
+from eos_ndn.SimpleStore import Producer as SimpleStoreProducer
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
-from SimpleStore import Producer as SimpleStoreProducer
-
-import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
