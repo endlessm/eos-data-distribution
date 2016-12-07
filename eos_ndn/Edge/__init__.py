@@ -21,15 +21,12 @@
 from pyndn import Name
 from pyndn import Data
 
-import NDN
-import Chunks
-import HTTP
+from eos_ndn import NDN, Chunks, HTTP
+from eos_ndn.NDN import Endless
 
 from os import path
 from functools import partial
 import json
-
-from NDN import Endless
 
 import gi
 gi.require_version('Soup', '2.4')

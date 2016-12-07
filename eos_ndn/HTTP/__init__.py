@@ -18,14 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import Chunks
+from .. import Chunks
+from ..NDN import Endless
 
 import gi
 gi.require_version('Soup', '2.4')
 
 from gi.repository import Soup
-
-from NDN import Endless
 
 from functools import partial
 

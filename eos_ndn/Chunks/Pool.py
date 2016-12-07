@@ -17,8 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import Chunks
-from NDN import Pool
+from .. import Chunks
+from ..NDN import Pool
 
 
 class MixPool(Pool.MixPool):

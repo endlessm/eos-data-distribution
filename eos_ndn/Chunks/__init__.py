@@ -26,8 +26,8 @@ from gi.repository import GLib
 
 from pyndn import Name
 
-import NDN
-from NDN import Endless
+from .. import NDN
+from ..NDN import Endless
 
 import os
 

@@ -29,9 +29,9 @@ from pyndn import Name
 from pyndn import Data
 from pyndn import Face
 
-import NDN
+from .. import NDN
+from ..NDN import Endless
 
-from NDN import Endless
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)

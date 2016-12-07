@@ -20,8 +20,7 @@
 import time
 from pyndn import Name
 
-import Chunks
-import NDN
+from eos_ndn import NDN, Chunks
 
 from gi.repository import GLib
 

@@ -31,7 +31,7 @@ from pyndn import Name, Data, Face, MetaInfo, ContentType
 from os import path
 from functools import partial
 
-from NDN import Endless
+from . import Endless
 
 import logging
 logging.basicConfig(level=Endless.LOGLEVEL)

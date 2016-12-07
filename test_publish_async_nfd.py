@@ -20,8 +20,8 @@
 import time
 from pyndn import Name
 
-import Chunks
-from NDN import Endless
+from eos_ndn import Chunks
+from eos_ndn.NDN import Endless
 
 from gi.repository import GLib
 

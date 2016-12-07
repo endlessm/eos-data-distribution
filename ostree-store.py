@@ -17,8 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import SimpleStore
-
 import gi
 
 #gi.require_version('OSTree', '1.0')
@@ -27,10 +25,9 @@ from gi.repository import GObject
 from gi.repository import GLib
 #from gi.repository import OSTree
 
-from NDN import Endless
-import NDN
-import Chunks
-from Edge import getSubIdName
+from eos_ndn import NDN, Chunks, SimpleStore
+from eos_ndn.NDN import Endless
+from eos_ndn.Edge import getSubIdName
 
 from os import path
 import json
