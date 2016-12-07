@@ -43,10 +43,6 @@ def makeName(o):
     return Name(o)
 
 
-def dumpName(n):
-    return [str(n.get(i)) for i in range(n.size())]
-
-
 class GLibUnixTransport(UnixTransport):
     _watch_id = 0
 
