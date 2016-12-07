@@ -24,18 +24,12 @@ from os import path
 from pyndn import Name
 
 LOGLEVEL = logging.INFO
-BASE = '/endless/'
 
 
-class Names(dict):
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+class NAMES(object):
+    BASE = Name('/endless/')
+    INSTALLED = Name('/endless/installed')
+    SOMA = Name('/endless/soma/v1')
 
-    def __init__(self, *args, **kwargs):
-        super(Names, self).__init__(*args, **kwargs)
-
-
-NAMES = Names({k: Name(path.join(BASE, v)) for k, v in {'BASE': '', 'INSTALLED': 'installed', 'SOMA': 'soma/v1'}.items()})
 
 SOMA_SUB_BASE = 'https://subscriptions.prod.soma.endless-cloud.com'
