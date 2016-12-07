@@ -51,7 +51,6 @@ class Store(NDN.Producer):
         self.consumers = dict()
         self.subs = dict()
         self.interests = dict()
-        self.notifications = dict()
 
         self.store = SimpleStore.Producer(tempdir, prefixes.producer)
 
@@ -81,7 +80,6 @@ class Store(NDN.Producer):
         self.interests[ssubid] = name
         sub = Chunks.Consumer(subname, filename=path.join(self.tempdir, manifest_path), auto=True)
 
-        sub.notifyChunk("Getting Metadata %s" % ssubid)
         sub.connect('complete', self.getShards, ssubid)
 
         self.consumers[subname] = sub
@@ -106,7 +104,6 @@ class Store(NDN.Producer):
             subname = "%s/%s" % (Endless.NAMES.SOMA, postfix)
             shard_filename = path.join(self.tempdir, postfix)
             sub = Chunks.Consumer(subname, filename=shard_filename, auto=True)
-            sub.notifyChunk("Downloading %s" % shard_filename)
             sub.connect('complete', self.checkSub, manifest_filename, subid)
             self.subs[subid][shard_filename] = False
 
@@ -117,8 +114,6 @@ class Store(NDN.Producer):
 
         logger.info('shard complete: %s → %s', shard_filename, subid)
         if all(self.subs[subid].values()):
-            Endless.notify_log(logger.info, 'all shards have been downloaded: %s' % self.subs[subid])
-
             shard_filenames = [path.realpath(shard_filename) for shard_filename in self.subs[subid]]
 
             response = {

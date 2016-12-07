@@ -26,15 +26,6 @@ from pyndn import Name
 LOGLEVEL = logging.INFO
 BASE = '/endless/'
 
-try:
-    import gi
-
-    gi.require_version('Notify', '0.7')
-    from gi.repository import Notify
-    Notify.init("NDN")
-except:
-    Notify = False
-
 
 class Names(dict):
     __getattr__ = dict.__getitem__
@@ -50,17 +41,3 @@ NAMES = Names({k: Name(path.join(BASE, v)) for k, v in {'BASE': '', 'INSTALLED':
 SOMA_SUB_BASE = 'https://subscriptions.prod-blue.soma.endless-cloud.com/v1'
 
 # SOMA_SUB_BASE = 'https://subscriptions.prod.soma.endless-cloud.com'
-
-
-def notify_log(log, title, subtitle=None, notification=None):
-    log("notify: %s, %s" % (title, subtitle))
-    if not Notify:
-        return None
-
-    if notification:
-        notification.update(title, subtitle)
-    else:
-        notification = Notify.Notification.new(title, subtitle)
-
-    notification.show()
-    return notification

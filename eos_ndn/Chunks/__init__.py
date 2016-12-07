@@ -131,8 +131,6 @@ class Consumer(NDN.Consumer):
         self.pipeline = pipeline
         self.chunkSize = chunkSize
 
-        self.notification = None
-
         self.connect('data', self.onData)
 
     def consume(self, name=None, start=0, *args, **kwargs):
@@ -172,8 +170,3 @@ class Consumer(NDN.Consumer):
         logger.debug('get Next %s → %s', name, suc)
         self.expressInterest(suc, forever=True)
         return suc
-
-    def notifyChunk(self, title, subtitle=None):
-        self.notification = Endless.notify_log(logger.info, title, subtitle)
-        self.connect('progress', lambda o, p: Endless.notify_log(logger.info, title=title, subtitle="progress %d/100" % p, notification=self.notification))
-        self.connect('complete', lambda o, *a: Endless.notify_log(logger.info, title="Completed: %" % title, subtitle="progress %d/100" % p, notification=self.notification))
