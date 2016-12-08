@@ -35,32 +35,25 @@ logger = logging.getLogger(__name__)
 
 
 class Store(NDN.Producer):
-    def __init__(self, tempdir, *args, **kwargs):
-        def delget(h, a):
-            ret = h[a]
-            del h[a]
-            return ret
+    def __init__(self, tempdir, consumer_prefix=None, producer_prefix=None, *args, **kwargs):
+        self.consumer_prefix = consumer_prefix
+        self.producer_prefix = producer_prefix
 
-        self.prefixes = prefixes = Endless.Names({p: delget(kwargs, '%s_prefix' % p) for p in ['consumer', 'producer']})
-        super(Store, self).__init__(name=prefixes.consumer, auto=True, *args, **kwargs)
+        super(Store, self).__init__(name=self.consumer_prefix, auto=True, *args, **kwargs)
         self.tempdir = tempdir
         self.consumers = dict()
         self.subs = dict()
         self.interests = dict()
 
-        self.store = SimpleStore.Producer(tempdir, prefixes.producer)
-
-        self.store.connect('producer-added', self.onProducerAdded)
-        self.store.connect('producer-removed', self.onProducerRemoved)
-
+        self.store = SimpleStore.Producer(tempdir, self.producer_prefix)
         self.connect('interest', self.onInterest)
 
     def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subid = getSubIdName(name, self.prefixes.consumer)
+        subid = getSubIdName(name, self.consumer_prefix)
         ssubid = str(subid)
         manifest_path = path.join(ssubid, 'manifest.json')
-        subname = "%s/%s" % (self.prefixes.producer, manifest_path)
+        subname = "%s/%s" % (self.producer_prefix, manifest_path)
 
         if not subid:
             logger.warning('Error, the requested name doesn\'t contain a sub', NDN.dumpName(name))
@@ -119,12 +112,6 @@ class Store(NDN.Producer):
             }
 
             self.send(self.interests[subid], json.dumps(response))
-
-    def onProducerAdded(self, name, producer, d=None):
-        print name, 'added as', producer
-
-    def onProducerRemoved(self, name, d=None):
-        print name, 'removed'
 
 
 if __name__ == '__main__':
