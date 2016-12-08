@@ -59,7 +59,6 @@ class Base(Pool.MixPool):
         return self.unpublish_name(f, d)
 
     def unpublish_name(self, name, basedir=None):
-        print 'remove', name
         self.remove_producer(name)
         filename = self.filenames[name]
         del self.filenames[name]
@@ -71,9 +70,7 @@ class Base(Pool.MixPool):
         return self.publish_name(f, d)
 
     def publish_name(self, filename, basedir=None):
-        print 'publish', filename, self.prefix
         if not filename.endswith(self.exts):
-            print('ignoring', filename, self.exts)
             return
 
         name = self._path_to_name(filename)
@@ -90,7 +87,6 @@ class Base(Pool.MixPool):
             # for dir in dirs:
             #     self.walk_dir(path.join(root,dir))
             for file in files:
-                print 'publish-name', basedir, file
                 self.publish_name(path.join(root, file), basedir)
 
     def publish_all_names(self, basedir):

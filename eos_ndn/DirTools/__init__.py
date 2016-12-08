@@ -14,7 +14,7 @@ class Monitor(GObject.GObject):
         self.monitors = dict()
         f = Gio.file_new_for_path(dir)
         if not self.isDir(f):
-            print 'asked to monitor something that is not a dir', dir
+            raise ValueError('Asked to monitor something that is not a dir: %s' % (dir, ))
         self.monitorAll(f)
 
     def filterSignals(self, a):

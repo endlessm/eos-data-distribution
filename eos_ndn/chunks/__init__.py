@@ -42,7 +42,7 @@ def get_chunk_component(name):
 class Producer(NDN.Producer):
     __gsignals__ = {'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )), 'complete': (GObject.SIGNAL_RUN_FIRST, None, (int, ))}
 
-    def __init__(self, name, filename=None, chunkSize=4096, mode="r", size=None, *args, **kwargs):
+    def __init__(self, name, filename=None, chunkSize=4096, mode="rb", size=None, *args, **kwargs):
         if size:
             self.size = size
         elif not filename:
@@ -94,7 +94,7 @@ class Producer(NDN.Producer):
             seg = 0
             name.appendSegment(seg)
 
-        final_block_id = self.size / self.chunkSize
+        final_block_id = self.size // self.chunkSize
         meta_info = MetaInfo()
         meta_info.setFinalBlockId(Name.Component.fromSegment(final_block_id))
         data = Data(name)
