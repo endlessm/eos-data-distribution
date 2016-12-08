@@ -23,9 +23,6 @@ import logging
 from functools import partial
 from os import path
 
-from pyndn import Name
-from pyndn import Data
-
 import gi
 gi.require_version('Soup', '2.4')
 
@@ -42,23 +39,16 @@ def getSubIdName(name, basename):
     return name.getSubName(basename.size()).get(0)
 
 
-class Getter(ndn.Producer):
-    def __init__(self, name, *args, **kwargs):
-        super(Getter, self).__init__(name=name, *args, **kwargs)
+class Fetcher(object):
+    def __init__(self):
+        self.getters = {}
 
-        self.getters = dict()
+        self._producer = Producer(Endless.NAMES.SOMA)
+        self._producer.connect('interest', self._on_interest)
+        self._producer.registerPrefix()
 
-        self.connect('interest', self.onInterest)
-
-    def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
+    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        chunked = str(name.get(-1))
-        if not chunked == 'chunked':
-            logger.debug('ignoring non-chunked request: %s', name)
-            return False
-
-        name = name.getPrefix(-1)
-
         filename = str(name.get(-1))
         filepath = name.getSubName(Endless.NAMES.SOMA.size())
         key = str(name)
@@ -67,13 +57,9 @@ class Getter(ndn.Producer):
             getter = self.getters[key]
         except:
             if filename.endswith('.json'):
-                getter = self.getters[key] = http.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
+                self.getters[key] = http.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
             elif filename.endswith('.shard'):
                 url = "http://" + str(filepath).replace('/shards/', '')
-                getter = self.getters[key] = http.Producer(name, url, face=face, auto=True)
+                self.getters[key] = http.Producer(name, url, face=face, auto=True)
             else:
                 logger.debug('ignoring request: %s → %s', filename, name)
-                return False
-
-        return getter
-

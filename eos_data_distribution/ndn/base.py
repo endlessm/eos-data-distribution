@@ -105,7 +105,11 @@ class Base(GObject.GObject):
 
 
 class Producer(Base):
-    __gsignals__ = {'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )), 'register-success': (GObject.SIGNAL_RUN_FIRST, None, (object, object)), 'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))}
+    __gsignals__ = {
+        'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
+        'register-success': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
+        'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
+    }
 
     def __init__(self, auto=False, *args, **kwargs):
         super(Producer, self).__init__(*args, **kwargs)
