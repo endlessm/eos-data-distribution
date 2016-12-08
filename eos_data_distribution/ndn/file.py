@@ -1,4 +1,5 @@
 
+import errno
 import fcntl
 import os
 
@@ -31,6 +32,9 @@ class FileProducer(chunks.Producer):
 
 
 def mkdir_p(dirname):
+    if not dirname:
+        return
+
     try:
         os.makedirs(dirname)
     except OSError as exc:
