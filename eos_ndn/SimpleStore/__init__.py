@@ -18,19 +18,19 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import re
+from collections import defaultdict
 from os import path, walk
 
 from pyndn import Face
 
 from ..DirTools import Monitor
-from ..chunks import Pool
+from ..chunks import FileProducer
 
 r = re.compile(r'^/+')
 
 
-class Base(Pool.MixPool):
-    def __init__(self, base=None, prefix='/', exts=('.shard', '.json'), split=None, *args, **kwargs):
-        super(Base, self).__init__(*args, **kwargs)
+class Producer(object):
+    def __init__(self, base=None, prefix='/', exts=('.shard', '.json'), split=None):
         self.base = base
         self.exts = exts
         self.split = split or base
@@ -38,7 +38,7 @@ class Base(Pool.MixPool):
 
         # XXX(xaiki): this is a lot of bookeeping, can probably be reduced
         self.dirs = dict()
-        self.dirpubs = dict()
+        self.dirpubs = defaultdict(lambda: {})
         self.filenames = dict()
 
         if base: self.publish_all_names(base)
@@ -58,29 +58,24 @@ class Base(Pool.MixPool):
     def _unpublish_name(self, M, p, m, f, o, evt, e=None, d=None):
         return self.unpublish_name(f, d)
 
-    def unpublish_name(self, name, basedir=None):
-        self.remove_producer(name)
-        filename = self.filenames[name]
+    def unpublish_name(self, name, basedir):
+        producer = self.dirpubs[basedir][name]
+        producer.removeRegisteredPrefix(name)
         del self.filenames[name]
-
-        if basedir:
-            del self.dirpubs[basedir][n]
+        del self.dirpubs[basedir][n]
 
     def _publish_name(self, M, p, m, f, o, evt, e=None, d=None):
         return self.publish_name(f, d)
 
-    def publish_name(self, filename, basedir=None):
+    def publish_name(self, filename, basedir):
         if not filename.endswith(self.exts):
             return
 
         name = self._path_to_name(filename)
-        producer = self.add_producer(name, filename)
+        file = open(filename, 'rb')
+        producer = FileProducer(name, file, auto=True)
         self.filenames[name] = filename
-        if basedir:
-            try:
-                self.dirpubs[basedir].update({name: producer})
-            except KeyError:
-                self.dirpubs[basedir] = {name: producer}
+        self.dirpubs[basedir].update({name: producer})
 
     def walk_dir(self, basedir):
         for root, dirs, files in walk(basedir):
@@ -96,12 +91,3 @@ class Base(Pool.MixPool):
         [monitor.connect(s, self._unpublish_name, basedir) for s in monitor.filterSignals(['moved-out', 'renamed'])]
         self.dirs[basedir] = monitor
 
-
-class Producer(Base):
-    def __init__(self, *args, **kwargs):
-        super(Producer, self).__init__(*args, **kwargs)
-
-
-class Consumer(Base):
-    def __init__(self, *args, **kwargs):
-        super(Consumer, self).__init__(*args, **kwargs)

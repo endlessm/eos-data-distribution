@@ -17,8 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import errno
 import json
 import logging
+import os
 import re
 from os import path
 
@@ -27,12 +29,23 @@ import gi
 from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_ndn import chunks, NDN, SimpleStore
+from eos_ndn import NDN, SimpleStore
+from eos_ndn.chunks import FileConsumer
 from eos_ndn.NDN import Endless
 from eos_ndn.Edge import getSubIdName
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def mkdir_p(dirname):
+    try:
+        os.makedirs(dirname)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+            pass
+        else:
+            raise
 
 
 class Store(NDN.Producer):
@@ -68,16 +81,15 @@ class Store(NDN.Producer):
             pass
 
         self.interests[ssubid] = name
-        sub = chunks.Consumer(subname, filename=path.join(self.tempdir, manifest_path), auto=True)
-
-        sub.connect('complete', self.getShards, ssubid)
-
+        manifest_filename = path.join(self.tempdir, manifest_path)
+        mkdir_p(path.dirname(manifest_filename))
+        out_file = open(manifest_filename, 'wb')
+        sub = FileConsumer(subname, out_file, auto=True)
+        sub.connect('complete', lambda consumer, subid: self.getShards(out_file.name, subid), ssubid)
         self.consumers[subname] = sub
         return sub
 
-    def getShards(self, consumer, manifest_filename, subid):
-        logger.info('got shards: %s : %s', consumer, manifest_filename)
-
+    def getShards(self, manifest_filename, subid):
         f = open(manifest_filename, 'r')
         manifest = json.loads(f.read())
 
@@ -93,7 +105,8 @@ class Store(NDN.Producer):
             postfix = 'shards/%s' % (re.sub('https?://', '', shard['download_uri']))
             subname = "%s/%s" % (Endless.NAMES.SOMA, postfix)
             shard_filename = path.join(self.tempdir, postfix)
-            sub = chunks.Consumer(subname, filename=shard_filename, auto=True)
+            out_file = open(shard_filename, 'wb')
+            sub = FileConsumer(subname, out_file, auto=True)
             sub.connect('complete', self.checkSub, manifest_filename, subid)
             self.subs[subid][shard_filename] = False
 
