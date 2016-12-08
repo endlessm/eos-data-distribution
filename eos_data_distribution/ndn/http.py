@@ -79,8 +79,8 @@ class Producer(chunks.Producer):
         # in the constructor here...
         self._size = get_content_size(self._session, self.url)
 
-    def _get_final_block_id(self):
-        return self._size / self.chunk_size
+    def _get_final_segment(self):
+        return self._size // self.chunk_size
 
     def _send_chunk(self, data, n):
         self._soup_get(data, self.url, n)

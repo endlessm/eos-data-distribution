@@ -66,13 +66,13 @@ class Producer(base.Producer):
             seg = 0
             name.appendSegment(seg)
 
-        final_block_id = self._get_final_block_id()
+        final_segment = self._get_final_segment()
         meta_info = MetaInfo()
-        meta_info.setFinalBlockId(Name.Component.fromSegment(final_block_id))
+        meta_info.setFinalBlockId(Name.Component.fromSegment(final_segment))
         data = Data(name)
         data.setMetaInfo(meta_info)
 
-        logger.debug('got interest: %s, %d/%d', name, seg, final_block_id)
+        logger.debug('got interest: %s, %d/%d', name, seg, final_segment)
 
         self._send_chunk(data, seg)
 

@@ -20,7 +20,7 @@ class FileProducer(chunks.Producer):
         self.f = file
         self._file_size = get_file_size(self.f)
 
-    def _get_final_block_id(self):
+    def _get_final_segment(self):
         return self._file_size // self.chunk_size
 
     def _get_chunk(self, n):
