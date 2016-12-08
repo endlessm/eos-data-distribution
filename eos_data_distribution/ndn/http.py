@@ -82,20 +82,19 @@ class Producer(chunks.Producer):
     def _get_final_block_id(self):
         return self._size / self.chunk_size
 
-    def _send_chunk(self, n, data):
-        self._soup_get(self.url, n, data)
+    def _send_chunk(self, data, n):
+        self._soup_get(data, self.url, n)
 
-    def _soup_get(self, uri, n, data, cancellable=None):
+    def _soup_get(self, data, uri, n, cancellable=None):
         msg = Soup.Message.new('GET', uri)
-        req_range = (n * self.chunkSize, (n + 1) * self.chunkSize - 1)
-        msg.request_headers.append('Range', 'bytes=%d-%d' % req_range)
-        self.session.send_async(msg, cancellable, lambda session, task: self._got_stream(session, task, data_template))
+        msg.request_headers.append('Range', 'bytes=%d-%d' % (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
+        self._session.send_async(msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
 
-    def _got_stream(self, session, task, data):
+    def _got_stream(self, msg, task, data):
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
             return
 
-        istream = session.send_finish(task)
+        istream = self._session.send_finish(task)
         read_from_stream_async(istream, lambda buf: self._got_buf(data, buf))
 
     def _got_buf(self, data, buf):

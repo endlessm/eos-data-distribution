@@ -29,7 +29,7 @@ from gi.repository import GLib
 from gi.repository import Soup
 
 from .names import SUBSCRIPTIONS_SOMA
-from .ndn import http
+from .ndn import http, Producer
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class Fetcher(object):
 
         # Else, we need to create a
         if filename.endswith('.json'):
-            self._subproducers[key] = http.Producer(name, "%s/%s" % (get_soma_server(), filepath), face=face, auto=True)
+            self._subproducers[key] = http.Producer(name, "%s/v1%s" % (get_soma_server(), filepath), face=face, auto=True)
         elif filename.endswith('.shard'):
             url = "http://" + str(filepath).replace('/shards/', '')
             self._subproducers[key] = http.Producer(name, url, face=face, auto=True)

@@ -109,10 +109,13 @@ class Consumer(base.Consumer):
         seg = get_chunk_component(name).toSegment()
         self._save_chunk(seg, data)
 
-        self.emit('progress', float(seg / final_block_id) * 100)
+        base_name = name.getPrefix(-1)
+
+        self.emit('progress', float((seg + 1)) / (final_block_id + 1) * 100)
 
         if seg < final_block_id:
-            next_chunk = name.getSuccessor()
+            seg += 1
+            next_chunk = Name(base_name).appendSegment(seg)
             self.expressInterest(next_chunk, forever=True)
         else:
             self._on_complete()

@@ -45,11 +45,13 @@ class ParallelConsumer(GObject.GObject):
     }
 
     def __init__(self, consumers):
+        super(ParallelConsumer, self).__init__()
         self._incomplete_consumers = set(consumers)
         for consumer in self._incomplete_consumers:
             consumer.connect('complete', self._on_consumer_complete)
 
     def _on_consumer_complete(self, consumer):
+        logger.info("Consumer complete: %s", (consumer, ))
         self._incomplete_consumers.remove(consumer)
         if len(self._incomplete_consumers) == 0:
             self.emit('complete')
@@ -61,6 +63,8 @@ class SubscriptionFetcher(GObject.GObject):
     }
 
     def __init__(self, face, store_dir, subscription_id):
+        super(SubscriptionFetcher, self).__init__()
+
         self.subscription_id = subscription_id
 
         self._face = face
@@ -69,11 +73,11 @@ class SubscriptionFetcher(GObject.GObject):
         self._manifest_filename = path.join(self._store_dir, self.subscription_id, 'manifest.json')
         self._shard_filenames = []
 
+    def start(self):
+        self._fetch_manifest()
+
     def _fetch_manifest(self):
-        manifest_ndn_name = "%s/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id, 'manifest.json')
-
-        out_file = open(self._manifest_filename, 'wb')
-
+        manifest_ndn_name = "%s/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id)
         manifest_consumer = FileConsumer(manifest_ndn_name, self._manifest_filename, auto=True)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
 
@@ -84,10 +88,12 @@ class SubscriptionFetcher(GObject.GObject):
         consumers = []
         for shard in manifest['shards']:
             postfix = 'shards/%s' % (re.sub('https?://', '', shard['download_uri']))
-            shard_ndn_name = Name("%s/%s") % (SUBSCRIPTIONS_SOMA, postfix)
+            shard_ndn_name = Name("%s/%s" % (SUBSCRIPTIONS_SOMA, postfix))
             shard_filename = path.realpath(path.join(self._store_dir, postfix))
             self._shard_filenames.append(shard_filename)
-            consumers.append(FileConsumer(subname, shard_filename, face=face, auto=True))
+            consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face, auto=True)
+            consumers.append(consumer)
+            logger.info("Starting consumer: %s", (consumer, ))
 
         parallel_consumer = ParallelConsumer(consumers)
         parallel_consumer.connect('complete', self._on_shards_complete)
@@ -118,7 +124,7 @@ class SubscriptionsProducer(object):
 
     def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subscription_id = getSubIdName(name, SUBSCRIPTIONS_INSTALLED)
+        subscription_id = str(getSubIdName(name, SUBSCRIPTIONS_INSTALLED))
 
         if subscription_id in self._fetchers:
             return
@@ -126,6 +132,7 @@ class SubscriptionsProducer(object):
         fetcher = SubscriptionFetcher(face, self._store_dir, subscription_id)
         fetcher.connect('complete', lambda fetcher, response: self._on_subscription_complete(fetcher, interest, response))
         self._fetchers[subscription_id] = fetcher
+        fetcher.start()
 
     def _on_subscription_complete(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
@@ -141,7 +148,10 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--store-dir", required=True)
 
     args = parser.parse_args()
+
     subscriptions_producer = SubscriptionsProducer(args.store_dir)
+    subscriptions_producer.start()
+
     store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_INSTALLED)
 
     GLib.MainLoop().run()

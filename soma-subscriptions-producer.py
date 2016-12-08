@@ -29,6 +29,6 @@ from eos_data_distribution.soma_subscription_fetcher import Fetcher
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    fetcher = soma_subscription_fetcher.Fetcher()
+    fetcher = Fetcher()
     loop = GLib.MainLoop()
     loop.run()
