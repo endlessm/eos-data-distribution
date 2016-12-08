@@ -29,8 +29,8 @@ gi.require_version('Soup', '2.4')
 from gi.repository import GLib
 from gi.repository import Soup
 
-from ..ndn import Endless
-from .. import ndn
+from . import ndn
+from .ndn import Endless
 
 logger = logging.getLogger(__name__)
 
