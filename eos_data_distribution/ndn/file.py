@@ -95,7 +95,9 @@ class FileConsumer(chunks.Consumer):
     def consume(self):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
-        if self._read_segment_footer():
+        self._read_segment_footer()
+
+        if self._segments is not None:
             self._schedule_interests()
         else:
             self._request_segment(0)
@@ -125,7 +127,7 @@ class FileConsumer(chunks.Consumer):
 
         # If there's no magic, then the file is busted, and we have no state to update.
         if magic != SEGMENT_FOOTER_MAGIC:
-            return False
+            return
 
         # Read the offs into the file that our footer exists.
         offs = read8()
@@ -142,7 +144,6 @@ class FileConsumer(chunks.Consumer):
 
         segments = completed_segments[:num_segments]
         self._segments = [SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
-        return True
 
     def _write_segment_footer(self):
         # If we don't have any segment state yet, just quit.
