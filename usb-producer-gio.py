@@ -33,7 +33,7 @@ from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
-logging.basicConfig(level=Endless.LOGLEVEL)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

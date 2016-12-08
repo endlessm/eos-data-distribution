@@ -27,7 +27,7 @@ from eos_data_distribution.ndn import Endless
 from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
 
 import logging
-logging.basicConfig(level=Endless.LOGLEVEL)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':

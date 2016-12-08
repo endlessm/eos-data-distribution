@@ -23,8 +23,6 @@ import logging
 from os import path
 from pyndn import Name
 
-LOGLEVEL = logging.INFO
-
 
 class NAMES(object):
     BASE = Name('/endless/')

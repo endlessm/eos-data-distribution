@@ -31,7 +31,7 @@ from pyndn import Name, Face
 
 from eos_data_distribution.ndn import Consumer, Endless
 
-logging.basicConfig(level=Endless.LOGLEVEL)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
