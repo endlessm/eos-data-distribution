@@ -19,29 +19,25 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import logging
-from functools import partial
-
-from .. import chunks
-from ..NDN import Endless
 
 import gi
 gi.require_version('Soup', '2.4')
 
 from gi.repository import Soup
 
+from . import base
+
 logger = logging.getLogger(__name__)
 
 
-def makeSession():
+def make_soup_session():
     session = Soup.Session()
     session.props.ssl_strict = False
     session.props.max_conns = 100
     session.props.max_conns_per_host = 100
-
     return session
 
-
-def read_from_stream_async(istream, callback, cancellable=None, chunk_size=4096):
+def read_from_stream_async(istream, callback, cancellable=None, chunk_size=base.CHUNK_SIZE):
     chunks = []
 
     def got_data(istream, res):
@@ -57,49 +53,51 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=4096)
 
     read_bytes_async()
 
+def get_content_size(session, url):
+    # XXX: SOMA's subscriptions-frontend doesn't handle HEAD requests yet because S3
+    # is a bit silly with signed requests. For now, request a bytes=0-0 range and
+    # look at the Content-Range.
+    msg = Soup.Message.new("GET", url)
+    msg.request_headers.append('Range', 'bytes=0-0')
+    session.send(msg, None)
+    content_range = msg.response_headers.get_one('Content-Range')
+    size = int(content_range.split('/')[1])
+    return size
 
-class Producer(chunks.Producer):
+class Producer(base.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
-        logger.info("%s %s", name, url)
+        super(Producer, self).__init__(name, *args, **kwargs)
+
         self.url = url
 
-        self.session = session
-        if not self.session:
-            self.session = makeSession()
+        self._session = session
+        if self._session is None:
+            self._session = make_soup_session()
 
-        try:
-            size = kwargs['size']
-        except:
-            # go out make a request to get size
-            msg = Soup.Message.new("GET", url)
-            msg.request_headers.append('Range', 'bytes=0-0')
-            self.session.send(msg, None)
-            CR = msg.response_headers.get_one('Content-Range')
-            size = int(CR.split('/')[1])
+        # XXX -- this is a bit ugly that we're making an HTTP request
+        # in the constructor here...
+        self._size = get_content_size(self._session, self.url)
 
-        super(Producer, self).__init__(name, size=size, *args, **kwargs)
+    def _get_final_block_id(self):
+        return self._size / self.chunk_size
 
-    def sendChunk(self, n, data_template):
-        self.soupGet(self.url, n, data_template)
+    def _send_chunk(self, n, data):
+        self._soup_get(self.url, n, data)
 
-    def soupGet(self, uri, n, data_template):
+    def _soup_get(self, uri, n, data, cancellable=None):
         msg = Soup.Message.new('GET', uri)
         req_range = (n * self.chunkSize, (n + 1) * self.chunkSize - 1)
         msg.request_headers.append('Range', 'bytes=%d-%d' % req_range)
-        logger.info('asked for %s (%d)', name, n)
-        logger.info('range %s', req_range)
-        gotStream = partial(self.gotStream, data_template=data_template)
-        self.session.send_async(msg, None, gotStream)
-        return msg
+        self.session.send_async(msg, cancellable, lambda session, task: self._got_stream(session, task, data_template))
 
-    def gotStream(self, session, task, data_template):
+    def _got_stream(self, session, task, data):
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
             return
 
         istream = session.send_finish(task)
-        read_from_stream_async(istream, lambda buf: self.gotBuf(data_template, buf))
+        read_from_stream_async(istream, lambda buf: self._got_buf(data, buf))
 
-    def gotBuf(self, data, buf):
+    def _got_buf(self, data, buf):
         data.setContent(buf)
         self.sendFinish(data)
 

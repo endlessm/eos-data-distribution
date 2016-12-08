@@ -26,14 +26,15 @@ from os import path
 from pyndn import Name
 from pyndn import Data
 
-from .. import chunks, NDN, HTTP
-from ..NDN import Endless
-
 import gi
 gi.require_version('Soup', '2.4')
 
 from gi.repository import GLib
 from gi.repository import Soup
+
+from ..chunks import http
+from ..NDN import Endless
+from .. import NDN
 
 logger = logging.getLogger(__name__)
 
@@ -67,23 +68,13 @@ class Getter(NDN.Producer):
             getter = self.getters[key]
         except:
             if filename.endswith('.json'):
-                getter = self.getters[key] = HTTP.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
+                getter = self.getters[key] = http.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
             elif filename.endswith('.shard'):
                 url = "http://" + str(filepath).replace('/shards/', '')
-                getter = self.getters[key] = HTTP.Producer(name, url, face=face, auto=True)
+                getter = self.getters[key] = http.Producer(name, url, face=face, auto=True)
             else:
                 logger.debug('ignoring request: %s → %s', filename, name)
                 return False
 
         return getter
 
-
-if __name__ == '__main__':
-    from gi.repository import GLib
-    import time
-
-    EG = Getter(NDN.Endless.NAMES.SOMA)
-    name = Name(NDN.Endless.NAMES.SOMA).append('10521bb3a18b573f088f84e59c9bbb6c2e2a1a67')
-    consumer = chunks.Consumer(name, filename='test.json', auto=True)
-
-    GLib.MainLoop().run()
