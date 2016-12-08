@@ -18,10 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import os
 import json
 import logging
-from functools import partial
-from os import path
 
 import gi
 gi.require_version('Soup', '2.4')
@@ -37,6 +36,16 @@ logger = logging.getLogger(__name__)
 
 def getSubIdName(name, basename):
     return name.getSubName(basename.size()).get(0)
+
+def get_cluster_type():
+    return os.environ.get('SOMA_CLUSTER_TYPE', 'prod')
+
+def get_soma_server():
+    server = os.getenv('EKN_SUBSCRIPTIONS_FRONTEND')
+    if server is not None:
+        return server
+    else:
+        return 'https://subscriptions.%s.soma.endless-cloud.com' % (get_cluster_type(), )
 
 
 class Fetcher(object):
@@ -60,7 +69,7 @@ class Fetcher(object):
 
         # Else, we need to create a
         if filename.endswith('.json'):
-            self._subproducers[key] = http.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
+            self._subproducers[key] = http.Producer(name, "%s/%s" % (get_soma_server(), filepath), face=face, auto=True)
         elif filename.endswith('.shard'):
             url = "http://" + str(filepath).replace('/shards/', '')
             self._subproducers[key] = http.Producer(name, url, face=face, auto=True)

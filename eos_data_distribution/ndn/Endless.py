@@ -25,9 +25,5 @@ from pyndn import Name
 
 
 class NAMES(object):
-    BASE = Name('/endless/')
     INSTALLED = Name('/endless/installed')
     SOMA = Name('/endless/soma/v1')
-
-
-SOMA_SUB_BASE = 'https://subscriptions.prod.soma.endless-cloud.com'
