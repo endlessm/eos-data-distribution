@@ -29,7 +29,9 @@ import gi
 from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_data_distribution import ndn, SimpleStore
+from pyndn import Name
+
+from eos_data_distribution import ndn
 from eos_data_distribution.ndn import Endless
 from eos_data_distribution.ndn.file import FileConsumer
 from eos_data_distribution.soma_subscription_fetcher import getSubIdName
@@ -48,84 +50,99 @@ def mkdir_p(dirname):
             raise
 
 
-class Store(ndn.Producer):
-    def __init__(self, tempdir, consumer_prefix=None, producer_prefix=None, *args, **kwargs):
-        self.consumer_prefix = consumer_prefix
-        self.producer_prefix = producer_prefix
+class ParallelConsumer(GObject.GObject):
+    __gsignals__ = {
+        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
 
-        super(Store, self).__init__(name=self.consumer_prefix, auto=True, *args, **kwargs)
-        self.tempdir = tempdir
-        self.consumers = dict()
-        self.subs = dict()
-        self.interests = dict()
+    def __init__(self, consumers):
+        self._incomplete_consumers = set(consumers)
+        for consumer in self._incomplete_consumers:
+            consumer.connect('complete', self._on_consumer_complete)
 
-        self.store = SimpleStore.Producer(tempdir, self.producer_prefix)
-        self.connect('interest', self.onInterest)
+    def _on_consumer_complete(self, consumer):
+        self._incomplete_consumers.remove(consumer)
+        if len(self._incomplete_consumers) == 0:
+            self.emit('complete')
 
-    def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
-        name = interest.getName()
-        subid = getSubIdName(name, self.consumer_prefix)
-        ssubid = str(subid)
-        manifest_path = path.join(ssubid, 'manifest.json')
-        subname = "%s/%s" % (self.producer_prefix, manifest_path)
 
-        if not subid:
-            logger.warning('Error, the requested name doesn\'t contain a sub: %s', str(name))
-            return False
+class SubscriptionFetcher(GObject.GObject):
+    __gsignals__ = {
+        'complete': (GObject.SIGNAL_RUN_FIRST, None, (str, )),
+    }
 
-        try:
-            ret = self.consumers[subname]
-            logger.warning('We already have a consumer for this sub: %s → %s', subid, ret)
-            return ret
-        except:
-            pass
+    def __init__(self, face, store_dir, subscription_id):
+        self.subscription_id = subscription_id
 
-        self.interests[ssubid] = name
-        manifest_filename = path.join(self.tempdir, manifest_path)
-        mkdir_p(path.dirname(manifest_filename))
-        out_file = open(manifest_filename, 'wb')
-        sub = FileConsumer(subname, out_file, auto=True)
-        sub.connect('complete', lambda consumer, subid: self.getShards(out_file.name, subid), ssubid)
-        self.consumers[subname] = sub
-        return sub
+        self._face = face
+        self._store_dir = store_dir
 
-    def getShards(self, manifest_filename, subid):
-        f = open(manifest_filename, 'r')
-        manifest = json.loads(f.read())
+        self._manifest_filename = path.join(self._store_dir, self.subscription_id, 'manifest.json')
+        self._shard_filenames = []
 
-        try:
-            return self.subs[subid]
-        except:
-            pass
+    def _fetch_manifest(self):
+        manifest_ndn_name = "%s/%s/manifest.json" % (Endless.NAMES.SOMA, self.subscription_id, 'manifest.json')
 
-        self.subs[subid] = dict()
+        mkdir_p(path.dirname(self._manifest_filename))
+        out_file = open(self._manifest_filename, 'wb')
 
+        manifest_consumer = FileConsumer(manifest_ndn_name, out_file, auto=True)
+        manifest_consumer.connect('complete', self._fetch_manifest_complete)
+
+    def _fetch_manifest_complete(self, consumer):
+        with open(self._manifest_filename, 'r') as f:
+            manifest = json.load(f)
+
+        consumers = []
         for shard in manifest['shards']:
-            logger.debug('looking at shard: %s', shard)
             postfix = 'shards/%s' % (re.sub('https?://', '', shard['download_uri']))
-            subname = "%s/%s" % (Endless.NAMES.SOMA, postfix)
-            shard_filename = path.join(self.tempdir, postfix)
+            shard_ndn_name = Name("%s/%s") % (Endless.NAMES.SOMA, postfix)
+            shard_filename = path.realpath(path.join(self._store_dir, postfix))
+            self._shard_filenames.append(shard_filename)
             out_file = open(shard_filename, 'wb')
-            sub = FileConsumer(subname, out_file, auto=True)
-            sub.connect('complete', self.checkSub, manifest_filename, subid)
-            self.subs[subid][shard_filename] = False
+            consumers.append(FileConsumer(subname, out_file, face=face, auto=True))
 
-            self.consumers[subname] = sub
+        parallel_consumer = ParallelConsumer(consumers)
+        parallel_consumer.connect('complete', self._on_shards_complete)
 
-    def checkSub(self, consumer, shard_filename, manifest_filename, subid):
-        self.subs[subid][shard_filename] = True
+    def _on_shards_complete(self):
+        response = {
+            "subscription_id": self.subscription_id,
+            "manifest_path": self._manifest_filename,
+            "shards": self._shard_filenames,
+        }
 
-        logger.info('shard complete: %s → %s', shard_filename, subid)
-        if all(self.subs[subid].values()):
-            shard_filenames = [path.realpath(shard_filename) for shard_filename in self.subs[subid]]
+        self.emit('complete', json.dumps(response))
 
-            response = {
-                "subscription_id": subid,
-                "manifest_path": manifest_filename,
-                "shards": shard_filenames,
-            }
 
-            self.send(self.interests[subid], json.dumps(response))
+# The SubscriptionsProducer listens for intents to /endless/installed/foo,
+# downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
+# and then generates a "signalling response" for them.
+class SubscriptionsProducer(object):
+    def __init__(self, store_dir):
+        self._store_dir = store_dir
+        self._fetchers = {}
+
+        self._producer = ndn.Producer(Endless.NAMES.INSTALLED)
+        self._producer.connect('interest', self._on_interest)
+
+    def start(self):
+        self._producer.registerPrefix()
+
+    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
+        name = interest.getName()
+        subscription_id = getSubIdName(name, Endless.NAMES.INSTALLED)
+
+        if subscription_id in self._fetchers:
+            return
+
+        fetcher = SubscriptionFetcher(face, self._store_dir, subscription_id)
+        fetcher.connect('complete', lambda fetcher, response: self._on_subscription_complete(fetcher, interest, response))
+        self._fetchers[subscription_id] = fetcher
+
+    def _on_subscription_complete(self, fetcher, interest, response):
+        fetcher = self._fetchers.pop(fetcher.subscription_id)
+        self._producer.send(interest.getName(), response)
 
 
 if __name__ == '__main__':
@@ -135,13 +152,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--tempdir", required=True)
-    parser.add_argument("-c", "--consumer-prefix", default=Endless.NAMES.INSTALLED)
-    parser.add_argument("-p", "--producer-prefix", default=Endless.NAMES.SOMA)
 
     args = parser.parse_args()
-    kwargs = args.__dict__
-
-    logger.info('creating store', kwargs)
-    store = Store(**kwargs)
+    store = SubscriptionsProducer(args.tempdir)
 
     GLib.MainLoop().run()
