@@ -83,14 +83,20 @@ class Consumer(base.Consumer):
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
-        super(Consumer, self).__init__(name=name, *args, **kwargs)
+    def __init__(self, name, chunk_size=CHUNK_SIZE, pipeline=5, *args, **kwargs):
         self.chunk_size = chunk_size
+        self._total_interest_requests = pipeline
+        self._final_segment = None
+        self._num_outstanding_interests = 0
+        self._total_retrieved_segments = 0
+        self._last_sent_segment = 0
+
+        super(Consumer, self).__init__(name=name, *args, **kwargs)
         self.connect('data', self._on_data)
 
-    def consume(self, name=None, *args, **kwargs):
-        if not name: name = self.name
-        self.expressInterest(name=Name(name), forever=True, *args, **kwargs)
+    def consume(self):
+        self.expressInterest(name=self.name, forever=True)
+        self._num_outstanding_interests += 1
 
     def _save_chunk(self, n, data):
         pass
@@ -99,23 +105,45 @@ class Consumer(base.Consumer):
         self.emit('complete')
         logger.debug('fully retrieved: %s', self.name)
 
+    def _check_for_complete(self):
+        # If we have no outstanding interests, and we've retrieved enough segments,
+        # then we're complete.
+        total_num_segments = self._final_segment + 1
+        if self._num_outstanding_interests == 0 and self._total_retrieved_segments == total_num_segments:
+            self._on_complete()
+
+    def _schedule_interests(self):
+        while self._num_outstanding_interests < self._total_interest_requests:
+            next_segment = self._last_sent_segment + 1
+
+            if next_segment > self._final_segment:
+                self._check_for_complete()
+                return
+
+            ndn_name = Name(self.name).appendSegment(next_segment)
+            self.expressInterest(ndn_name, forever=True)
+            self._num_outstanding_interests += 1
+            self._last_sent_segment += 1
+
     def _on_data(self, o, interest, data):
+        self._num_outstanding_interests -= 1
+
+        # If we get a NACK, then check for completion.
         meta_info = data.getMetaInfo()
-        final_block_id = meta_info.getFinalBlockId().toSegment()
+        if meta_info.getType() == ContentType.NACK:
+            self._check_for_complete()
+            return
+
+        self._final_segment = meta_info.getFinalBlockId().toSegment()
 
         name = data.getName()
         logger.debug('got data: %s', name)
 
         seg = get_chunk_component(name).toSegment()
         self._save_chunk(seg, data)
+        self._total_retrieved_segments += 1
 
-        base_name = name.getPrefix(-1)
+        total_num_segments = self._final_segment + 1
+        self.emit('progress', (float(self._total_retrieved_segments) / total_num_segments) * 100)
 
-        self.emit('progress', float((seg + 1)) / (final_block_id + 1) * 100)
-
-        if seg < final_block_id:
-            seg += 1
-            next_chunk = Name(base_name).appendSegment(seg)
-            self.expressInterest(next_chunk, forever=True)
-        else:
-            self._on_complete()
+        self._schedule_interests()
