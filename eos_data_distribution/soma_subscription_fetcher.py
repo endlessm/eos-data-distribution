@@ -41,25 +41,28 @@ def getSubIdName(name, basename):
 
 class Fetcher(object):
     def __init__(self):
-        self.getters = {}
-
         self._producer = Producer(Endless.NAMES.SOMA)
         self._producer.connect('interest', self._on_interest)
         self._producer.registerPrefix()
 
+        self._subproducers = {}
+
     def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        filename = str(name.get(-1))
-        filepath = name.getSubName(Endless.NAMES.SOMA.size())
         key = str(name)
 
-        try:
-            getter = self.getters[key]
-        except:
-            if filename.endswith('.json'):
-                self.getters[key] = http.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
-            elif filename.endswith('.shard'):
-                url = "http://" + str(filepath).replace('/shards/', '')
-                self.getters[key] = http.Producer(name, url, face=face, auto=True)
-            else:
-                logger.debug('ignoring request: %s → %s', filename, name)
+        # If we already have a producer for this name, then we're good...
+        if key in self._subproducers:
+            return
+
+        filename = str(name.get(-1))
+        filepath = name.getSubName(Endless.NAMES.SOMA.size())
+
+        # Else, we need to create a
+        if filename.endswith('.json'):
+            self._subproducers[key] = http.Producer(name, "%s%s" % (Endless.SOMA_SUB_BASE, filepath), face=face, auto=True)
+        elif filename.endswith('.shard'):
+            url = "http://" + str(filepath).replace('/shards/', '')
+            self._subproducers[key] = http.Producer(name, url, face=face, auto=True)
+        else:
+            logger.debug('ignoring request: %s → %s', filename, name)
