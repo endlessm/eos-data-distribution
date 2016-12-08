@@ -30,7 +30,7 @@ import netifaces
 
 from eos_data_distribution.MDNS import ServiceDiscovery
 from eos_data_distribution.ndn import Endless
-from eos_data_distribution import Edge
+from eos_data_distribution import soma_subscription_fetcher
 
 logging.basicConfig(level=logging.INFO)
 
@@ -43,9 +43,9 @@ def flatten(l):
     return [i for s in l for i in s]
 
 
-class EdgeRouter(Edge.Getter):
+class EdgeRouter(soma_subscription_fetcher.Getter):
     def __init__(self, name, *args, **kwargs):
-        Edge.Getter.__init__(self, name, *args, **kwargs)
+        super(EdgeRouter, self).__init__(self, name, *args, **kwargs)
 
         sda = ServiceDiscovery(SERVICES)
         sda.start()

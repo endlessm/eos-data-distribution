@@ -32,7 +32,7 @@ from gi.repository import GLib
 from eos_data_distribution import ndn, SimpleStore
 from eos_data_distribution.ndn import Endless
 from eos_data_distribution.ndn.file import FileConsumer
-from eos_data_distribution.Edge import getSubIdName
+from eos_data_distribution.soma_subscription_fetcher import getSubIdName
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
