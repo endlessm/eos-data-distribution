@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import logging
+
 import gi
 
 from gi.repository import GLib
@@ -30,6 +32,8 @@ from eos_ndn.MDNS import ServiceDiscovery
 from eos_ndn.chunks import Producer
 from eos_ndn.NDN import Endless
 from eos_ndn import Edge
+
+logging.basicConfig(level=logging.INFO)
 
 SERVICES = ["_nfd._tcp", "_nfd._udp"]
 

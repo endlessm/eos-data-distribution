@@ -31,6 +31,7 @@ from eos_ndn import chunks, NDN, SimpleStore
 from eos_ndn.NDN import Endless
 from eos_ndn.Edge import getSubIdName
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
