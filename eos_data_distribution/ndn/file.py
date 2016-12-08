@@ -50,6 +50,7 @@ def mkdir_p(dirname):
 # downloaded file. Each .sgt file has a simple magic of 8 bytes:
 #
 # 8 bytes magic - "EosSgtV1"
+# 8 bytes flags - reserved
 #
 # The segment map has:
 # 8 bytes - num_segments, the number of segments in the file.
