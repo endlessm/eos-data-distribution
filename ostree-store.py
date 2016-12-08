@@ -98,7 +98,7 @@ class SubscriptionFetcher(GObject.GObject):
         parallel_consumer = ParallelConsumer(consumers)
         parallel_consumer.connect('complete', self._on_shards_complete)
 
-    def _on_shards_complete(self):
+    def _on_shards_complete(self, parallel_consumer):
         response = {
             "subscription_id": self.subscription_id,
             "manifest_path": self._manifest_filename,
