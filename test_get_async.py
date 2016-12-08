@@ -34,8 +34,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    f = open(args.filename, 'wb')
-    consumer = FileConsumer(args.name, f, auto=True)
+    consumer = FileConsumer(args.name, args.filename, auto=True)
 
     def complete(*a):
         loop.quit()

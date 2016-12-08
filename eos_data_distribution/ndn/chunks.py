@@ -95,6 +95,10 @@ class Consumer(base.Consumer):
     def _save_chunk(self, n, data):
         pass
 
+    def _on_complete(self):
+        self.emit('complete')
+        logger.debug('fully retrieved: %s', self.name)
+
     def _on_data(self, o, interest, data):
         meta_info = data.getMetaInfo()
         final_block_id = meta_info.getFinalBlockId().toSegment()
@@ -111,5 +115,4 @@ class Consumer(base.Consumer):
             next_chunk = name.getSuccessor()
             self.expressInterest(next_chunk, forever=True)
         else:
-            self.emit('complete')
-            logger.debug('fully retrieved: %s', self.name)
+            self._on_complete()

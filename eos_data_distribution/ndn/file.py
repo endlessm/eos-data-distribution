@@ -30,17 +30,31 @@ class FileProducer(chunks.Producer):
         return self.f.read(self.chunk_size)
 
 
+def mkdir_p(dirname):
+    try:
+        os.makedirs(dirname)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+            pass
+        else:
+            raise
+
 class FileConsumer(chunks.Consumer):
-    def __init__(self, name, file, *args, **kwargs):
+    def __init__(self, name, filename, mode=os.O_CREAT | os.O_WRONLY, *args, **kwargs):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
-        self.f = file
-        self.fd = self.f.fileno()
-        # Set the file to be non-blocking.
-        flag = fcntl.fcntl(self.fd, fcntl.F_GETFL)
-        fcntl.fcntl(self.fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
+
+        self._filename = filename
+        self._part_filename = '%s.part' % (self._filename, )
+        mkdir_p(os.path.dirname(self._filename))
+        self.fd = os.open(self._part_filename, mode | os.O_NONBLOCK)
 
     def _save_chunk(self, n, data):
         buf = data.getContent().toBuffer()
         start = self.chunk_size * n
         s = os.lseek(self.fd, start, os.SEEK_SET)
         return os.write(self.fd, buf)
+
+    def _on_complete(self):
+        os.close(self.fd)
+        os.rename(self._part_filename, self._filename)
+        super(FileConsumer, self)._on_complete()

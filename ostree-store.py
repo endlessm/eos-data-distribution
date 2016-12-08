@@ -40,16 +40,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def mkdir_p(dirname):
-    try:
-        os.makedirs(dirname)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
-            pass
-        else:
-            raise
-
-
 class ParallelConsumer(GObject.GObject):
     __gsignals__ = {
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
@@ -83,10 +73,9 @@ class SubscriptionFetcher(GObject.GObject):
     def _fetch_manifest(self):
         manifest_ndn_name = "%s/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id, 'manifest.json')
 
-        mkdir_p(path.dirname(self._manifest_filename))
         out_file = open(self._manifest_filename, 'wb')
 
-        manifest_consumer = FileConsumer(manifest_ndn_name, out_file, auto=True)
+        manifest_consumer = FileConsumer(manifest_ndn_name, self._manifest_filename, auto=True)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
 
     def _fetch_manifest_complete(self, consumer):
@@ -99,8 +88,7 @@ class SubscriptionFetcher(GObject.GObject):
             shard_ndn_name = Name("%s/%s") % (SUBSCRIPTIONS_SOMA, postfix)
             shard_filename = path.realpath(path.join(self._store_dir, postfix))
             self._shard_filenames.append(shard_filename)
-            out_file = open(shard_filename, 'wb')
-            consumers.append(FileConsumer(subname, out_file, face=face, auto=True))
+            consumers.append(FileConsumer(subname, shard_filename, face=face, auto=True))
 
         parallel_consumer = ParallelConsumer(consumers)
         parallel_consumer.connect('complete', self._on_shards_complete)
@@ -151,9 +139,9 @@ if __name__ == '__main__':
     from tempfile import mkdtemp
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--tempdir", required=True)
+    parser.add_argument("-t", "--store-dir", required=True)
 
     args = parser.parse_args()
-    store = SubscriptionsProducer(args.tempdir)
+    store = SubscriptionsProducer(args.store_dir)
 
     GLib.MainLoop().run()
