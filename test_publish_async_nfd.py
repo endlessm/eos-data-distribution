@@ -22,7 +22,7 @@ from pyndn import Name
 
 from gi.repository import GLib
 
-from eos_ndn.chunks import FileProducer
+from eos_data_distribution.ndn.file import FileProducer
 
 
 if __name__ == "__main__":

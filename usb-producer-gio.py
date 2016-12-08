@@ -28,8 +28,8 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gio
 from gi.repository import GLib
 
-from eos_ndn.ndn import Endless
-from eos_ndn.SimpleStore import Producer as SimpleStoreProducer
+from eos_data_distribution.ndn import Endless
+from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 

@@ -28,9 +28,9 @@ from gi.repository import GObject
 
 import netifaces
 
-from eos_ndn.MDNS import ServiceDiscovery
-from eos_ndn.ndn import Endless
-from eos_ndn import Edge
+from eos_data_distribution.MDNS import ServiceDiscovery
+from eos_data_distribution.ndn import Endless
+from eos_data_distribution import Edge
 
 logging.basicConfig(level=logging.INFO)
 

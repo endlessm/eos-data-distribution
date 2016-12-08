@@ -29,10 +29,10 @@ import gi
 from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_ndn import ndn, SimpleStore
-from eos_ndn.ndn import Endless
-from eos_ndn.ndn.file import FileConsumer
-from eos_ndn.Edge import getSubIdName
+from eos_data_distribution import ndn, SimpleStore
+from eos_data_distribution.ndn import Endless
+from eos_data_distribution.ndn.file import FileConsumer
+from eos_data_distribution.Edge import getSubIdName
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

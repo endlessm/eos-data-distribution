@@ -28,10 +28,9 @@ from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
 
-from pyndn import Name
-from pyndn import Face
+from pyndn import Name, Face
 
-from eos_ndn.ndn import Consumer, Endless
+from eos_data_distribution.ndn import Consumer, Endless
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>

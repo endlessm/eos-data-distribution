@@ -17,10 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-from pyndn import Name
-from pyndn import Face
-
-from eos_ndn.ndn import Consumer, Endless
+import logging
+import json
+from os import path
 
 import gi
 gi.require_version('GLib', '2.0')
@@ -28,10 +27,10 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-from os import path
-import json
+from pyndn import Name, Face
 
-import logging
+from eos_data_distribution.ndn import Consumer, Endless
+
 logging.basicConfig(level=Endless.LOGLEVEL)
 logger = logging.getLogger(__name__)
 
