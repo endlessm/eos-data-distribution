@@ -77,6 +77,12 @@ class Producer(base.Producer):
         self._send_chunk(data, seg)
 
 
+class SegmentState(object):
+    UNSENT = 0
+    OUTGOING = 1
+    COMPLETE = 2
+
+
 class Consumer(base.Consumer):
     __gsignals__ = {
         'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )),
@@ -87,16 +93,15 @@ class Consumer(base.Consumer):
         self.chunk_size = chunk_size
         self._total_interest_requests = pipeline
         self._final_segment = None
+        self._num_segments = None
+        self._segments = None
         self._num_outstanding_interests = 0
-        self._total_retrieved_segments = 0
-        self._last_sent_segment = 0
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         self.connect('data', self._on_data)
 
     def consume(self):
-        self.expressInterest(name=self.name, forever=True)
-        self._num_outstanding_interests += 1
+        self._request_segment(0)
 
     def _save_chunk(self, n, data):
         pass
@@ -106,24 +111,43 @@ class Consumer(base.Consumer):
         logger.debug('fully retrieved: %s', self.name)
 
     def _check_for_complete(self):
-        # If we have no outstanding interests, and we've retrieved enough segments,
-        # then we're complete.
-        total_num_segments = self._final_segment + 1
-        if self._num_outstanding_interests == 0 and self._total_retrieved_segments == total_num_segments:
+        if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
             self._on_complete()
 
     def _schedule_interests(self):
         while self._num_outstanding_interests < self._total_interest_requests:
-            next_segment = self._last_sent_segment + 1
-
-            if next_segment > self._final_segment:
+            try:
+                next_segment = self._segments.index(SegmentState.UNSENT)
+            except ValueError as e:
+                # If we have no unsent segments left, then check for completion.
                 self._check_for_complete()
                 return
 
-            ndn_name = Name(self.name).appendSegment(next_segment)
-            self.expressInterest(ndn_name, forever=True)
-            self._num_outstanding_interests += 1
-            self._last_sent_segment += 1
+            self._request_segment(next_segment)
+
+    def _request_segment(self, n):
+        ndn_name = Name(self.name).appendSegment(n)
+        self.expressInterest(ndn_name, forever=True)
+        if self._segments is not None:
+            self._segments[n] = SegmentState.OUTGOING
+        self._num_outstanding_interests += 1
+
+    def _set_final_segment(self, n):
+        self._final_segment = n
+        self._num_segments = self._final_segment + 1
+        self._size = self.chunk_size * n
+
+        if self._segments is None:
+            self._segments = [SegmentState.UNSENT] * self._num_segments
+
+    def _check_final_segment(self, n):
+        if self._final_segment is not None:
+            if n == self._final_segment:
+                return
+            else:
+                raise ValueError("Could not read final segment")
+        else:
+            self._set_final_segment(n)
 
     def _on_data(self, o, interest, data):
         self._num_outstanding_interests -= 1
@@ -134,16 +158,16 @@ class Consumer(base.Consumer):
             self._check_for_complete()
             return
 
-        self._final_segment = meta_info.getFinalBlockId().toSegment()
+        self._check_final_segment(meta_info.getFinalBlockId().toSegment())
 
         name = data.getName()
-        logger.debug('got data: %s', name)
+        logger.info('got data: %s', name)
 
         seg = get_chunk_component(name).toSegment()
         self._save_chunk(seg, data)
-        self._total_retrieved_segments += 1
+        self._segments[seg] = SegmentState.COMPLETE
 
-        total_num_segments = self._final_segment + 1
-        self.emit('progress', (float(self._total_retrieved_segments) / total_num_segments) * 100)
+        num_complete_segments = self._segments.count(SegmentState.COMPLETE)
+        self.emit('progress', (float(num_complete_segments) / len(self._segments)) * 100)
 
         self._schedule_interests()
