@@ -31,7 +31,7 @@ from gi.repository import GLib
 
 from pyndn import Name
 
-from eos_data_distribution import ndn
+from eos_data_distribution import ndn, SimpleStore
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
 from eos_data_distribution.ndn.file import FileConsumer
 from eos_data_distribution.soma_subscription_fetcher import getSubIdName
@@ -142,6 +142,7 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--store-dir", required=True)
 
     args = parser.parse_args()
-    store = SubscriptionsProducer(args.store_dir)
+    subscriptions_producer = SubscriptionsProducer(args.store_dir)
+    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_INSTALLED)
 
     GLib.MainLoop().run()
