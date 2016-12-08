@@ -46,14 +46,10 @@ def mkdir_p(dirname):
             raise
 
 
-# The segment footer is a really simple format to describe a partially
-# downloaded file.
-#
-# The last 16 bytes of the .part file contains a relatively simple
-# header marker:
+# The segment table is a really simple format to describe a partially
+# downloaded file. Each .sgt file has a simple magic of 8 bytes:
 #
 # 8 bytes magic - "EosSgtV1"
-# 8 bytes offset to the segment map, from the start of the file..
 #
 # The segment map has:
 # 8 bytes - num_segments, the number of segments in the file.
@@ -67,7 +63,7 @@ def mkdir_p(dirname):
 # If the Nth index in the file is set, it means that the corresponding
 # segment has completed downloading and has been written into the file.
 
-SEGMENT_FOOTER_MAGIC = 'EosSgtV1'
+SEGMENT_TABLE_MAGIC = 'EosSgtV1'
 
 # 7 => [0, 0, 0, 0, 0, 1, 1, 1]
 def num_to_bitmap(n):
@@ -83,19 +79,25 @@ def bitmap_to_num(bitmap):
     return n
 
 class FileConsumer(chunks.Consumer):
-    def __init__(self, name, filename, mode=os.O_CREAT | os.O_RDWR, *args, **kwargs):
+    def __init__(self, name, filename, *args, **kwargs):
         self._filename = filename
-        self._part_filename = '%s.part' % (self._filename, )
         mkdir_p(os.path.dirname(self._filename))
-        self._fd = os.open(self._part_filename, mode | os.O_NONBLOCK)
-        # XXX: scroogled by auto=True again
+
+        self._part_filename = '%s.part' % (self._filename, )
+        self._part_fd = os.open(self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK)
+        self._sgt_filename = '%s.sgt' % (self._filename, )
+        self._sgt_fd = os.open(self._sgt_filename, os.O_CREAT | os.O_RDWR)
+
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
     # XXX: This is disgusting hackery. We need to remove auto=True.
     def consume(self):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
-        self._read_segment_footer()
+        try:
+            self._read_segment_table()
+        except ValueError as e:
+            pass
 
         if self._segments is not None:
             self._schedule_interests()
@@ -105,61 +107,62 @@ class FileConsumer(chunks.Consumer):
     def _save_chunk(self, n, data):
         buf = data.getContent().toBytes()
         offs = self.chunk_size * n
-        os.lseek(self._fd, offs, os.SEEK_SET)
-        os.write(self._fd, buf)
-
-        if n == self._final_segment:
-            self._final_chunk_size = len(buf)
-
-        self._write_segment_footer()
+        os.lseek(self._part_fd, offs, os.SEEK_SET)
+        os.write(self._part_fd, buf)
+        self._write_segment_table()
 
     def _set_final_segment(self, n):
         super(FileConsumer, self)._set_final_segment(n)
 
         # Reserve space for the full file...
-        fallocate.fallocate(self._fd, 0, self._size)
+        fallocate.fallocate(self._part_fd, 0, self._size)
 
-    def _read_segment_footer(self):
+    def _read_segment_table(self):
         def read8():
-            return struct.unpack('<Q', os.read(self._fd, 8))[0]
+            try:
+                return struct.unpack('<Q', os.read(self._sgt_fd, 8))[0]
+            except struct.error:
+                raise ValueError()
 
         try:
-            os.lseek(self._fd, -16, os.SEEK_END)
-            magic = os.read(self._fd, len(SEGMENT_FOOTER_MAGIC))
+            os.lseek(self._sgt_fd, 0, os.SEEK_SET)
+            magic = os.read(self._sgt_fd, len(SEGMENT_TABLE_MAGIC))
         except OSError as e:
-            magic = ''
+            raise ValueError()
 
         # If there's no magic, then the file is busted, and we have no state to update.
-        if magic != SEGMENT_FOOTER_MAGIC:
+        if magic != SEGMENT_TABLE_MAGIC:
             return
 
-        # Read the offs into the file that our footer exists.
-        offs = read8()
-
-        os.lseek(self._fd, offs, os.SEEK_SET)
+        # Flags -- reserved for now.
+        flags = read8()
 
         # Num segments.
         num_segments = read8()
         completed_segments = []
 
         for i in xrange(0, num_segments, 8):
-            byte = ord(os.read(self._fd, 1))
+            byte = ord(os.read(self._sgt_fd, 1))
             completed_segments += num_to_bitmap(byte)
 
         segments = completed_segments[:num_segments]
         self._segments = [SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
 
-    def _write_segment_footer(self):
+    def _write_segment_table(self):
         # If we don't have any segment state yet, just quit.
         if self._segments is None:
             return
 
         def write8(value):
-            os.write(self._fd, struct.pack('<Q', value))
+            os.write(self._sgt_fd, struct.pack('<Q', value))
 
-        # In order to track which chunks are taken, we use a special
-        # footer which is lopped off when the file is completed.
-        offs = os.lseek(self._fd, self._size, os.SEEK_SET)
+        # Truncate the file so it contains nothing.
+        os.ftruncate(self._sgt_fd, 0)
+        os.lseek(self._sgt_fd, 0, os.SEEK_SET)
+        os.write(self._sgt_fd, SEGMENT_TABLE_MAGIC)
+
+        # Flags.
+        write8(0)
 
         write8(len(self._segments))
 
@@ -168,20 +171,11 @@ class FileConsumer(chunks.Consumer):
             bitmap = [1 if state == SegmentState.COMPLETE else 0 for state in segments]
             bitmap = (bitmap + [0] * 8)[:8]
             byte = bitmap_to_num(bitmap)
-            os.write(self._fd, chr(byte))
-
-        os.write(self._fd, SEGMENT_FOOTER_MAGIC)
-        write8(offs)
-
-        total_size = os.lseek(self._fd, 0, os.SEEK_CUR)
-        os.ftruncate(self._fd, total_size)
+            os.write(self._sgt_fd, chr(byte))
 
     def _on_complete(self):
-        # self._size is an approximation based on the number of chunks. The
-        # true file size needs to take into account the size of the final chunk,
-        # since it isn't guaranteed to be chunk_size big.
-        true_file_size = self.chunk_size * (len(self._segments) - 1) + self._final_chunk_size
-        os.ftruncate(self._fd, true_file_size)
-        os.close(self._fd)
+        os.close(self._part_fd)
+        os.close(self._sgt_fd)
         os.rename(self._part_filename, self._filename)
+        os.unlink(self._sgt_filename)
         super(FileConsumer, self)._on_complete()
