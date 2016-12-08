@@ -23,7 +23,7 @@ import gi
 gi.require_version('GLib', '2.0')
 from gi.repository import GLib
 
-from eos_data_distribution.ndn import Endless
+from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
 
 import logging
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     parser.add_argument("dir")
     args = parser.parse_args()
 
-    store = SimpleStoreProducer(prefix=Endless.NAMES.SOMA, split=path.realpath(args.dir))
+    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=path.realpath(args.dir))
     logger.info('creating store: %s', args.__dict__)
     store.publish_all_names(path.realpath(args.dir))
 

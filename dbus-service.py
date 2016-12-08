@@ -30,7 +30,8 @@ from gi.repository import Gio
 
 from pyndn import Name, Face
 
-from eos_data_distribution.ndn import Consumer, Endless
+from eos_data_distribution.ndn import Consumer
+from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
@@ -89,7 +90,7 @@ class DBusService(object):
 
     def impl_DownloadSubscription(self, invocation, parameters):
         subscription_id, = parameters.unpack()
-        name = Name(Endless.NAMES.INSTALLED).append(subscription_id)
+        name = Name(SUBSCRIPTIONS_INSTALLED).append(subscription_id)
         self._consumer.expressInterest(name, forever=True)
         invocation.return_value(None)
 

@@ -32,7 +32,7 @@ from gi.repository import GLib
 from pyndn import Name
 
 from eos_data_distribution import ndn
-from eos_data_distribution.ndn import Endless
+from eos_data_distribution.names import SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
 from eos_data_distribution.ndn.file import FileConsumer
 from eos_data_distribution.soma_subscription_fetcher import getSubIdName
 
@@ -81,7 +81,7 @@ class SubscriptionFetcher(GObject.GObject):
         self._shard_filenames = []
 
     def _fetch_manifest(self):
-        manifest_ndn_name = "%s/%s/manifest.json" % (Endless.NAMES.SOMA, self.subscription_id, 'manifest.json')
+        manifest_ndn_name = "%s/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id, 'manifest.json')
 
         mkdir_p(path.dirname(self._manifest_filename))
         out_file = open(self._manifest_filename, 'wb')
@@ -96,7 +96,7 @@ class SubscriptionFetcher(GObject.GObject):
         consumers = []
         for shard in manifest['shards']:
             postfix = 'shards/%s' % (re.sub('https?://', '', shard['download_uri']))
-            shard_ndn_name = Name("%s/%s") % (Endless.NAMES.SOMA, postfix)
+            shard_ndn_name = Name("%s/%s") % (SUBSCRIPTIONS_SOMA, postfix)
             shard_filename = path.realpath(path.join(self._store_dir, postfix))
             self._shard_filenames.append(shard_filename)
             out_file = open(shard_filename, 'wb')
@@ -123,7 +123,7 @@ class SubscriptionsProducer(object):
         self._store_dir = store_dir
         self._fetchers = {}
 
-        self._producer = ndn.Producer(Endless.NAMES.INSTALLED)
+        self._producer = ndn.Producer(SUBSCRIPTIONS_INSTALLED)
         self._producer.connect('interest', self._on_interest)
 
     def start(self):
@@ -131,7 +131,7 @@ class SubscriptionsProducer(object):
 
     def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subscription_id = getSubIdName(name, Endless.NAMES.INSTALLED)
+        subscription_id = getSubIdName(name, SUBSCRIPTIONS_INSTALLED)
 
         if subscription_id in self._fetchers:
             return

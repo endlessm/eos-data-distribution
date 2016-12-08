@@ -17,13 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-# THIS FILE CONTAINS ENDLESS DEFAULTS
-
-import logging
-from os import path
 from pyndn import Name
 
-
-class NAMES(object):
-    INSTALLED = Name('/endless/installed')
-    SOMA = Name('/endless/soma/v1')
+SUBSCRIPTIONS_INSTALLED = Name('/com.endlessm.subscriptions/installed')
+SUBSCRIPTIONS_SOMA = Name('/com.endlessm/subscriptions/soma')

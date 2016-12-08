@@ -28,8 +28,8 @@ gi.require_version('Soup', '2.4')
 from gi.repository import GLib
 from gi.repository import Soup
 
-from . import ndn
-from .ndn import Endless
+from .names import SUBSCRIPTIONS_SOMA
+from .ndn import http
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def get_soma_server():
 
 class Fetcher(object):
     def __init__(self):
-        self._producer = Producer(Endless.NAMES.SOMA)
+        self._producer = Producer(SUBSCRIPTIONS_SOMA)
         self._producer.connect('interest', self._on_interest)
         self._producer.registerPrefix()
 
@@ -65,7 +65,7 @@ class Fetcher(object):
             return
 
         filename = str(name.get(-1))
-        filepath = name.getSubName(Endless.NAMES.SOMA.size())
+        filepath = name.getSubName(SUBSCRIPTIONS_SOMA.size())
 
         # Else, we need to create a
         if filename.endswith('.json'):

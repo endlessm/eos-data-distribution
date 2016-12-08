@@ -28,7 +28,7 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gio
 from gi.repository import GLib
 
-from eos_data_distribution.ndn import Endless
+from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
@@ -61,7 +61,7 @@ def mount_removed_cb(monitor, mount, store):
 if __name__ == '__main__':
     loop = GLib.MainLoop()
     monitor = Gio.VolumeMonitor.get()
-    store = SimpleStoreProducer(prefix=Endless.NAMES.SOMA, split=ENDLESS_NDN_CACHE_PATH)
+    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=ENDLESS_NDN_CACHE_PATH)
 
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)
