@@ -29,9 +29,9 @@ import gi
 from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_ndn import NDN, SimpleStore
-from eos_ndn.chunks import FileConsumer
-from eos_ndn.NDN import Endless
+from eos_ndn import ndn, SimpleStore
+from eos_ndn.ndn import Endless
+from eos_ndn.ndn.file import FileConsumer
 from eos_ndn.Edge import getSubIdName
 
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +48,7 @@ def mkdir_p(dirname):
             raise
 
 
-class Store(NDN.Producer):
+class Store(ndn.Producer):
     def __init__(self, tempdir, consumer_prefix=None, producer_prefix=None, *args, **kwargs):
         self.consumer_prefix = consumer_prefix
         self.producer_prefix = producer_prefix
@@ -70,7 +70,7 @@ class Store(NDN.Producer):
         subname = "%s/%s" % (self.producer_prefix, manifest_path)
 
         if not subid:
-            logger.warning('Error, the requested name doesn\'t contain a sub', NDN.dumpName(name))
+            logger.warning('Error, the requested name doesn\'t contain a sub: %s', str(name))
             return False
 
         try:

@@ -31,7 +31,7 @@ from gi.repository import Gio
 from pyndn import Name
 from pyndn import Face
 
-from eos_ndn.NDN import Consumer, Endless
+from eos_ndn.ndn import Consumer, Endless
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>

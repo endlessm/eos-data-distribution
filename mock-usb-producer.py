@@ -23,7 +23,7 @@ import gi
 gi.require_version('GLib', '2.0')
 from gi.repository import GLib
 
-from eos_ndn.NDN import Endless
+from eos_ndn.ndn import Endless
 from eos_ndn.SimpleStore import Producer as SimpleStoreProducer
 
 import logging

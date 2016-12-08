@@ -24,8 +24,7 @@ from gi.repository import GObject
 
 from pyndn import Name, Data, MetaInfo, ContentType
 
-from .. import NDN
-from ..NDN import Endless
+from . import base, Endless
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ def get_chunk_component(name):
     return name.get(-1)
 
 
-class Producer(NDN.Producer):
+class Producer(base.Producer):
     def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
         super(Producer, self).__init__(name=name, *args, **kwargs)
         self.chunk_size = chunk_size
@@ -78,7 +77,7 @@ class Producer(NDN.Producer):
         self._send_chunk(data, seg)
 
 
-class Consumer(NDN.Consumer):
+class Consumer(base.Consumer):
     __gsignals__ = {
         'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )),
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),

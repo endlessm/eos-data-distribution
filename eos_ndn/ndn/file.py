@@ -2,7 +2,7 @@
 import fcntl
 import os
 
-from . import base
+from . import chunks
 
 
 def get_file_size(f):
@@ -10,7 +10,7 @@ def get_file_size(f):
     return f.tell()
 
 
-class FileProducer(base.Producer):
+class FileProducer(chunks.Producer):
     def __init__(self, name, file, *args, **kwargs):
         super(FileProducer, self).__init__(name, *args, **kwargs)
         self.name = name
@@ -30,7 +30,7 @@ class FileProducer(base.Producer):
         return self.f.read(self.chunk_size)
 
 
-class FileConsumer(base.Consumer):
+class FileConsumer(chunks.Consumer):
     def __init__(self, name, file, *args, **kwargs):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
         self.f = file

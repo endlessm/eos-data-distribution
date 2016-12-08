@@ -32,9 +32,8 @@ gi.require_version('Soup', '2.4')
 from gi.repository import GLib
 from gi.repository import Soup
 
-from ..chunks import http
-from ..NDN import Endless
-from .. import NDN
+from ..ndn import Endless
+from .. import ndn
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,7 @@ def getSubIdName(name, basename):
     return name.getSubName(basename.size()).get(0)
 
 
-class Getter(NDN.Producer):
+class Getter(ndn.Producer):
     def __init__(self, name, *args, **kwargs):
         super(Getter, self).__init__(name=name, *args, **kwargs)
 

@@ -25,7 +25,7 @@ gi.require_version('Soup', '2.4')
 
 from gi.repository import Soup
 
-from . import base
+from . import chunks
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def make_soup_session():
     session.props.max_conns_per_host = 100
     return session
 
-def read_from_stream_async(istream, callback, cancellable=None, chunk_size=base.CHUNK_SIZE):
+def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunks.CHUNK_SIZE):
     chunks = []
 
     def got_data(istream, res):
@@ -64,7 +64,8 @@ def get_content_size(session, url):
     size = int(content_range.split('/')[1])
     return size
 
-class Producer(base.Producer):
+
+class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
         super(Producer, self).__init__(name, *args, **kwargs)
 
