@@ -61,7 +61,8 @@ def mkdir_p(dirname):
 # After that is a bitmap containing num_segments bits. Read the bitmap
 # as if you converted it into a large string of bits, with the MSB of
 # the first byte at the 0th index, and the LSB of the last bit at the
-# last index.
+# last index. If num_segments is not cleanly divisible by 8, any
+# remaining bits in the bitmap are undefined and can be ignored.
 #
 # If the Nth index in the file is set, it means that the corresponding
 # segment has completed downloading and has been written into the file.
