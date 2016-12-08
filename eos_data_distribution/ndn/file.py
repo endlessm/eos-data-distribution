@@ -107,6 +107,10 @@ class FileConsumer(chunks.Consumer):
         offs = self.chunk_size * n
         os.lseek(self._fd, offs, os.SEEK_SET)
         os.write(self._fd, buf)
+
+        if n == self._final_segment:
+            self._final_chunk_size = len(buf)
+
         self._write_segment_footer()
 
     def _set_final_segment(self, n):
@@ -173,8 +177,11 @@ class FileConsumer(chunks.Consumer):
         os.ftruncate(self._fd, total_size)
 
     def _on_complete(self):
-        # XXX: We need to save the true size of the final chunk.
-        os.ftruncate(self._fd, self._size)
+        # self._size is an approximation based on the number of chunks. The
+        # true file size needs to take into account the size of the final chunk,
+        # since it isn't guaranteed to be chunk_size big.
+        true_file_size = self.chunk_size * (len(self._segments) - 1) + self._final_chunk_size
+        os.ftruncate(self._fd, true_file_size)
         os.close(self._fd)
         os.rename(self._part_filename, self._filename)
         super(FileConsumer, self)._on_complete()
