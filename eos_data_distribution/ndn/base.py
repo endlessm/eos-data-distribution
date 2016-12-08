@@ -32,8 +32,6 @@ from pyndn.security import KeyChain
 from pyndn.transport.unix_transport import UnixTransport
 from pyndn import Name, Data, Face, MetaInfo
 
-from . import Endless
-
 logger = logging.getLogger(__name__)
 
 

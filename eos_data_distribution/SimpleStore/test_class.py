@@ -3,8 +3,7 @@ import time
 
 from os import path, utime
 
-from . import SimpleStore
-
+from .. import SimpleStore
 
 def touch(fname, times=None):
     with open(fname, 'a'):

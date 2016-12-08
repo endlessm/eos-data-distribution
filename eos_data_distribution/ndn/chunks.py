@@ -24,7 +24,7 @@ from gi.repository import GObject
 
 from pyndn import Name, Data, MetaInfo, ContentType
 
-from . import base, Endless
+from . import base
 
 logger = logging.getLogger(__name__)
 
