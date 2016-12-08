@@ -2,3 +2,5 @@
 *.shard
 .vagrant
 .gitignore
+tmp
+*~

@@ -20,7 +20,7 @@
 import time
 from pyndn import Name
 
-from eos_ndn import chunks, NDN
+from eos_ndn.chunks import FileConsumer
 
 from gi.repository import GLib
 
@@ -29,29 +29,17 @@ if __name__ == "__main__":
     import sys
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--filename")
-    parser.add_argument("-l", "--limit", type=int, default=0)
-    parser.add_argument("-n", "--no-chunks", action='store_true')
     parser.add_argument("name")
+    parser.add_argument("filename")
 
     args = parser.parse_args()
-    if not args.filename:
-        args.filename = args.name.split('/')[-1]
 
-    if args.no_chunks:
-        consumer = NDN.Consumer(name=args.name, auto=True)
-    else:
-        consumer = chunks.Consumer(name=args.name, filename=args.filename, auto=True)
-
-    loop = GLib.MainLoop()
-
-    def check(*a):
-        if args.limit and consumer._callbackCount > args.limit:
-            loop.quit()
+    f = open(args.filename, 'wb')
+    consumer = FileConsumer(args.name, f, auto=True)
 
     def complete(*a):
         loop.quit()
 
-    consumer.connect('data', check)
     consumer.connect('complete', complete)
+    loop = GLib.MainLoop()
     loop.run()

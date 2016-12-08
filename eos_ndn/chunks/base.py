@@ -20,11 +20,7 @@
 import logging
 import os
 
-import gi
-gi.require_version('GLib', '2.0')
-
 from gi.repository import GObject
-from gi.repository import GLib
 
 from pyndn import Name, Data, MetaInfo, ContentType
 
@@ -33,6 +29,7 @@ from ..NDN import Endless
 
 logger = logging.getLogger(__name__)
 
+CHUNK_SIZE = 4096
 
 def get_chunk_component(name):
     # The chunk component of a name is the last part...
@@ -40,47 +37,23 @@ def get_chunk_component(name):
 
 
 class Producer(NDN.Producer):
-    __gsignals__ = {'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )), 'complete': (GObject.SIGNAL_RUN_FIRST, None, (int, ))}
-
-    def __init__(self, name, filename=None, chunkSize=4096, mode="rb", size=None, *args, **kwargs):
-        if size:
-            self.size = size
-        elif not filename:
-            logger.critical('need to provide a size or filename argument: %s', name)
-            raise ValueError
-        else:
-            self.size = os.path.getsize(filename)
-
+    def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
         super(Producer, self).__init__(name=name, *args, **kwargs)
-        self.chunkSize = chunkSize
+        self.chunk_size = chunk_size
+        self.connect('interest', self._on_interest)
 
-        if filename:
-            self.f = open(filename, mode)
+    def _get_final_block_id(self):
+        pass
 
-        self.connect('interest', self.onInterest)
-
-    def _getChunk(self, n):
-        pos = self.chunkSize * n
-        if pos >= self.size:
-            self.emit('complete', self.size)
-            logger.debug('asked for a chunk outside of file: %d, %d', pos, self.size)
-            return False
-
-        self.emit('progress', pos * 100 / self.size)
-
-        self.f.seek(pos)
-        return self.f.read(self.chunkSize)
-
-    def sendChunk(self, data, n):
-        content = self._getChunk(n)
+    def _send_chunk(self, data, n):
+        content = self._get_chunk(n)
         if content is None:
             data.getMetaInfo().setType(ContentType.NACK)
         else:
             data.setContent(content)
         self.sendFinish(data)
 
-    def onInterest(self, o, prefix, interest, face, interestFilterId, filter):
-        # Make and sign a Data packet.
+    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
 
         chunk_component = get_chunk_component(name)
@@ -94,7 +67,7 @@ class Producer(NDN.Producer):
             seg = 0
             name.appendSegment(seg)
 
-        final_block_id = self.size // self.chunkSize
+        final_block_id = self._get_final_block_id()
         meta_info = MetaInfo()
         meta_info.setFinalBlockId(Name.Component.fromSegment(final_block_id))
         data = Data(name)
@@ -102,41 +75,28 @@ class Producer(NDN.Producer):
 
         logger.debug('got interest: %s, %d/%d', name, seg, final_block_id)
 
-        self.sendChunk(data, seg)
+        self._send_chunk(data, seg)
 
 
 class Consumer(NDN.Consumer):
-    __gsignals__ = {'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )), 'complete': (GObject.SIGNAL_RUN_FIRST, None, (str, ))}
+    __gsignals__ = {
+        'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )),
+        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
 
-    def __init__(self, name, filename, chunkSize=4096, mode=os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK, *args, **kwargs):
+    def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
+        self.chunk_size = chunk_size
+        self.connect('data', self._on_data)
 
-        try:
-            os.makedirs(os.path.dirname(filename))
-        except:
-            pass
-
-        if filename:
-            self.filename = filename
-            self.f = os.open(filename, mode)
-
-        logger.debug('creating consumer: %s, %s', name, filename)
-
-        self.chunkSize = chunkSize
-
-        self.connect('data', self.onData)
-
-    def consume(self, name=None, start=0, *args, **kwargs):
+    def consume(self, name=None, *args, **kwargs):
         if not name: name = self.name
         self.expressInterest(name=Name(name), forever=True, *args, **kwargs)
 
-    def saveChunk(self, n, data):
-        buf = data.getContent().toBuffer()
-        start = self.chunkSize * n
-        s = os.lseek(self.f, start, os.SEEK_SET)
-        return os.write(self.f, buf)
+    def _save_chunk(self, n, data):
+        pass
 
-    def onData(self, o, interest, data):
+    def _on_data(self, o, interest, data):
         meta_info = data.getMetaInfo()
         final_block_id = meta_info.getFinalBlockId().toSegment()
 
@@ -144,7 +104,7 @@ class Consumer(NDN.Consumer):
         logger.debug('got data: %s', name)
 
         seg = get_chunk_component(name).toSegment()
-        self.saveChunk(seg, data)
+        self._save_chunk(seg, data)
 
         self.emit('progress', float(seg / final_block_id) * 100)
 
@@ -152,6 +112,5 @@ class Consumer(NDN.Consumer):
             next_chunk = name.getSuccessor()
             self.expressInterest(next_chunk, forever=True)
         else:
-            os.close(self.f)
-            self.emit('complete', self.filename)
-            logger.debug('fully retrieved: %s', self.filename)
+            self.emit('complete')
+            logger.debug('fully retrieved: %s', self.name)

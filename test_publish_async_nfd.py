@@ -20,10 +20,9 @@
 import time
 from pyndn import Name
 
-from eos_ndn import chunks
-from eos_ndn.NDN import Endless
-
 from gi.repository import GLib
+
+from eos_ndn.chunks import FileProducer
 
 
 if __name__ == "__main__":
@@ -31,21 +30,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("name")
     parser.add_argument("filename")
-    parser.add_argument("-n", "--name")
-    parser.add_argument("-l", "--limit", type=int, default=100)
-    parser.add_argument("-c", "--chunksize", type=int, default=4096)
     args = parser.parse_args()
 
-    if not args.name:
-        args.name = Name(Endless.NAMES.BASE).append("testchunks/").append(args.filename)
-
-    producer = chunks.Producer(args.name, args.filename, args.chunksize, auto=True)
+    f = open(args.filename, 'rb')
+    producer = FileProducer(args.name, f, auto=True)
     loop = GLib.MainLoop()
-
-    def check(*a):
-        if args.limit and producer._responseCount > args.limit:
-            loop.quit()
-
-    producer.connect('interest', check)
     loop.run()
