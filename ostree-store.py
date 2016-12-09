@@ -77,7 +77,7 @@ class SubscriptionFetcher(GObject.GObject):
         self._fetch_manifest()
 
     def _fetch_manifest(self):
-        manifest_ndn_name = "%s/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id)
+        manifest_ndn_name = "%s/subscription/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id)
         manifest_consumer = FileConsumer(manifest_ndn_name, self._manifest_filename, auto=True)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
 
@@ -87,9 +87,9 @@ class SubscriptionFetcher(GObject.GObject):
 
         consumers = []
         for shard in manifest['shards']:
-            postfix = 'shards/%s' % (re.sub('https?://', '', shard['download_uri']))
-            shard_ndn_name = Name("%s/%s" % (SUBSCRIPTIONS_SOMA, postfix))
-            shard_filename = path.realpath(path.join(self._store_dir, postfix))
+            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append('shard').append(shard['download_uri'])
+            local_path = 'shard/%s' % (re.sub('https?://', '', shard['download_uri']))
+            shard_filename = path.realpath(path.join(self._store_dir, local_path))
             self._shard_filenames.append(shard_filename)
             consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face, auto=True)
             consumers.append(consumer)

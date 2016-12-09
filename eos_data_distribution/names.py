@@ -19,5 +19,5 @@
 
 from pyndn import Name
 
-SUBSCRIPTIONS_INSTALLED = Name('/com.endlessm.subscriptions/installed')
-SUBSCRIPTIONS_SOMA = Name('/com.endlessm.subscriptions/soma')
+SUBSCRIPTIONS_INSTALLED = Name('/com.endlessm/subscriptions/installed')
+SUBSCRIPTIONS_SOMA = Name('/com.endlessm/subscriptions/soma')

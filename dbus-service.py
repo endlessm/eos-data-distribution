@@ -84,8 +84,8 @@ class DBusService(object):
         getattr(self, 'impl_%s' % (method_name, ))(invocation, parameters)
 
     def _on_data(self, consumer, interest, response):
-        subscription_reply = json.loads(consumer.dataToBytes(response).tobytes())
-
+        response_text = response.getContent().toBytes()
+        subscription_reply = json.loads(response_text)
         apply_subscription_update(subscription_reply['subscription_id'], subscription_reply['manifest_path'], subscription_reply['shards'])
 
     def impl_DownloadSubscription(self, invocation, parameters):

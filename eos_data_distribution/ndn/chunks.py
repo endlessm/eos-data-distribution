@@ -135,7 +135,7 @@ class Consumer(base.Consumer):
     def _set_final_segment(self, n):
         self._final_segment = n
         self._num_segments = self._final_segment + 1
-        self._size = self.chunk_size * n
+        self._size = self.chunk_size * self._num_segments
 
         if self._segments is None:
             self._segments = [SegmentState.UNSENT] * self._num_segments
