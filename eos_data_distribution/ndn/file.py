@@ -48,21 +48,36 @@ def mkdir_p(dirname):
 
 # The segment table is a really simple format to describe a partially
 # downloaded file. Each .sgt file has a simple magic of 8 bytes:
+# All integer values are little-endian.
 #
 # 8 bytes magic - "EosSgtV1"
-# 8 bytes flags - reserved
+# 1 byte "mode".
+# 7 bytes flags - reserved
 #
-# The segment map has:
-# 8 bytes - num_segments, the number of segments in the file.
+# The most basic mode is mode 0 -- "basic segment table":
+#   8 bytes - num_segments, the number of segments in the file.
 #
-# After that is a bitmap containing num_segments bits. Read the bitmap
-# as if you converted it into a large string of bits, with the MSB of
-# the first byte at the 0th index, and the LSB of the last bit at the
-# last index. If num_segments is not cleanly divisible by 8, any
-# remaining bits in the bitmap are undefined and can be ignored.
+#   After that is a bitmap containing num_segments bits. Read the bitmap
+#   as if you converted it into a large string of bits, with the MSB of
+#   the first byte at the 0th index, and the LSB of the last bit at the
+#   last index. If num_segments is not cleanly divisible by 8, any
+#   remaining bits in the bitmap are undefined and can be ignored.
 #
-# If the Nth index in the file is set, it means that the corresponding
-# segment has completed downloading and has been written into the file.
+#   If the Nth index in the file is set, it means that the corresponding
+#   segment has completed downloading and has been written into the file.
+#
+# Mode 1 is a basic kind of compression for when the basic segment table
+# is too big: hole-compressed segmented table.
+#
+#   8 bytes -- num_segments, the number of segments in the file.
+#   8 bytes -- num_completed_segments
+#   8 bytes -- num_holes
+#   For each hole: 8 bytes -- hole_index
+#
+#   To construct a segment table from the segment table, construct a table
+#   num_segments long. Mark all indexes lower than num_completed_segments
+#   as being complete. Then, mark each segment for at each hole_index as
+#   incomplete.
 
 SEGMENT_TABLE_MAGIC = 'EosSgtV1'
 
@@ -138,16 +153,37 @@ class FileConsumer(chunks.Consumer):
         # Flags -- reserved for now.
         flags = read8()
 
-        # Num segments.
-        num_segments = read8()
-        completed_segments = []
+        mode = flags & 0xFF
 
-        for i in xrange(0, num_segments, 8):
-            byte = ord(os.read(self._sgt_fd, 1))
-            completed_segments += num_to_bitmap(byte)
+        def read_mode0():
+            # Num segments.
+            num_segments = read8()
+            completed_segments = []
 
-        segments = completed_segments[:num_segments]
-        self._segments = [SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
+            for i in xrange(0, num_segments, 8):
+                byte = ord(os.read(self._sgt_fd, 1))
+                completed_segments += num_to_bitmap(byte)
+
+            segments = completed_segments[:num_segments]
+            self._segments = [SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
+
+        def read_mode1():
+            num_segments = read8()
+            num_complete_segments = read8()
+            num_unsent_segments = num_segments - num_complete_segments
+            segments = ([SegmentState.COMPLETE] * num_complete_segments) + ([SegmentState.UNSENT] * num_unsent_segments)
+
+            num_holes = read8()
+            for i in xrange(num_holes):
+                hole_index = read8()
+                segments[hole_index] = SegmentState.UNSENT
+
+            self._segments = segments
+
+        if mode == 0:
+            read_mode0()
+        elif mode == 1:
+            read_mode1()
 
     def _write_segment_table(self):
         # If we don't have any segment state yet, just quit.
@@ -163,16 +199,47 @@ class FileConsumer(chunks.Consumer):
         os.write(self._sgt_fd, SEGMENT_TABLE_MAGIC)
 
         # Flags.
-        write8(0)
+        mode = 1
 
-        write8(len(self._segments))
+        flags = 0 | mode
+        write8(mode)
 
-        for i in xrange(0, len(self._segments), 8):
-            segments = self._segments[i:i+8]
-            bitmap = [1 if state == SegmentState.COMPLETE else 0 for state in segments]
-            bitmap = (bitmap + [0] * 8)[:8]
-            byte = bitmap_to_num(bitmap)
-            os.write(self._sgt_fd, chr(byte))
+        def write_mode0():
+            write8(len(self._segments))
+
+            for i in xrange(0, len(self._segments), 8):
+                segments = self._segments[i:i+8]
+                bitmap = [1 if state == SegmentState.COMPLETE else 0 for state in segments]
+                bitmap = (bitmap + [0] * 8)[:8]
+                byte = bitmap_to_num(bitmap)
+
+        def write_mode1():
+            write8(len(self._segments))
+
+            try:
+                first_unsent_index = self._segments.index(SegmentState.UNSENT)
+            except ValueError as e:
+                first_unsent_index = len(self._segments)
+
+            unsent_segments = self._segments[first_unsent_index:]
+            # Make sure there are no complete and outgoing segments past the first unsent one...
+            assert unsent_segments.count(SegmentState.COMPLETE) == 0
+            assert unsent_segments.count(SegmentState.OUTGOING) == 0
+
+            # All complete segments are before this index.
+            num_complete_segments = first_unsent_index
+            write8(num_complete_segments)
+
+            complete_segments = self._segments[:num_complete_segments]
+            hole_indexes = [i for i, state in enumerate(complete_segments) if state == SegmentState.OUTGOING]
+            write8(len(hole_indexes))
+            for hole_index in hole_indexes:
+                write8(hole_index)
+
+        if mode == 0:
+            write_mode0()
+        elif mode == 1:
+            write_mode1()
 
     def _on_complete(self):
         os.close(self._part_fd)
