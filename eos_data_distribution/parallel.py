@@ -19,30 +19,25 @@
 
 import logging
 
-import gi
-
 from gi.repository import GObject
-from gi.repository import GLib
-
-from eos_data_distribution import SimpleStore
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
-from eos_data_distribution.subscription import Producer as SubscriptionProducer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-if __name__ == '__main__':
-    import sys
-    import argparse
-    from tempfile import mkdtemp
+class Batch(GObject.GObject):
+    __gsignals__ = {
+        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--store-dir", required=True)
+    def __init__(self, batchs, type="Batch"):
+        super(Batch, self).__init__()
+        self._type = type
+        self._incomplete_batchs = set(batchs)
+        for batch in self._incomplete_batchs:
+            batch.connect('complete', self._on_batch_complete)
 
-    args = parser.parse_args()
-
-    subscription_producer = SubscriptionProducer(args.store_dir)
-    subscription_producer.start()
-
-    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_INSTALLED)
-    GLib.MainLoop().run()
+    def _on_batch_complete(self, batch):
+        logger.info("%s complete: %s", (self._type, batch))
+        self._incomplete_batchs.remove(batch)
+        if len(self._incomplete_batchs) == 0:
+            self.emit('complete')
