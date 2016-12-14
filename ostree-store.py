@@ -62,7 +62,7 @@ class SubscriptionFetcher(GObject.GObject):
         'complete': (GObject.SIGNAL_RUN_FIRST, None, (str, )),
     }
 
-    def __init__(self, face, store_dir, subscription_id):
+    def __init__(self, store_dir, subscription_id, face=None):
         super(SubscriptionFetcher, self).__init__()
 
         self.subscription_id = subscription_id
@@ -129,7 +129,7 @@ class SubscriptionsProducer(object):
         if subscription_id in self._fetchers:
             return
 
-        fetcher = SubscriptionFetcher(face, self._store_dir, subscription_id)
+        fetcher = SubscriptionFetcher(self._store_dir, subscription_id, face=face)
         fetcher.connect('complete', lambda fetcher, response: self._on_subscription_complete(fetcher, interest, response))
         self._fetchers[subscription_id] = fetcher
         fetcher.start()
