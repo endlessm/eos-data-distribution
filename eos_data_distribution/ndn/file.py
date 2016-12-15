@@ -131,7 +131,10 @@ class FileConsumer(chunks.Consumer):
         super(FileConsumer, self)._set_final_segment(n)
 
         # Reserve space for the full file...
-        fallocate.fallocate(self._part_fd, 0, self._size)
+        try:
+            fallocate.fallocate(self._part_fd, 0, self._size)
+        except: # if it fails, we might get surprises later, but it's ok.
+            pass
 
     def _read_segment_table(self):
         def read8():

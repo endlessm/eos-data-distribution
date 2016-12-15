@@ -15,7 +15,7 @@ def _fallocate():
     def fallocate(fd, offs, size, mode=FALLOC_FL_KEEP_SIZE):
         ret = raw_fallocate(fd, mode, offs, size)
         if ret != 0:
-            raise IOError(ret)
+            raise IOError(ctypes.get_errno ())
 
     return fallocate
 
