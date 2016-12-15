@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BASE_PATH="."
+BASE_PATH="/vagrant"
 
 TEMP_DIR="${BASE_PATH}/tmp"
 APPIDS="10521bb3a18b573f088f84e59c9bbb6c2e2a1a67"
@@ -25,7 +25,7 @@ run () {
         echo "$title '$t'; $(cprofile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log; sleep infinity"
 }
 
-run_router="$(run router edge-router-avahi)"
+run_router="$(run router soma-subscriptions-producer)"
 run_store="$(run store ostree-store -t ${TEMP_DIR})"
 run_dbus_consumer="$(run dbus simulate-dbus-consumer $APPIDS)"
 run_usb_mock="$(run usb mock-usb-producer ${BASE_PATH}/DL)"
