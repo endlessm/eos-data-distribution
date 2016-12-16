@@ -29,15 +29,15 @@ class Batch(GObject.GObject):
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, batchs, type="Batch"):
+    def __init__(self, workers, type="Batch"):
         super(Batch, self).__init__()
         self._type = type
-        self._incomplete_batchs = set(batchs)
-        for batch in self._incomplete_batchs:
+        self._incomplete_workers = set(workers)
+        for batch in self._incomplete_workers:
             batch.connect('complete', self._on_batch_complete)
 
     def _on_batch_complete(self, batch):
         logger.info("%s complete: %s", (self._type, batch))
-        self._incomplete_batchs.remove(batch)
-        if len(self._incomplete_batchs) == 0:
+        self._incomplete_workers.remove(batch)
+        if len(self._incomplete_workers) == 0:
             self.emit('complete')
