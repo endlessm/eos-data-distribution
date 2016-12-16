@@ -44,7 +44,7 @@ EOF
 
 grep id ../../eos-subscriptions-apps/*/subscriptions.json \
     | while read path n id; do
-        echo "    \"$(basename `dirname $path`)\": $id" >> ${file}
+        echo "    \"$(basename `dirname $path`)\": $id," >> ${file}
 done
 
 cat <<EOF >> ${file}
