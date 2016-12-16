@@ -1,3 +1,4 @@
+import json
 import logging
 import argparse
 import os, sys
@@ -10,13 +11,38 @@ from gi.repository import GLib
 from gi.repository import Gio
 
 from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
-from eos_data_distribution.subid import APPID_TO_SUBID
 from eos_data_distribution.subscription import Fetcher
 from eos_data_distribution.parallel import Batch
 from eos_data_distribution.ndn.base import GLibUnixFace
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+app_to_sub = {}
+for data_dir in GLib.get_system_data_dirs ():
+    dir_path = os.path.join (data_dir, 'ekn')
+    try:
+        dirs = os.listdir (dir_path)
+    except:
+        continue
+
+    for d in dirs:
+        app_path = (os.path.join (dir_path, d))
+        if not os.path.isdir (app_path):
+            continue
+
+        try:
+            id = app_to_sub [d]
+            continue
+        except:
+            print 'look at', app_path
+            try:
+                sub = open (os.path.join (app_path, 'subscriptions.json'))
+                sub_json = json.load (sub)
+                id = sub_json['subscriptions'][0]['id']
+                app_to_sub[d] = id
+            except:
+                pass
 
 loop = GLib.MainLoop()
 face = GLibUnixFace()
@@ -42,7 +68,7 @@ parser.add_argument("appids", nargs='+')
 args = parser.parse_args()
 
 try:
-    fetchers = [Fetcher(args.store_dir, APPID_TO_SUBID[s], face=face).start() for s in args.appids]
+    fetchers = [Fetcher(args.store_dir, app_to_sub[s], face=face).start() for s in args.appids]
 except KeyError as e:
     logger.critical ("couldn't find subid for app: %s", e.args)
     sys.exit()
