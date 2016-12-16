@@ -55,6 +55,7 @@ class Fetcher(GObject.GObject):
 
     def start(self):
         self._fetch_manifest()
+        return self
 
     def _fetch_manifest(self):
         manifest_ndn_name = "%s/subscription/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id)
