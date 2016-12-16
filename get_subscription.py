@@ -1,6 +1,6 @@
 import logging
 import argparse
-from os import path
+import os, sys
 
 import gi
 gi.require_version('Gio', '2.0')
@@ -26,7 +26,7 @@ def mount_get_root (mount):
     root = mount.get_root()
 
     print "found drive", drive.get_name()
-    return path.join (root.get_path(), ENDLESS_NDN_CACHE_PATH)
+    return os.path.join (root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
 monitor = Gio.VolumeMonitor.get()
 usb_stores = [mount_get_root(mount) for mount in monitor.get_mounts()]
@@ -41,7 +41,12 @@ parser.add_argument("appids", nargs='+')
 
 args = parser.parse_args()
 
-fetchers = [Fetcher(args.store_dir, APPID_TO_SUBID(s), face=face).start() for s in args.appids]
+try:
+    fetchers = [Fetcher(args.store_dir, APPID_TO_SUBID[s], face=face).start() for s in args.appids]
+except KeyError as e:
+    print "couldn't find subid for app", e.args
+    sys.exit()
+
 batch = Batch(fetchers, "Subscriptions")
 batch.connect('complete', lambda *a: loop.quit())
 
