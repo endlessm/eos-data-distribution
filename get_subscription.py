@@ -5,6 +5,7 @@ from os import path
 from gi.repository import GLib
 
 from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
+from eos_data_distribution.subid import APPID_TO_SUBID
 from eos_data_distribution.subscription import Fetcher
 from eos_data_distribution.parallel import Batch
 from eos_data_distribution.ndn.base import GLibUnixFace
@@ -35,7 +36,7 @@ parser.add_argument("appids", nargs='+')
 
 args = parser.parse_args()
 
-fetchers = [Fetcher(args.store_dir, s, face=face).start() for s in args.appids]
+fetchers = [Fetcher(args.store_dir, APPID_TO_SUBID(s), face=face).start() for s in args.appids]
 batch = Batch(fetchers, "Subscriptions")
 batch.connect('complete', lambda *a: loop.quit())
 
