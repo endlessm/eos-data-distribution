@@ -2,7 +2,12 @@ import logging
 import argparse
 from os import path
 
+import gi
+gi.require_version('Gio', '2.0')
+gi.require_version('GLib', '2.0')
+
 from gi.repository import GLib
+from gi.repository import Gio
 
 from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
 from eos_data_distribution.subid import APPID_TO_SUBID
