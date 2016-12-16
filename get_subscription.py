@@ -44,7 +44,7 @@ args = parser.parse_args()
 try:
     fetchers = [Fetcher(args.store_dir, APPID_TO_SUBID[s], face=face).start() for s in args.appids]
 except KeyError as e:
-    print "couldn't find subid for app", e.args
+    logger.critical ("couldn't find subid for app: %s", e.args)
     sys.exit()
 
 batch = Batch(fetchers, "Subscriptions")
