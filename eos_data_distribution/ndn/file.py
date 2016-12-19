@@ -133,7 +133,7 @@ class FileConsumer(chunks.Consumer):
         # Reserve space for the full file...
         try:
             fallocate.fallocate(self._part_fd, 0, self._size)
-        except: # if it fails, we might get surprises later, but it's ok.
+        except IOError as e: # if it fails, we might get surprises later, but it's ok.
             pass
 
     def _read_segment_table(self):
