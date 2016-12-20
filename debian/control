@@ -5,6 +5,7 @@ Maintainer: Philip Withnall <withnall@endlessm.com>
 Build-Depends:
  debhelper (>= 10),
  dh-python,
+ dh-systemd,
  python-all,
  python-pyndn,
  python-pytest,
