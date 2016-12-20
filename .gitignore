@@ -4,3 +4,5 @@
 .gitignore
 tmp
 *~
+*.log
+*.cprof
