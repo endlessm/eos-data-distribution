@@ -1,5 +1,5 @@
 import pytest
-from eos_data_distribution import DirTools
+from eosdatadistribution import DirTools
 
 from gi.repository import GLib
 

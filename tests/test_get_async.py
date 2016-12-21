@@ -22,7 +22,7 @@ import logging
 import time
 from pyndn import Name
 
-from eos_data_distribution.ndn.file import FileConsumer
+from eosdatadistribution.ndn.file import FileConsumer
 
 from gi.repository import GLib
 

@@ -25,8 +25,8 @@ run () {
         echo "$title '$t'; $(cprofile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log; sleep infinity"
 }
 
-run_router="$(run router eos_data_distribution/producers/soma_subscriptions)"
-run_store="$(run store eos_data_distribution/store/ostree_store -t ${TEMP_DIR})"
+run_router="$(run router eosdatadistribution/producers/soma_subscriptions)"
+run_store="$(run store eosdatadistribution/store/ostree_store -t ${TEMP_DIR})"
 run_dbus_consumer="$(run dbus demo/simulate-dbus-consumer $APPIDS)"
 run_usb_mock="$(run usb demo/mock-usb-producer ${BASE_PATH}/DL)"
 

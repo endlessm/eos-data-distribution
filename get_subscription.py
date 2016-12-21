@@ -10,10 +10,10 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GLib
 from gi.repository import Gio
 
-from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
-from eos_data_distribution.subscription import Fetcher
-from eos_data_distribution.parallel import Batch
-from eos_data_distribution.ndn.base import GLibUnixFace
+from eosdatadistribution.defaults import ENDLESS_NDN_CACHE_PATH
+from eosdatadistribution.subscription import Fetcher
+from eosdatadistribution.parallel import Batch
+from eosdatadistribution.ndn.base import GLibUnixFace
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

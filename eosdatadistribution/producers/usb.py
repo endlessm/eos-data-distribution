@@ -28,9 +28,9 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gio
 from gi.repository import GLib
 
-from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
-from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
-from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
+from eosdatadistribution.defaults import ENDLESS_NDN_CACHE_PATH
+from eosdatadistribution.names import SUBSCRIPTIONS_SOMA
+from eosdatadistribution.SimpleStore import Producer as SimpleStoreProducer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

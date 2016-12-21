@@ -25,7 +25,7 @@ gi.require_version('GLib', '2.0')
 
 from gi.repository import GLib
 
-from eos_data_distribution.soma_subscription_fetcher import Fetcher
+from eosdatadistribution.soma_subscription_fetcher import Fetcher
 
 
 def main():
