@@ -56,7 +56,7 @@ def mount_removed_cb(monitor, mount, store):
     pprint.pprint([store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)])
 
 
-if __name__ == '__main__':
+def main():
     loop = GLib.MainLoop()
     monitor = Gio.VolumeMonitor.get()
     store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=ENDLESS_NDN_CACHE_PATH)
@@ -66,3 +66,7 @@ if __name__ == '__main__':
     monitor.connect("mount-added", mount_added_cb, store)
     monitor.connect("mount-removed", mount_removed_cb, store)
     loop.run()
+
+
+if __name__ == '__main__':
+    main()

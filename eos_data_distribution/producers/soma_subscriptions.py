@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
 # Copyright (C) 2016 Endless Computers INC.
@@ -20,29 +21,19 @@
 import logging
 
 import gi
+gi.require_version('GLib', '2.0')
 
-from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_data_distribution import SimpleStore
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
-from eos_data_distribution.subscription import Producer as SubscriptionProducer
+from eos_data_distribution.soma_subscription_fetcher import Fetcher
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-if __name__ == '__main__':
-    import sys
-    import argparse
-    from tempfile import mkdtemp
+def main():
+    logging.basicConfig(level=logging.INFO)
+    fetcher = Fetcher()
+    loop = GLib.MainLoop()
+    loop.run()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--store-dir", required=True)
 
-    args = parser.parse_args()
-
-    subscription_producer = SubscriptionProducer(args.store_dir)
-    subscription_producer.start()
-
-    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_INSTALLED)
-    GLib.MainLoop().run()
+if __name__ == "__main__":
+    main()
