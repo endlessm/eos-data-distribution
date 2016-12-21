@@ -1,0 +1,11 @@
+Tests: edd-store
+Depends:
+ python-eosdatadistribution,
+
+Tests: edd-producer-soma-subscriptions
+Depends:
+ python-eosdatadistribution,
+
+Tests: edd-producer-usb
+Depends:
+ python-eosdatadistribution,

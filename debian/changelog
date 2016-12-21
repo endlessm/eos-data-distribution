@@ -1,0 +1,5 @@
+eos-data-distribution (0.1.0) UNRELEASED; urgency=medium
+
+  * Initial Debian directory and packaging
+
+ -- Philip Withnall <withnall@endlessm.com>  Fri, 23 Dec 2016 15:07:00 +0000
