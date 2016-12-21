@@ -6,3 +6,8 @@ tmp
 *~
 *.log
 *.cprof
+.eggs/
+build/
+*.egg-info/
+.coverage
+.cache/

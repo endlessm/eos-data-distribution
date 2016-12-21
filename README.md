@@ -49,6 +49,8 @@ Here are the words you need to know:
    UNIX socket connection that lets you register prefixes and express
    interests, among other things.
 
+ * **EDD** - Acronym for ‘EOS Data Distribution’, the name of the project.
+
 ## License
 
 This package is licensed under the LGPLv3+.
