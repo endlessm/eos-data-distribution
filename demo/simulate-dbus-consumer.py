@@ -60,7 +60,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = args.__dict__
 
-    print 'spawning DbusConsumer', kwargs
+    print('spawning DbusConsumer', kwargs)
 
     consumer = DbusConsumer(**kwargs)
 

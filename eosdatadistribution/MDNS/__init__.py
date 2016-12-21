@@ -24,13 +24,13 @@ try:
     import dbus
     import avahi.ServiceTypeDatabase
     from gi.repository import GObject
-except ImportError, e:
-    print "A required python module is missing!\n%s" % (e)
+except ImportError as e:
+    print("A required python module is missing!\n%s" % (e))
     sys.exit()
 
 try:
     import dbus.glib
-except ImportError, e:
+except ImportError as e:
     pass
 
 
@@ -69,7 +69,7 @@ class ServiceDiscovery(GObject.GObject):
         try:
             self.system_bus = dbus.SystemBus()
             self.system_bus.add_signal_receiver(self.avahi_dbus_connect_cb, "NameOwnerChanged", "org.freedesktop.DBus", arg0="org.freedesktop.Avahi")
-        except dbus.DBusException, e:
+        except dbus.DBusException as e:
             pprint.pprint(e)
             sys.exit(1)
 
@@ -79,10 +79,10 @@ class ServiceDiscovery(GObject.GObject):
 
     def avahi_dbus_connect_cb(self, a, connect, disconnect):
         if connect != "":
-            print "We are disconnected from avahi-daemon"
+            print("We are disconnected from avahi-daemon")
             self._stop()
         else:
-            print "We are connected to avahi-daemon"
+            print("We are connected to avahi-daemon")
             if self.started: self._start()
 
     def siocgifname(self, interface):
@@ -96,10 +96,11 @@ class ServiceDiscovery(GObject.GObject):
         self.emit('service-added', interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, avahi.txt_array_to_string_array(txt), flags)
 
     def print_error(self, err):
-        print "Error:", str(err)
+        print("Error:", str(err))
 
     def service_add(self, interface, protocol, name, type, domain, flags):
-        print "Found service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, self.siocgifname(interface), protocol)
+        print("Found service '%s' of type '%s' in domain '%s' on %s.%i." %
+              (name, type, domain, self.siocgifname(interface), protocol))
 
         # this check is for local services
         #        try:
@@ -114,7 +115,7 @@ class ServiceDiscovery(GObject.GObject):
         self.emit('service-removed', interface, protocol, name, type, domain, flags)
 
     def already_browsing(self, type):
-        return self.service_browsers.has_key((self.interface, self.protocol, type, self.domain))
+        return (self.interface, self.protocol, type, self.domain) in self.service_browsers
 
     def add_service_type(self, type):
         interface, protocol, domain = (self.interface, self.protocol, self.domain)
@@ -122,7 +123,8 @@ class ServiceDiscovery(GObject.GObject):
         if self.already_browsing(type):
             return
 
-        print "Browsing for services of type '%s' in domain '%s' on %s.%i ..." % (type, domain, self.siocgifname(interface), protocol)
+        print("Browsing for services of type '%s' in domain '%s' on %s.%i ..." %
+              (type, domain, self.siocgifname(interface), protocol))
 
         browser = self.server.ServiceBrowserNew(interface, protocol, type, domain, dbus.UInt32(0))
         bus = dbus.Interface(self.system_bus.get_object(avahi.DBUS_NAME, browser), avahi.DBUS_INTERFACE_SERVICE_BROWSER)
@@ -134,7 +136,7 @@ class ServiceDiscovery(GObject.GObject):
     def del_service_type(self, interface, protocol, type, domain):
 
         service = (interface, protocol, type, domain)
-        if not self.service_browsers.has_key(service):
+        if service not in self.service_browsers:
             return
         sb = self.service_browsers[service]
         try:
@@ -143,7 +145,7 @@ class ServiceDiscovery(GObject.GObject):
             pass
         del self.service_browsers[service]
         # delete the sub menu of service_type
-        if self.zc_types.has_key(type):
+        if type in self.zc_types:
             self.service_menu.remove(self.zc_types[type].get_attach_widget())
             del self.zc_types[type]
         if len(self.zc_types) == 0:
@@ -157,7 +159,7 @@ class ServiceDiscovery(GObject.GObject):
         try:
             self.server = dbus.Interface(self.system_bus.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
         except:
-            print "Check that the Avahi daemon is running!"
+            print("Check that the Avahi daemon is running!")
             return
 
         try:
@@ -166,7 +168,7 @@ class ServiceDiscovery(GObject.GObject):
             self.use_host_names = False
 
         self.domain = self.server.GetDomainName()
-        print "Starting discovery"
+        print("Starting discovery")
 
         for service in self.services:
             self.add_service_type(service)
@@ -177,7 +179,7 @@ class ServiceDiscovery(GObject.GObject):
 
     def stop(self):
         if len(self.domain) == 0:
-            print "Discovery already stopped"
+            print("Discovery already stopped")
             return
 
-        print "Discovery stopped"
+        print("Discovery stopped")

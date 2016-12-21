@@ -35,7 +35,7 @@ for data_dir in GLib.get_system_data_dirs ():
             id = app_to_sub [d]
             continue
         except:
-            print 'look at', app_path
+            print('look at', app_path)
             try:
                 sub = open (os.path.join (app_path, 'subscriptions.json'))
                 sub_json = json.load (sub)
@@ -51,7 +51,7 @@ def mount_get_root (mount):
     drive = mount.get_drive()
     root = mount.get_root()
 
-    print "found drive", drive.get_name()
+    print("found drive", drive.get_name())
     return os.path.join (root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
 monitor = Gio.VolumeMonitor.get()
