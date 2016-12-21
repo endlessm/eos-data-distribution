@@ -48,3 +48,7 @@ Here are the words you need to know:
  * **Face** - A connection to the NFD program. Effectively an API around a
    UNIX socket connection that lets you register prefixes and express
    interests, among other things.
+
+## License
+
+This package is licensed under the LGPLv3+.
