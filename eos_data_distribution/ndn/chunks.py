@@ -96,12 +96,17 @@ class Consumer(base.Consumer):
         self._num_segments = None
         self._segments = None
         self._num_outstanding_interests = 0
+        self._qualified_name = None
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         self.connect('data', self._on_data)
 
     def start(self):
-        self._request_segment(0)
+        # Make an initial request for the barename. We should get a fully
+        # qualified request back for the first segment, with a timestamp and
+        # segment number. Future requests will request the fully qualified
+        # name.
+        self.expressInterest(self.name, forever=True)
 
     def _save_chunk(self, n, data):
         pass
@@ -126,7 +131,7 @@ class Consumer(base.Consumer):
             self._request_segment(next_segment)
 
     def _request_segment(self, n):
-        ndn_name = Name(self.name).appendSegment(n)
+        ndn_name = Name(self._qualified_name).appendSegment(n)
         self.expressInterest(ndn_name, forever=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING
@@ -162,6 +167,12 @@ class Consumer(base.Consumer):
 
         name = data.getName()
         logger.info('got data: %s', name)
+
+        if self._qualified_name is None:
+            # Strip off the chunk component for our final FQDN...
+            # XXX: We should probably have a better parsing algorithm at some point
+            # rather than relying on the chunk component being last.
+            self._qualified_name = name.getPrefix(-1)
 
         seg = get_chunk_component(name).toSegment()
         self._save_chunk(seg, data)
