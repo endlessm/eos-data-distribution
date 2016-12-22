@@ -35,6 +35,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     f = open(args.filename, 'rb')
-    producer = FileProducer(args.name, f, auto=True)
+    producer = FileProducer(args.name, f)
+    producer.registerPrefix()
     loop = GLib.MainLoop()
     loop.run()

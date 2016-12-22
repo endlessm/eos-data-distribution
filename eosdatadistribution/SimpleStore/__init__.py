@@ -69,7 +69,8 @@ class Producer(object):
 
         name = self._path_to_name(filename)
         file = open(filename, 'rb')
-        producer = FileProducer(name, file, auto=True)
+        producer = FileProducer(name, file)
+        producer.registerPrefix()
         self.dirpubs[basedir].update({name: producer})
 
     def walk_dir(self, basedir):

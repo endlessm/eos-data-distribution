@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    consumer = FileConsumer(args.name, args.filename, auto=True)
+    consumer = FileConsumer(args.name, args.filename)
 
     def check(consumer, pct):
         if args.limit and consumer._callbackCount > args.limit:
@@ -50,5 +50,7 @@ if __name__ == "__main__":
         loop.quit()
 
     consumer.connect('complete', complete)
+    consumer.consume()
+
     loop = GLib.MainLoop()
     loop.run()

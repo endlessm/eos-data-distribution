@@ -118,6 +118,7 @@ if __name__ == '__main__':
     else:
         name = re.sub('https?://', '', args.url)
 
-    producer = Producer(name, args.url, auto=True)
+    producer = Producer(name, args.url)
+    producer.registerPrefix()
 
     GLib.MainLoop().run()
