@@ -136,20 +136,12 @@ class Producer(Base):
 
     def generateKeys(self):
         # Use the system default key chain and certificate name to sign commands.
-        keyChain = KeyChain()
-        self._keyChain = keyChain
-        try:
-            self._certificateName = keyChain.getDefaultCertificateName()
-        except:
-            name = Name(self.name)
-            logger.warning("Could not get default certificate name, creating a new one from %s", name)
-            self._certificateName = keyChain.createIdentityAndCertificate(name)
-        self._responseCount = 0
-
-        self.face.setCommandSigningInfo(keyChain, self._certificateName)
+        self._key_chain = KeyChain()
+        self._cert_name = keyChain.getDefaultCertificateName()
+        self.face.setCommandSigningInfo(self._key_chain, self._cert_name)
 
     def sign(self, data):
-        return self._keyChain.sign(data, self._certificateName)
+        return self._key_chain.sign(data, self._cert_name)
 
     def send(self, name, content):
         data = Data(name)
@@ -159,8 +151,8 @@ class Producer(Base):
         return name
 
     def sendFinish(self, data):
-        #        self.sign(data)
-        #       logger.debug ('sending data: %d', data.__len__())
+        # self.sign(data)
+        # logger.debug ('sending data: %d', data.__len__())
         self.face.putData(data)
 
     def _onInterest(self, *args, **kwargs):
