@@ -255,3 +255,7 @@ class FileConsumer(chunks.Consumer):
         os.rename(self._part_filename, self._filename)
         os.unlink(self._sgt_filename)
         super(FileConsumer, self)._on_complete()
+
+if __name__ == '__main__':
+    from . import test
+    test.run_file_producer(FileProducer)

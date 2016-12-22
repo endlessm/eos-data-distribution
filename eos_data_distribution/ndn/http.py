@@ -103,27 +103,5 @@ class Producer(chunks.Producer):
 
 
 if __name__ == '__main__':
-    from . import file
-    from gi.repository import GLib
-    import re
-
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--name")
-    parser.add_argument("-o", "--output")
-    parser.add_argument("url")
-
-    args = parser.parse_args()
-    if args.name:
-        name = args.name
-    else:
-        name = re.sub('https?://', '', args.url)
-
-    loop = GLib.MainLoop()
-    producer = Producer(name, args.url, auto=True)
-    if args.output:
-        consumer = file.FileConsumer(name, filename=args.output, auto=True)
-        consumer.connect('complete', lambda  *a: loop.quit())
-
-    loop.run()
+    from . import test
+    test.run_url_producer(Producer)
