@@ -29,7 +29,7 @@ from gi.repository import GLib
 from gi.repository import Soup
 
 from .names import SUBSCRIPTIONS_SOMA
-from .ndn import http, Producer
+from .ndn import http, get_default_face
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +49,13 @@ def get_soma_server():
 
 
 class Fetcher(object):
-    def __init__(self):
-        self._producer = Producer(SUBSCRIPTIONS_SOMA)
-        self._producer.connect('interest', self._on_interest)
-        self._producer.registerPrefix()
+    def __init__(self, face=None):
+        self._face = face or get_default_face()
+        self._face.registerPrefix(SUBSCRIPTIONS_SOMA, self._on_interest)
 
         self._subproducers = {}
 
-    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
+    def _on_interest(self, prefix, interest, face, interestFilterId, filter):
         # We handle one fo two paths:
         #   /com.endlessm/subscriptions/soma/subscription/$sub_id/manifest.json/$chunk
         #   /com.endlessm/subscriptions/soma/shard/$shard_url/$chunk

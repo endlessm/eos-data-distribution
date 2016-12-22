@@ -35,11 +35,14 @@ def get_chunk_component(name):
     return name.get(-1)
 
 
-class Producer(base.Producer):
-    def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
-        super(Producer, self).__init__(name=name, *args, **kwargs)
+class Producer(object):
+    def __init__(self, name, chunk_size=CHUNK_SIZE, face=None):
+        self._face = face or base.get_default_face()
+        self._name = name
         self.chunk_size = chunk_size
-        self.connect('interest', self._on_interest)
+
+    def registerPrefix(self):
+        self._face.registerPrefix(self._name, self._on_interest)
 
     def _get_final_block_id(self):
         pass
@@ -50,9 +53,9 @@ class Producer(base.Producer):
             data.getMetaInfo().setType(ContentType.NACK)
         else:
             data.setContent(content)
-        self.sendFinish(data)
+        self._face.putData(data)
 
-    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
+    def _on_interest(self, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
 
         chunk_component = get_chunk_component(name)

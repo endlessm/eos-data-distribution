@@ -99,7 +99,7 @@ class Producer(chunks.Producer):
 
     def _got_buf(self, data, buf):
         data.setContent(buf)
-        self.sendFinish(data)
+        self._face.putData(data)
 
 
 if __name__ == '__main__':

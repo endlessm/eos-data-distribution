@@ -16,7 +16,6 @@ def get_file_size(f):
 class FileProducer(chunks.Producer):
     def __init__(self, name, file, *args, **kwargs):
         super(FileProducer, self).__init__(name, *args, **kwargs)
-        self.name = name
         self.f = file
         self._file_size = get_file_size(self.f)
 

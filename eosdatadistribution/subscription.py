@@ -23,7 +23,7 @@ import os
 import re
 from os import path
 
-from pyndn import Name
+from pyndn import Name, Data
 
 import gi
 from gi.repository import GObject
@@ -96,17 +96,16 @@ class Fetcher(GObject.GObject):
 # downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
 # and then generates a "signalling response" for them.
 class Producer(object):
-    def __init__(self, store_dir):
+    def __init__(self, store_dir, face=None):
+        self._face = face or base.get_default_face()
         self._store_dir = store_dir
+
         self._fetchers = {}
 
-        self._producer = ndn.Producer(SUBSCRIPTIONS_INSTALLED)
-        self._producer.connect('interest', self._on_interest)
-
     def start(self):
-        self._producer.registerPrefix()
+        self._face.registerPrefix(SUBSCRIPTIONS_INSTALLED, self._on_interest)
 
-    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
+    def _on_interest(self, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
         subscription_id = str(getSubIdName(name, SUBSCRIPTIONS_INSTALLED))
 
@@ -120,4 +119,6 @@ class Producer(object):
 
     def _on_subscription_complete(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
-        self._producer.send(interest.getName(), response)
+        data = Data(interest)
+        data.setContent(response)
+        self._face.putData(data)
