@@ -21,8 +21,6 @@ import re
 from collections import defaultdict
 from os import path, walk
 
-from pyndn import Face
-
 from ..DirTools import Monitor
 from ..ndn.file import FileProducer
 
@@ -39,7 +37,6 @@ class Producer(object):
         # XXX(xaiki): this is a lot of bookeeping, can probably be reduced
         self.dirs = dict()
         self.dirpubs = defaultdict(lambda: {})
-        self.filenames = dict()
 
         if base: self.publish_all_names(base)
 
@@ -61,7 +58,6 @@ class Producer(object):
     def unpublish_name(self, name, basedir):
         producer = self.dirpubs[basedir][name]
         producer.removeRegisteredPrefix(name)
-        del self.filenames[name]
         del self.dirpubs[basedir][n]
 
     def _publish_name(self, M, p, m, f, o, evt, e=None, d=None):
@@ -74,7 +70,6 @@ class Producer(object):
         name = self._path_to_name(filename)
         file = open(filename, 'rb')
         producer = FileProducer(name, file, auto=True)
-        self.filenames[name] = filename
         self.dirpubs[basedir].update({name: producer})
 
     def walk_dir(self, basedir):
