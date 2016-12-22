@@ -24,6 +24,7 @@ import gi
 gi.require_version('Soup', '2.4')
 
 from gi.repository import Soup
+from gi.repository import GObject
 
 from . import chunks
 
@@ -64,12 +65,16 @@ def get_content_size(session, url):
     size = int(content_range.split('/')[1])
     return size
 
+class Getter(GObject.GObject):
+    __gsignals__ = {
+        'data': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
+    }
 
-class Producer(chunks.Producer):
-    def __init__(self, name, url, session=None, *args, **kwargs):
-        super(Producer, self).__init__(name, *args, **kwargs)
+    def __init__(self, url, session=None, chunk_size=chunks.CHUNK_SIZE):
+        super(Getter, self).__init__()
 
         self.url = url
+        self.chunk_size = chunk_size
 
         self._session = session
         if self._session is None:
@@ -79,13 +84,7 @@ class Producer(chunks.Producer):
         # in the constructor here...
         self._size = get_content_size(self._session, self.url)
 
-    def _get_final_segment(self):
-        return self._size // self.chunk_size
-
-    def _send_chunk(self, data, n):
-        self._soup_get(data, n)
-
-    def _soup_get(self, data, n, cancellable=None):
+    def soup_get(self, data, n, cancellable=None):
         msg = Soup.Message.new('GET', self.url)
         msg.request_headers.append('Range', 'bytes=%d-%d' % (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
         self._session.send_async(msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
@@ -99,8 +98,19 @@ class Producer(chunks.Producer):
 
     def _got_buf(self, data, buf):
         data.setContent(buf)
-        self.sendFinish(data)
+        self.emit('data', data)
 
+class Producer(chunks.Producer):
+    def __init__(self, name, url, session=None, *args, **kwargs):
+        super(Producer, self).__init__(name, *args, **kwargs)
+        self._getter = Getter(url, session=session, chunk_size=self.chunk_size)
+        self._getter.connect('data', lambda o, d: self.sendFinish(d))
+
+    def _get_final_segment(self):
+        return self._getter._size // self.chunk_size
+
+    def _send_chunk(self, data, n):
+        self._getter.soup_get(data, n)
 
 if __name__ == '__main__':
     from . import test
