@@ -83,10 +83,10 @@ class Producer(chunks.Producer):
         return self._size // self.chunk_size
 
     def _send_chunk(self, data, n):
-        self._soup_get(data, self.url, n)
+        self._soup_get(data, n)
 
-    def _soup_get(self, data, uri, n, cancellable=None):
-        msg = Soup.Message.new('GET', uri)
+    def _soup_get(self, data, n, cancellable=None):
+        msg = Soup.Message.new('GET', self.url)
         msg.request_headers.append('Range', 'bytes=%d-%d' % (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
         self._session.send_async(msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
 
