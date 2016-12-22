@@ -54,16 +54,24 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunk
 
     read_bytes_async()
 
-def get_content_size(session, url):
+def fetch_http_headers(session, url):
     # XXX: SOMA's subscriptions-frontend doesn't handle HEAD requests yet because S3
     # is a bit silly with signed requests. For now, request a bytes=0-0 range and
-    # look at the Content-Range.
+    # return the full response_headers.
     msg = Soup.Message.new("GET", url)
     msg.request_headers.append('Range', 'bytes=0-0')
     session.send(msg, None)
-    content_range = msg.response_headers.get_one('Content-Range')
+    return msg.response_headers
+
+def get_content_size(headers):
+    content_range = headers.get_one('Content-Range')
     size = int(content_range.split('/')[1])
     return size
+
+def get_last_modified(headers):
+    # note that we can't use ETag as we need things to be ordered
+    date = Soup.Date.new_from_string(headers.get_one('Last-Modified'))
+    return date.to_string(Soup.DateFormat.ISO8601)
 
 class Getter(GObject.GObject):
     __gsignals__ = {
@@ -82,7 +90,9 @@ class Getter(GObject.GObject):
 
         # XXX -- this is a bit ugly that we're making an HTTP request
         # in the constructor here...
-        self._size = get_content_size(self._session, self.url)
+        self._headers = fetch_http_headers(self._session, self.url)
+        self._size = get_content_size(self._headers)
+        self._last_modified = get_last_modified(self._headers)
 
     def soup_get(self, data, n, cancellable=None):
         msg = Soup.Message.new('GET', self.url)
