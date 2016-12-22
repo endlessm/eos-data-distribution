@@ -87,6 +87,20 @@ class GLibUnixFace(Face):
         GLib.timeout_add(delayMilliseconds, wrap)
 
 
+def singleton(f):
+    instance = [None]
+    def inner():
+        if instance[0] is None:
+            instance[0] = f()
+        return instance[0]
+    return inner
+
+
+@singleton
+def get_default_face():
+    return GLibUnixFace()
+
+
 class Base(GObject.GObject):
     def __init__(self, name, face=None):
         GObject.GObject.__init__(self)
@@ -96,7 +110,7 @@ class Base(GObject.GObject):
             assert isinstance(face, GLibUnixFace)
             self.face = face
         else:
-            self.face = GLibUnixFace()
+            self.face = get_default_face()
 
         self._callbackCount = 0
         self._responseCount = 0
