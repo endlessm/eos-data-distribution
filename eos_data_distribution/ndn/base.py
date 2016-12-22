@@ -164,20 +164,12 @@ class Producer(Base):
             logger.warning("tried to unregister a prefix that never was registred: %s", prefix)
             pass
 
-    def registerPrefix(self, prefix=None, postfix="", flags=None):
-        prefix = makeName(prefix)
-        postfix = makeName(postfix)
-
-        if not prefix:
-            prefix = Name(self.name).append(postfix)
-        try:
-            flags = flags or self.flags
-        except:
-            flags = None
+    def registerPrefix(self, prefix=None, flags=None):
+        if prefix is None:
+            prefix = self.name
 
         logger.info("Register prefix: %s", prefix)
         self._prefixes[prefix] = self.face.registerPrefix(prefix, self._onInterest, self.onRegisterFailed, self.onRegisterSuccess, flags=flags)
-        return prefix
 
     def onRegisterFailed(self, prefix):
         self._responseCount += 1
@@ -213,17 +205,13 @@ class Consumer(Base):
         # to call into buf() to get a bytearray…
         self.emit('data', interest, data)
 
-    def makeInterest(self, name):
-        return Name(name)
+    def expressInterest(self, name=None, forever=False):
+        if name is None:
+            name = self.name
 
-    def expressInterest(self, name=None, forever=False, postfix=None):
-        if name == None: name = self.name
-        segname = self.makeInterest(name)
-        if postfix: segname.append(postfix)
-        logger.debug("Express Interest name: %s", segname)
+        logger.debug("Express Interest name: %s", name)
         onTimeout = partial(self.onTimeout, forever=forever, name=name)
-        self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
-        return segname
+        self.pit[name] = self.face.expressInterest(name, self._onData, onTimeout)
 
     def removePendingInterest(self, name):
         self.face.removePendingInterest(self.pit[name])
