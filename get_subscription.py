@@ -38,26 +38,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app_to_sub = {}
-for data_dir in GLib.get_system_data_dirs ():
-    dir_path = os.path.join (data_dir, 'ekn')
+for data_dir in GLib.get_system_data_dirs():
+    dir_path = os.path.join(data_dir, 'ekn')
     try:
-        dirs = os.listdir (dir_path)
+        dirs = os.listdir(dir_path)
     except:
         continue
 
     for d in dirs:
-        app_path = (os.path.join (dir_path, d))
-        if not os.path.isdir (app_path):
+        app_path = os.path.join(dir_path, d)
+        if not os.path.isdir(app_path):
             continue
 
-        try:
-            id = app_to_sub [d]
-            continue
-        except:
-            print('look at', app_path)
+        if d in app_to_sub:
+            id = app_to_sub[d]
+        else:
             try:
-                sub = open (os.path.join (app_path, 'subscriptions.json'))
-                sub_json = json.load (sub)
+                sub = open(os.path.join(app_path, 'subscriptions.json'))
+                sub_json = json.load(sub)
                 id = sub_json['subscriptions'][0]['id']
                 app_to_sub[d] = id
             except:
@@ -66,12 +64,12 @@ for data_dir in GLib.get_system_data_dirs ():
 loop = GLib.MainLoop()
 face = GLibUnixFace()
 
-def mount_get_root (mount):
+def mount_get_root(mount):
     drive = mount.get_drive()
     root = mount.get_root()
 
-    print("found drive", drive.get_name())
-    return os.path.join (root.get_path(), ENDLESS_NDN_CACHE_PATH)
+    print "found drive", drive.get_name()
+    return os.path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
 monitor = Gio.VolumeMonitor.get()
 usb_stores = [mount_get_root(mount) for mount in monitor.get_mounts()]
@@ -89,7 +87,7 @@ args = parser.parse_args()
 try:
     fetchers = [Fetcher(args.store_dir, app_to_sub[s], face=face).start() for s in args.appids]
 except KeyError as e:
-    logger.critical ("couldn't find subid for app: %s", e.args)
+    logger.critical("couldn't find subid for app: %s", e.args)
     sys.exit()
 
 batch = Batch(fetchers, "Subscriptions")
