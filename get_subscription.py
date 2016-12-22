@@ -81,7 +81,7 @@ except:
     store_dir = "./eos_subscription_data"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-t", "--store-dir", default=store_dir)
+parser.add_argument("-t", "--store-dir", default=store_dir, type=str, help="where to store the downloaded files")
 parser.add_argument("appids", nargs='+')
 
 args = parser.parse_args()
