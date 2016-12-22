@@ -66,13 +66,15 @@ face = GLibUnixFace()
 
 def mount_get_root(mount):
     drive = mount.get_drive()
+    if not drive or not drive.is_removable():
+        return False
     root = mount.get_root()
 
     print "found drive", drive.get_name()
     return os.path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
 monitor = Gio.VolumeMonitor.get()
-usb_stores = [mount_get_root(mount) for mount in monitor.get_mounts()]
+usb_stores = [m for m in [mount_get_root(mount) for mount in monitor.get_mounts()] if m]
 try:
     store_dir = usb_stores[0]
 except:
