@@ -87,10 +87,12 @@ parser.add_argument("appids", nargs='+')
 args = parser.parse_args()
 
 try:
-    fetchers = [Fetcher(args.store_dir, app_to_sub[s], face=face).start() for s in args.appids]
+    appids = [app_to_sub[s] for s in args.appids]
 except KeyError as e:
     logger.critical("couldn't find subid for app: %s", e.args)
     sys.exit()
+
+fetchers = [Fetcher(args.store_dir, appid, face=face).start() for appid in appids]
 
 batch = Batch(fetchers, "Subscriptions")
 batch.connect('complete', lambda *a: loop.quit())
