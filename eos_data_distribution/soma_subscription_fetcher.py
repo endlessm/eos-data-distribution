@@ -29,7 +29,7 @@ from gi.repository import GLib
 from gi.repository import Soup
 
 from .names import SUBSCRIPTIONS_SOMA
-from .ndn import http, Producer
+from .ndn import http, Producer, manifest
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class Fetcher(object):
             subscription_id = route.get(1).getValue().toRawStr()
             filename = route.get(2).getValue().toRawStr()
             assert filename == 'manifest.json'
-            self._subproducers[key] = http.Producer(chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face, auto=True)
+            self._subproducers[key] = manifest.Producer(chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face, auto=True)
         elif component == 'shard':
             shard_url = route.get(1).getValue().toRawStr()
             self._subproducers[key] = http.Producer(chunkless_name, shard_url, face=face, auto=True)
