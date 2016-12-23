@@ -1,5 +1,5 @@
 import pytest
-import DirTools
+from eosdatadistribution import DirTools
 
 from gi.repository import GLib
 
@@ -20,7 +20,7 @@ class TestClass:
         d = tmpdir.mkdir("ndn")
         m = DirTools.Monitor(str(d))
         [m.connect(s, cb_changed, s) for s in ['created']]
-        [d.mkdir(str(i)) for i in xrange(ITER_COUNT)]
+        [d.mkdir(str(i)) for i in range(ITER_COUNT)]
 
         GLib.timeout_add_seconds(2, lambda: loop.quit())
         loop.run()

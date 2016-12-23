@@ -23,8 +23,8 @@ import gi
 gi.require_version('GLib', '2.0')
 from gi.repository import GLib
 
-from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
-from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
+from eosdatadistribution.names import SUBSCRIPTIONS_SOMA
+from eosdatadistribution.SimpleStore import Producer as SimpleStoreProducer
 
 import logging
 logging.basicConfig(level=logging.INFO)

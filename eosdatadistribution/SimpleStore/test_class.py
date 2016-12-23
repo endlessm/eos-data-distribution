@@ -24,8 +24,8 @@ class TestClass:
         touch(tmpfilepath)
 
         p.publish_all_names(tmpdirpath)
-        assert p.producers.keys() == [tmpfilepath]
-        assert p.dirs.keys().__len__() == 1
+        assert list(p.producers.keys()) == [tmpfilepath]
+        assert list(p.dirs.keys()).__len__() == 1
         p.unpublish(tmpdirpath)
-        assert p.producers.keys() == []
-        assert p.dirs.keys().__len__() == 0
+        assert list(p.producers.keys()) == []
+        assert list(p.dirs.keys()).__len__() == 0

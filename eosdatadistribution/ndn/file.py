@@ -163,7 +163,7 @@ class FileConsumer(chunks.Consumer):
             num_segments = read8()
             completed_segments = []
 
-            for i in xrange(0, num_segments, 8):
+            for i in range(0, num_segments, 8):
                 byte = ord(os.read(self._sgt_fd, 1))
                 completed_segments += num_to_bitmap(byte)
 
@@ -177,7 +177,7 @@ class FileConsumer(chunks.Consumer):
             segments = ([SegmentState.COMPLETE] * num_complete_segments) + ([SegmentState.UNSENT] * num_unsent_segments)
 
             num_holes = read8()
-            for i in xrange(num_holes):
+            for i in range(num_holes):
                 hole_index = read8()
                 segments[hole_index] = SegmentState.UNSENT
 
@@ -210,7 +210,7 @@ class FileConsumer(chunks.Consumer):
         def write_mode0():
             write8(len(self._segments))
 
-            for i in xrange(0, len(self._segments), 8):
+            for i in range(0, len(self._segments), 8):
                 segments = self._segments[i:i+8]
                 bitmap = [1 if state == SegmentState.COMPLETE else 0 for state in segments]
                 bitmap = (bitmap + [0] * 8)[:8]

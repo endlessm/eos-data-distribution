@@ -29,8 +29,8 @@ from gi.repository import GLib
 
 from pyndn import Name, Face
 
-from eos_data_distribution.ndn import Consumer
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
+from eosdatadistribution.ndn import Consumer
+from eosdatadistribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = args.__dict__
 
-    print 'spawning DbusConsumer', kwargs
+    print('spawning DbusConsumer', kwargs)
 
     consumer = DbusConsumer(**kwargs)
 

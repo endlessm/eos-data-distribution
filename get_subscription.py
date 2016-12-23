@@ -10,10 +10,10 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GLib
 from gi.repository import Gio
 
-from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
-from eos_data_distribution.subscription import Fetcher
-from eos_data_distribution.parallel import Batch
-from eos_data_distribution.ndn.base import GLibUnixFace
+from eosdatadistribution.defaults import ENDLESS_NDN_CACHE_PATH
+from eosdatadistribution.subscription import Fetcher
+from eosdatadistribution.parallel import Batch
+from eosdatadistribution.ndn.base import GLibUnixFace
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ for data_dir in GLib.get_system_data_dirs ():
             id = app_to_sub [d]
             continue
         except:
-            print 'look at', app_path
+            print('look at', app_path)
             try:
                 sub = open (os.path.join (app_path, 'subscriptions.json'))
                 sub_json = json.load (sub)
@@ -51,7 +51,7 @@ def mount_get_root (mount):
     drive = mount.get_drive()
     root = mount.get_root()
 
-    print "found drive", drive.get_name()
+    print("found drive", drive.get_name())
     return os.path.join (root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
 monitor = Gio.VolumeMonitor.get()
