@@ -7,10 +7,9 @@ Copyright:
 License: LGPL-3+
 
 Files:
- dbus-service.py
- demo/simulate-dbus-consumer.py
- tools/test_get_async.py
- tools/test_publish_async_nfd.py
+ scripts/edd-get-chunk
+ scripts/edd-put-chunk
+ scripts/edd-service-dbus
 Copyright:
  © 2014–2016 Regents of the University of California
 License: LGPL-3+
