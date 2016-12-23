@@ -20,7 +20,7 @@
 import json
 import logging
 import argparse
-import os, sys
+import os, sys, re
 
 import gi
 gi.require_version('Gio', '2.0')
@@ -87,12 +87,14 @@ parser.add_argument("appids", nargs='+')
 args = parser.parse_args()
 
 try:
-    appids = [app_to_sub[s] for s in args.appids]
+    subids = [app_to_sub[a] for a in args.appids if re.match('^\w+$', a)]
 except KeyError as e:
     logger.critical("couldn't find subid for app: %s", e.args)
     sys.exit()
 
-fetchers = [Fetcher(args.store_dir, appid, face=face).start() for appid in appids]
+assert subids.__len__()
+
+fetchers = [Fetcher(args.store_dir, subid, face=face).start() for subid in subids]
 
 batch = Batch(fetchers, "Subscriptions")
 batch.connect('complete', lambda *a: loop.quit())
