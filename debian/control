@@ -1,0 +1,29 @@
+Source: eos-data-distribution
+Section: python
+Priority: standard
+Maintainer: Philip Withnall <withnall@endlessm.com>
+Build-Depends:
+ debhelper (>= 10),
+ dh-python,
+ python-all,
+ python-pyndn,
+ python-pytest,
+ python-setuptools,
+ python-setuptools-git,
+Standards-Version: 3.9.7
+Testsuite: autopkgtest-pkg-python
+X-Python-Version: >= 2.7
+Homepage: https://github.com/endlessm/endless-ndn
+Vcs-Git: https://github.com/endlessm/endless-ndn.git
+Vcs-Browser: https://github.com/endlessm/endless-ndn
+
+Package: python-eos-data-distribution
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python:Depends},
+Description: NDN producers and daemons (Python 2)
+ Named Data Networking provides name-based access to data over the
+ network.
+ .
+ This package contains the services and library for Python 2.

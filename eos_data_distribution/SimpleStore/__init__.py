@@ -45,7 +45,7 @@ class Producer(object):
             basename = r.sub('', filename.split(self.split)[1])
         except:
             basename = filename
-        return path.join(self.prefix.toUri(), basename)
+        return path.join(self.prefix, basename)
 
     def unpublish(self, basedir):
         [self.unpublish_name(n) for n in self.dirpubs[basedir]]

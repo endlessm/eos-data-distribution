@@ -29,8 +29,8 @@ from gi.repository import GLib
 
 from pyndn import Name, Face
 
-from eosdatadistribution.ndn import Consumer
-from eosdatadistribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
+from eos_data_distribution.ndn import Consumer
+from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,8 +1,8 @@
-#!/usr/bin/python
-# -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
-#
-# Copyright (C) 2016 Endless Computers INC.
-# Author: Niv Sardi <xaiki@endlessm.com>
+#!/bin/sh
+
+# Smoke test for edd-producer-soma-subscriptions: can it be run?
+
+# Copyright © 2016 Endless Mobile, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -18,22 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import logging
+set -e
+exec 2>&1
 
-import gi
-gi.require_version('GLib', '2.0')
-
-from gi.repository import GLib
-
-from eosdatadistribution.soma_subscription_fetcher import Fetcher
-
-
-def main():
-    logging.basicConfig(level=logging.INFO)
-    fetcher = Fetcher()
-    loop = GLib.MainLoop()
-    loop.run()
-
-
-if __name__ == "__main__":
-    main()
+edd-producer-soma-subscriptions --help

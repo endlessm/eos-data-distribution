@@ -104,9 +104,9 @@ setup(
     entry_points={
         'console_scripts': [
             'edd-soma-subscriptions-producer = '
-            'eosdatadistribution.producers.soma_subscriptions:main',
-            'edd-store = eosdatadistribution.store.ostree_store:main',
-            'edd-usb-producer = eosdatadistribution.producers.usb:main',
+            'eos_data_distribution.producers.soma_subscriptions:main',
+            'edd-store = eos_data_distribution.store.ostree_store:main',
+            'edd-usb-producer = eos_data_distribution.producers.usb:main',
         ],
     },
     author=project_author,
