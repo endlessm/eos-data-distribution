@@ -1,7 +1,7 @@
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Computers INC.
-# Author: Niv Sardi <xaiki@endlessm.com>
+# Copyright (C) 2014-2016 Regents of the University of California.
+# Author: Jeff Thompson <jefft0@remap.ucla.edu>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -19,35 +19,36 @@
 
 import logging
 
-import gi
+import time
+from pyndn import Name
 
-from gi.repository import GObject
+from eos_data_distribution.ndn.file import FileConsumer
+
 from gi.repository import GLib
 
-from eosdatadistribution import SimpleStore
-from eosdatadistribution.names import SUBSCRIPTIONS_INSTALLED
-from eosdatadistribution.subscription import Producer as SubscriptionProducer
-
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-
-def main():
+if __name__ == "__main__":
     import sys
     import argparse
-    from tempfile import mkdtemp
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--store-dir", required=True)
+    parser.add_argument("name")
+    parser.add_argument("filename")
+    parser.add_argument("-l", "--limit", type=int, default=0)
 
     args = parser.parse_args()
 
-    subscription_producer = SubscriptionProducer(args.store_dir)
-    subscription_producer.start()
+    consumer = FileConsumer(args.name, args.filename, auto=True)
 
-    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_INSTALLED)
-    GLib.MainLoop().run()
+    def check(consumer, pct):
+        if args.limit and consumer._callbackCount > args.limit:
+            complete()
 
+    consumer.connect('progress', check)
 
-if __name__ == '__main__':
-    main()
+    def complete(*a):
+        loop.quit()
+
+    consumer.connect('complete', complete)
+    loop = GLib.MainLoop()
+    loop.run()

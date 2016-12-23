@@ -17,38 +17,24 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import logging
-
 import time
 from pyndn import Name
 
-from eosdatadistribution.ndn.file import FileConsumer
-
 from gi.repository import GLib
 
-logging.basicConfig(level=logging.INFO)
+from eos_data_distribution.ndn.file import FileProducer
+
 
 if __name__ == "__main__":
     import sys
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("name")
     parser.add_argument("filename")
-    parser.add_argument("-l", "--limit", type=int, default=0)
-
     args = parser.parse_args()
 
-    consumer = FileConsumer(args.name, args.filename, auto=True)
-
-    def check(consumer, pct):
-        if args.limit and consumer._callbackCount > args.limit:
-            complete()
-
-    consumer.connect('progress', check)
-
-    def complete(*a):
-        loop.quit()
-
-    consumer.connect('complete', complete)
+    f = open(args.filename, 'rb')
+    producer = FileProducer(args.name, f, auto=True)
     loop = GLib.MainLoop()
     loop.run()

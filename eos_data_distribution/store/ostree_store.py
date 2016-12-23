@@ -17,28 +17,37 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-from os import path
+import logging
 
 import gi
-gi.require_version('GLib', '2.0')
+
+from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
-from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
+from eos_data_distribution import SimpleStore
+from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
+from eos_data_distribution.subscription import Producer as SubscriptionProducer
 
-import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-if __name__ == '__main__':
+
+def main():
+    import sys
     import argparse
+    from tempfile import mkdtemp
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("dir")
+    parser.add_argument("-t", "--store-dir", required=True)
+
     args = parser.parse_args()
 
-    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=path.realpath(args.dir))
-    logger.info('creating store: %s', args.__dict__)
-    store.publish_all_names(path.realpath(args.dir))
+    subscription_producer = SubscriptionProducer(args.store_dir)
+    subscription_producer.start()
 
+    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_INSTALLED)
     GLib.MainLoop().run()
+
+
+if __name__ == '__main__':
+    main()

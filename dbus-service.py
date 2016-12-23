@@ -30,8 +30,8 @@ from gi.repository import Gio
 
 from pyndn import Name, Face
 
-from eosdatadistribution.ndn import Consumer
-from eosdatadistribution.names import SUBSCRIPTIONS_INSTALLED
+from eos_data_distribution.ndn import Consumer
+from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>

@@ -1,7 +1,8 @@
+#!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2014-2016 Regents of the University of California.
-# Author: Jeff Thompson <jefft0@remap.ucla.edu>
+# Copyright (C) 2016 Endless Computers INC.
+# Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,24 +18,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import time
-from pyndn import Name
+import logging
+
+import gi
+gi.require_version('GLib', '2.0')
 
 from gi.repository import GLib
 
-from eosdatadistribution.ndn.file import FileProducer
+from eos_data_distribution.soma_subscription_fetcher import Fetcher
+
+
+def main():
+    logging.basicConfig(level=logging.INFO)
+    fetcher = Fetcher()
+    loop = GLib.MainLoop()
+    loop.run()
 
 
 if __name__ == "__main__":
-    import sys
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("name")
-    parser.add_argument("filename")
-    args = parser.parse_args()
-
-    f = open(args.filename, 'rb')
-    producer = FileProducer(args.name, f, auto=True)
-    loop = GLib.MainLoop()
-    loop.run()
+    main()

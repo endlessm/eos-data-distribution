@@ -17,7 +17,7 @@ run () {
         echo "$title '$t'; $(run_python ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log; sleep infinity"
 }
 
-run_store="$(run store eosdatadistribution/store/ostree_store -t ${TEMP_DIR})"
+run_store="$(run store eos_data_distribution/store/ostree_store -t ${TEMP_DIR})"
 run_dbus="$(run dbus dbus-service)"
 
 nfd-stop
