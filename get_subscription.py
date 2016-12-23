@@ -80,7 +80,7 @@ try:
 except:
     store_dir = "./eos_subscription_data"
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description="submit a list of subscription ids, get the shards")
 parser.add_argument("-t", "--store-dir", default=store_dir, type=str, help="where to store the downloaded files")
 parser.add_argument("appids", nargs='+')
 
