@@ -57,12 +57,18 @@ class Fetcher(object):
         self._subproducers = {}
 
     def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
-        # We handle one fo two paths:
+        # We handle one of two paths:
         #   /com.endlessm/subscriptions/soma/subscription/$sub_id/manifest.json/$chunk
         #   /com.endlessm/subscriptions/soma/shard/$shard_url/$chunk
 
         name = interest.getName()
-        chunkless_name = name.getPrefix(-1)
+
+        # XXX: Use more sophisticated parsing algorithm to strip non-chunk parts.
+        chunk_component = name.get(-1)
+        if chunk_component.isSegment():
+            chunkless_name = name.getPrefix(-1)
+        else:
+            chunkless_name = name
         key = str(chunkless_name)
 
         # If we already have a producer for this name, then we're good...
