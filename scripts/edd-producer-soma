@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
 # Copyright (C) 2016 Endless Computers INC.
@@ -28,12 +28,8 @@ from gi.repository import GLib
 from eos_data_distribution.soma_subscription_fetcher import Fetcher
 
 
-def main():
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     fetcher = Fetcher()
     loop = GLib.MainLoop()
     loop.run()
-
-
-if __name__ == "__main__":
-    main()

@@ -101,14 +101,15 @@ setup(
     tests_require=[
         'pytest',
     ],
-    entry_points={
-        'console_scripts': [
-            'edd-soma-subscriptions-producer = '
-            'eos_data_distribution.producers.soma_subscriptions:main',
-            'edd-store = eos_data_distribution.store.ostree_store:main',
-            'edd-usb-producer = eos_data_distribution.producers.usb:main',
-        ],
-    },
+    scripts=[
+        'scripts/edd-producer-soma',
+        'scripts/edd-producer-usb',
+        'scripts/edd-store-ostree',
+        'scripts/edd-service-dbus',
+        'scripts/edd-put-chunk',
+        'scripts/edd-get-chunk',
+        'scripts/edd-get-appdata',
+    ],
     author=project_author,
     author_email='xaiki@endlessm.com',
     description=__doc__,

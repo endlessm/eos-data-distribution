@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
 # Copyright (C) 2014-2016 Regents of the University of California.
@@ -94,7 +95,6 @@ class DBusService(object):
         self._consumer.expressInterest(name, forever=True)
         print(str(name))
         invocation.return_value(None)
-
 
 if __name__ == "__main__":
     service = DBusService()
