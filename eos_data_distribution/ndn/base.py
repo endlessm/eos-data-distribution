@@ -220,7 +220,7 @@ class Consumer(Base):
         self.emit('data', interest, data)
 
     def makeInterest(self, name):
-        return Name(name)
+        return Interest(name)
 
     def expressInterest(self, name=None, forever=False, postfix=None):
         if name == None: name = self.name
