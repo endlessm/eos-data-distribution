@@ -222,24 +222,29 @@ class Consumer(Base):
     def makeInterest(self, name):
         return Interest(name)
 
-    def expressInterest(self, name=None, forever=False, postfix=None):
+    def expressInterest(self, name=None, postfix=None, *args, **kwargs):
         if name == None: name = self.name
         segname = self.makeInterest(name)
         if postfix: segname.append(postfix)
-        logger.debug("Express Interest name: %s", segname)
-        onTimeout = partial(self.onTimeout, forever=forever, name=name)
-        self.pit[name] = self.face.expressInterest(segname, self._onData, onTimeout)
-        return segname
+        return self._expressInterest (segname, name, *args, **kwargs)
+
+    def _expressInterest(self, interest, name=self.name,
+                         forever=False, onData=self._onData, onTimeout=None):
+        logger.debug("Express Interest name: %s", interest)
+        onTimeout = partial(self.onTimeout,
+                            forever=forever, name=name, extra=onTimeout)
+        self.pit[name] = self.face.expressInterest(interest, onData, onTimeout)
+        return interest
 
     def removePendingInterest(self, name):
         self.face.removePendingInterest(self.pit[name])
         del self.pit[name]
 
-    def onTimeout(self, interest, forever=False, name=None):
+    def onTimeout(self, interest, forever=False, name=None, extra=None):
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
         logger.debug("Time out for interest: %s", interest.getName())
-        if forever and name:
+        if forever:
             logger.info("Re-requesting Interest: %s", name)
-            onTimeout = partial(self.onTimeout, forever=forever, name=name)
-            self.pit[name] = self.face.expressInterest(interest, self._onData, onTimeout)
+            self._expressInterest(interest,
+                                  name=name, forever=forever, onTimeout=extra)
