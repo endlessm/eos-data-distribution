@@ -72,7 +72,7 @@ class Fetcher(GObject.GObject):
             local_path = 'shard/%s' % (re.sub('https?://', '', shard['download_uri']))
             shard_filename = path.realpath(path.join(self._store_dir, local_path))
             self._shard_filenames.append(shard_filename)
-            consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face, auto=True)
+            consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face)
             consumers.append(consumer)
             logger.info("Starting consumer: %s", (consumer, ))
 
