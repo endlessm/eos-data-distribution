@@ -115,7 +115,6 @@ class Base(GObject.GObject):
         self._callbackCount = 0
         self._responseCount = 0
 
-
 class Producer(Base):
     __gsignals__ = {
         'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
@@ -129,9 +128,9 @@ class Producer(Base):
         self.generateKeys()
         self._prefixes = dict()
 
-        if auto: self.produce()
+        if auto: self.start()
 
-    def produce(self):
+    def start(self):
         self.registerPrefix()
 
     def generateKeys(self):
@@ -208,9 +207,10 @@ class Consumer(Base):
         self.pit = dict()
         #        self.generateKeys()
         self._prefixes = dict()
-        if auto: self.consume()
 
-    def consume(self):
+        if auto: self.start()
+
+    def start(self):
         self.expressInterest()
 
     def _onData(self, interest, data):

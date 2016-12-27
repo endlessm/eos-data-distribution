@@ -100,7 +100,7 @@ class Consumer(base.Consumer):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         self.connect('data', self._on_data)
 
-    def consume(self):
+    def start(self):
         self._request_segment(0)
 
     def _save_chunk(self, n, data):
