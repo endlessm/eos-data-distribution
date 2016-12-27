@@ -107,7 +107,7 @@ class FileConsumer(chunks.Consumer):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
     # XXX: This is disgusting hackery. We need to remove auto=True.
-    def consume(self):
+    def start(self):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
         try:
