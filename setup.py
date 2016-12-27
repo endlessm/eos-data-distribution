@@ -108,6 +108,7 @@ setup(
             'edd-usb-producer = eos_data_distribution.producers.usb:main',
             'edd-getchunks = eos_data_distribution.tools.getchunks:main',
             'edd-putchunks = eos_data_distribution.tools.putchunks:main',
+            'edd-dbus-service = eos_data_distribution.dbus_service:main',
         ],
     },
     author=project_author,

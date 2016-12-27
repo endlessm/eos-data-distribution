@@ -92,10 +92,9 @@ class DBusService(object):
         subscription_id, = parameters.unpack()
         name = Name(SUBSCRIPTIONS_INSTALLED).append(subscription_id)
         self._consumer.expressInterest(name, forever=True)
-        print(str(name))
         invocation.return_value(None)
 
 
-if __name__ == "__main__":
+def main():
     service = DBusService()
     GLib.MainLoop().run()
