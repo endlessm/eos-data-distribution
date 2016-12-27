@@ -30,10 +30,11 @@ from gi.repository import GLib
 from pyndn.node import Node
 from pyndn.security import KeyChain
 from pyndn.transport.unix_transport import UnixTransport
-from pyndn import Name, Data, Face, MetaInfo
+from pyndn import Name, Data, Face, MetaInfo, Interest
+
+from . import command
 
 logger = logging.getLogger(__name__)
-
 
 def makeName(o):
     if isinstance(o, Name):
@@ -114,6 +115,54 @@ class Base(GObject.GObject):
 
         self._callbackCount = 0
         self._responseCount = 0
+        self._keyChain = None
+        self._certificateName = None
+        self.pit = dict()
+
+    def generateKeys(self):
+        # Use the system default key chain and certificate name to sign commands.
+        keyChain = KeyChain()
+        self._keyChain = keyChain
+        try:
+            self._certificateName = keyChain.getDefaultCertificateName()
+        except:
+            name = Name(self.name)
+            logger.warning("Could not get default certificate name, creating a new one from %s", name)
+            self._certificateName = keyChain.createIdentityAndCertificate(name)
+        self._responseCount = 0
+
+        self.face.setCommandSigningInfo(keyChain, self._certificateName)
+
+    def sign(self, data):
+        return self._keyChain.sign(data, self._certificateName)
+
+    def _expressInterest(self, interest, name=None,
+                         forever=False, onData=None, onTimeout=None):
+        if not name: name = self.name
+        if not onData: onData = self._onData
+        if not onTimeout: onTimeout = partial(self.onTimeout,
+                            forever=forever, name=name)
+
+        logger.debug("Express Interest name: %s", interest)
+        self.pit[name] = self.face.expressInterest(interest, onData, onTimeout)
+        return interest
+
+    def makeCommandInterest(self, cmd, prefix=None, controlParameters={},
+                            keyChain=None, certificateName=None,
+                            *args, **kwargs):
+        if not prefix: prefix=self.name
+        if not self._keyChain or not self._certificateName:
+            self.generateKeys()
+
+        if not keyChain: keyChain = self._keyChain
+        if not certificateName: certificateName = self._certificateName
+
+        controlParameters['name'] = prefix
+        return command.makeInterest(cmd, controlParameters=controlParameters,
+                                    keyChain=keyChain,
+                                    certificateName=certificateName,
+                                    local=self.face.isLocal(),
+                                    *args, **kwargs)
 
 class Producer(Base):
     __gsignals__ = {
@@ -132,15 +181,6 @@ class Producer(Base):
 
     def start(self):
         self.registerPrefix()
-
-    def generateKeys(self):
-        # Use the system default key chain and certificate name to sign commands.
-        self._key_chain = KeyChain()
-        self._cert_name = keyChain.getDefaultCertificateName()
-        self.face.setCommandSigningInfo(self._key_chain, self._cert_name)
-
-    def sign(self, data):
-        return self._key_chain.sign(data, self._cert_name)
 
     def send(self, name, content):
         data = Data(name)
@@ -170,7 +210,8 @@ class Producer(Base):
             logger.warning("tried to unregister a prefix that never was registred: %s", prefix)
             pass
 
-    def registerPrefix(self, prefix=None, postfix="", flags=None):
+    def registerPrefix(self, prefix=None, postfix="", flags=None,
+                       *args, **kwargs):
         prefix = makeName(prefix)
         postfix = makeName(postfix)
 
@@ -182,8 +223,18 @@ class Producer(Base):
             flags = None
 
         logger.info("Register prefix: %s", prefix)
-        self._prefixes[prefix] = self.face.registerPrefix(prefix, self._onInterest, self.onRegisterFailed, self.onRegisterSuccess, flags=flags)
+        self._prefixes[prefix] = self._registerPrefix(prefix, flags=flags, *args, **kwargs)
         return prefix
+
+    def _registerPrefix(self, prefix, flags=None,
+                           onInterest=None, onRegisterFailed=None,
+                           onRegisterSuccess=None,
+                        *args, **kwargs):
+        if not onInterest: onInterest = self._onInterest
+        if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
+        if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
+
+        return self.face.registerPrefix(prefix, self._onInterest, self.onRegisterFailed, self.onRegisterSuccess, flags=flags)
 
     def onRegisterFailed(self, prefix):
         self._responseCount += 1
@@ -194,7 +245,6 @@ class Producer(Base):
         self.emit('register-success', prefix, registered)
         logger.info("Register succeded for prefix: %s, %s", prefix, registered)
 
-
 class Consumer(Base):
     __gsignals__ = {
         'data': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
@@ -204,7 +254,6 @@ class Consumer(Base):
     def __init__(self, name=None, auto=False, *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
-        self.pit = dict()
         #        self.generateKeys()
         self._prefixes = dict()
 
@@ -215,8 +264,6 @@ class Consumer(Base):
 
     def _onData(self, interest, data):
         self._callbackCount += 1
-        # that is complicated… getContent() returns an ndn.Blob, that needs
-        # to call into buf() to get a bytearray…
         self.emit('data', interest, data)
 
     def makeInterest(self, name):
@@ -228,23 +275,15 @@ class Consumer(Base):
         if postfix: segname.append(postfix)
         return self._expressInterest (segname, name, *args, **kwargs)
 
-    def _expressInterest(self, interest, name=self.name,
-                         forever=False, onData=self._onData, onTimeout=None):
-        logger.debug("Express Interest name: %s", interest)
-        onTimeout = partial(self.onTimeout,
-                            forever=forever, name=name, extra=onTimeout)
-        self.pit[name] = self.face.expressInterest(interest, onData, onTimeout)
-        return interest
-
     def removePendingInterest(self, name):
         self.face.removePendingInterest(self.pit[name])
         del self.pit[name]
 
-    def onTimeout(self, interest, forever=False, name=None, extra=None):
+    def onTimeout(self, interest, forever=False, name=None):
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
         logger.debug("Time out for interest: %s", interest.getName())
         if forever:
             logger.info("Re-requesting Interest: %s", name)
             self._expressInterest(interest,
-                                  name=name, forever=forever, onTimeout=extra)
+                                  name=name, forever=forever)
