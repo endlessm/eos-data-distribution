@@ -33,8 +33,9 @@ class Batch(GObject.GObject):
         super(Batch, self).__init__()
         self._type = type
         self._incomplete_workers = set(workers)
-        for batch in self._incomplete_workers:
-            batch.connect('complete', self._on_batch_complete)
+        for worker in self._incomplete_workers:
+            worker.connect('complete', self._on_batch_complete)
+            worker.start()
 
     def _on_batch_complete(self, batch):
         logger.info("%s complete: %s", (self._type, batch))

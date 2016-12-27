@@ -94,7 +94,7 @@ except KeyError as e:
 
 assert subids.__len__()
 
-fetchers = [Fetcher(args.store_dir, subid, face=face).start() for subid in subids]
+fetchers = [Fetcher(args.store_dir, subid, face=face) for subid in subids]
 
 batch = Batch(fetchers, "Subscriptions")
 batch.connect('complete', lambda *a: loop.quit())
