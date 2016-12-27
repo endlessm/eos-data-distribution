@@ -17,20 +17,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import argparse
 import logging
-
+import sys
 import time
-from pyndn import Name
 
-from eos_data_distribution.ndn.file import FileConsumer
+from pyndn import Name
 
 from gi.repository import GLib
 
-logging.basicConfig(level=logging.INFO)
+from eos_data_distribution.ndn.file import FileConsumer
 
-if __name__ == "__main__":
-    import sys
-    import argparse
+
+def main():
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser()
     parser.add_argument("name")
     parser.add_argument("filename")

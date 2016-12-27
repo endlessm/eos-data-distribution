@@ -106,6 +106,8 @@ setup(
             'edd-ostree-store = eos_data_distribution.store.ostree_store:main',
             'edd-soma-subscriptions-producer = eos_data_distribution.producers.soma_subscriptions:main',
             'edd-usb-producer = eos_data_distribution.producers.usb:main',
+            'edd-getchunks = eos_data_distribution.tools.getchunks:main',
+            'edd-putchunks = eos_data_distribution.tools.putchunks:main',
         ],
     },
     author=project_author,
