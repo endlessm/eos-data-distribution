@@ -67,7 +67,7 @@ face = GLibUnixFace()
 def mount_get_root(mount):
     drive = mount.get_drive()
     if not drive or not drive.is_removable():
-        return False
+        return None
     root = mount.get_root()
 
     print "found drive", drive.get_name()
