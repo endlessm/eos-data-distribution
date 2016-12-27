@@ -18,6 +18,7 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import argparse
+import itertools
 import json
 import logging
 import os
@@ -35,29 +36,16 @@ from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
 from eos_data_distribution.subscription import Fetcher
 from eos_data_distribution.parallel import Batch
 
-app_to_sub = {}
-for data_dir in GLib.get_system_data_dirs():
-    dir_path = os.path.join(data_dir, 'ekn')
-    try:
-        dirs = os.listdir(dir_path)
-    except:
-        continue
+def get_subscription_ids_for_arg(arg):
+    # Check if it's an app ID.
+    for data_dir in GLib.get_system_data_dirs():
+        subscriptions_path = os.path.join(data_dir, 'ekn', arg, 'subscriptions.json')
+        if os.path.exists(subscriptions_path):
+            subscriptions_json = json.load(open(subscriptions_path, 'r'))
+            return [subscription_entry['id'] for subscription_entry in subscription_json['subscriptions']]
 
-    for d in dirs:
-        app_path = os.path.join(dir_path, d)
-        if not os.path.isdir(app_path):
-            continue
-
-        if d in app_to_sub:
-            id = app_to_sub[d]
-        else:
-            try:
-                sub = open(os.path.join(app_path, 'subscriptions.json'))
-                sub_json = json.load(sub)
-                id = sub_json['subscriptions'][0]['id']
-                app_to_sub[d] = id
-            except:
-                pass
+    # Otherwise, assume it's a subscription ID.
+    return [arg]
 
 def mount_get_root(mount):
     drive = mount.get_drive()
@@ -80,23 +68,18 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    parser = argparse.ArgumentParser(description="submit a list of subscription ids, get the shards")
+    parser = argparse.ArgumentParser(description="Download content for a number of subscription IDs or app IDs")
     parser.add_argument("-t", "--store-dir", default=get_default_store_dir(), help="where to store the downloaded files")
-    parser.add_argument("appids", nargs='+')
+    parser.add_argument("ids", nargs='+')
 
     args = parser.parse_args()
 
-    try:
-        subids = [app_to_sub[a] for a in args.appids if re.match('^\w+$', a)]
-    except KeyError as e:
-        logger.critical("couldn't find subid for app: %s", e.args)
-        sys.exit()
-
-        assert len(subids)
+    subscription_ids = list(itertools.chain.from_iterable((get_subscription_ids_for_arg(arg) for arg in args.ids)))
+    assert len(subscription_ids)
 
     loop = GLib.MainLoop()
 
-    fetchers = [Fetcher(args.store_dir, subid) for subid in subids]
+    fetchers = [Fetcher(args.store_dir, subscription_id) for subscription_id in subscription_ids]
 
     batch = Batch(fetchers, "Subscriptions")
     batch.connect('complete', lambda *a: loop.quit())
