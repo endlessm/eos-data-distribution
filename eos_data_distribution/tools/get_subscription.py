@@ -17,10 +17,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import argparse
 import json
 import logging
-import argparse
-import os, sys, re
+import os
+import re
+import sys
 
 import gi
 gi.require_version('Gio', '2.0')
@@ -32,10 +34,6 @@ from gi.repository import Gio
 from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
 from eos_data_distribution.subscription import Fetcher
 from eos_data_distribution.parallel import Batch
-from eos_data_distribution.ndn.base import GLibUnixFace
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app_to_sub = {}
 for data_dir in GLib.get_system_data_dirs():
@@ -61,9 +59,6 @@ for data_dir in GLib.get_system_data_dirs():
             except:
                 pass
 
-loop = GLib.MainLoop()
-face = GLibUnixFace()
-
 def mount_get_root(mount):
     drive = mount.get_drive()
     if not drive or not drive.is_removable():
@@ -73,32 +68,37 @@ def mount_get_root(mount):
     print "found drive", drive.get_name()
     return os.path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
-monitor = Gio.VolumeMonitor.get()
-usb_stores = [m for m in [mount_get_root(mount) for mount in monitor.get_mounts()] if m]
-try:
-    store_dir = usb_stores[0]
-except:
-    store_dir = "./eos_subscription_data"
+def get_default_store_dir():
+    monitor = Gio.VolumeMonitor.get()
+    usb_stores = [m for m in [mount_get_root(mount) for mount in monitor.get_mounts()] if m]
+    if usb_stores:
+        return usb_stores[0]
+    else:
+        return "./eos_subscription_data"
 
-parser = argparse.ArgumentParser(description="submit a list of subscription ids, get the shards")
-parser.add_argument("-t", "--store-dir", default=store_dir, help="where to store the downloaded files")
-parser.add_argument("appids", nargs='+')
+def main():
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
-args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="submit a list of subscription ids, get the shards")
+    parser.add_argument("-t", "--store-dir", default=get_default_store_dir(), help="where to store the downloaded files")
+    parser.add_argument("appids", nargs='+')
 
-try:
-    subids = [app_to_sub[a] for a in args.appids if re.match('^\w+$', a)]
-except KeyError as e:
-    logger.critical("couldn't find subid for app: %s", e.args)
-    sys.exit()
+    args = parser.parse_args()
 
-assert subids.__len__()
+    try:
+        subids = [app_to_sub[a] for a in args.appids if re.match('^\w+$', a)]
+    except KeyError as e:
+        logger.critical("couldn't find subid for app: %s", e.args)
+        sys.exit()
 
-fetchers = [Fetcher(args.store_dir, subid, face=face) for subid in subids]
+        assert len(subids)
 
-batch = Batch(fetchers, "Subscriptions")
-batch.connect('complete', lambda *a: loop.quit())
+    loop = GLib.MainLoop()
 
-loop.run()
+    fetchers = [Fetcher(args.store_dir, subid) for subid in subids]
 
+    batch = Batch(fetchers, "Subscriptions")
+    batch.connect('complete', lambda *a: loop.quit())
 
+    loop.run()
