@@ -34,13 +34,6 @@ from pyndn import Name, Data, Face, MetaInfo
 
 logger = logging.getLogger(__name__)
 
-
-def makeName(o):
-    if isinstance(o, Name):
-        return o
-    return Name(o)
-
-
 class GLibUnixTransport(UnixTransport):
     _watch_id = 0
 
@@ -114,6 +107,7 @@ class Base(GObject.GObject):
 
         self._callbackCount = 0
         self._responseCount = 0
+
 
 class Producer(Base):
     __gsignals__ = {
