@@ -145,7 +145,7 @@ class Producer(Base):
 
     def sendFinish(self, data):
         # self.sign(data)
-        # logger.debug ('sending data: %d', data.__len__())
+        logger.debug('sending data: %s', data.getName())
         self.face.putData(data)
 
     def _onInterest(self, *args, **kwargs):
