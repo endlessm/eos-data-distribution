@@ -136,7 +136,7 @@ class Producer(Base):
     def generateKeys(self):
         # Use the system default key chain and certificate name to sign commands.
         self._key_chain = KeyChain()
-        self._cert_name = keyChain.getDefaultCertificateName()
+        self._cert_name = self._key_chain.getDefaultCertificateName()
         self.face.setCommandSigningInfo(self._key_chain, self._cert_name)
 
     def sign(self, data):
