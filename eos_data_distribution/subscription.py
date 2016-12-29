@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 
 class Fetcher(GObject.GObject):
     __gsignals__ = {
-        'complete': (GObject.SIGNAL_RUN_FIRST, None, (str, )),
+        'response': (GObject.SIGNAL_RUN_FIRST, None, (str, )),
+        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
     def __init__(self, store_dir, subscription_id, face=None):
@@ -86,7 +87,8 @@ class Fetcher(GObject.GObject):
             "shards": self._shard_filenames,
         }
 
-        self.emit('complete', json.dumps(response))
+        self.emit('response', json.dumps(response))
+        self.emit('complete')
 
 # The Producer listens for intents to /endless/installed/foo,
 # downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
@@ -110,10 +112,10 @@ class Producer(object):
             return
 
         fetcher = Fetcher(self._store_dir, subscription_id, face=face)
-        fetcher.connect('complete', lambda fetcher, response: self._on_subscription_complete(fetcher, interest, response))
+        fetcher.connect('response', lambda fetcher, response: self._on_subscription_response(fetcher, interest, response))
         self._fetchers[subscription_id] = fetcher
         fetcher.start()
 
-    def _on_subscription_complete(self, fetcher, interest, response):
+    def _on_subscription_response(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
         self._producer.send(interest.getName(), response)
