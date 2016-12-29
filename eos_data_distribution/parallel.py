@@ -37,8 +37,8 @@ class Batch(GObject.GObject):
             worker.connect('complete', self._on_batch_complete)
             worker.start()
 
-    def _on_batch_complete(self, batch):
-        logger.info("%s complete: %s", (self._type, batch))
-        self._incomplete_workers.remove(batch)
+    def _on_batch_complete(self, worker):
+        logger.info("%s complete: %s", self._type, worker)
+        self._incomplete_workers.remove(worker)
         if len(self._incomplete_workers) == 0:
             self.emit('complete')
