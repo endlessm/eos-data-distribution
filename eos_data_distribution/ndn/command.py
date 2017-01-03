@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 _commandInterestGenerator = CommandInterestGenerator()
 
-def makeCommandInterest (*args, **kwargs):
+def makeCommandInterest(*args, **kwargs):
     logger.debug("args kwargs: %s %s", args, kwargs)
     _commandInterestGenerator.generate(*args, **kwargs)
 
@@ -46,6 +46,17 @@ controlMap = {
     'persistency': 'setFacePersistency',
     'flagbit': 'setFlagBit'
 }
+
+def addNextHop(faceUri, name, cost=0, *args, **kwargs):
+    face = Face(faceUri)
+
+    controlParameters = {}
+    if cost: controlParameters['cost'] = int(cost)
+    interest = makeInterest('/nfd/fib/add-nexthop', name,
+                            controlParameters=controlParameters,
+                            *args, **kwargs)
+    face.expressInterest(interest)
+    return face
 
 def makeInterest(cmd, flags=None, local=True,
                  keyChain=None, certificateName=None,
