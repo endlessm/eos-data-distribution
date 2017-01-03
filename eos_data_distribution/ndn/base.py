@@ -203,13 +203,13 @@ class Consumer(Base):
         self._callbackCount += 1
         self.emit('data', interest, data)
 
-    def expressInterest(self, name=None, forever=False):
-        if name is None:
-            name = self.name
+    def expressInterest(self, interest=None, forever=False):
+        if interest is None:
+            interest = self.name
 
-        logger.debug("Express Interest name: %s", name)
-        onTimeout = partial(self.onTimeout, forever=forever, name=name)
-        self.pit[name] = self.face.expressInterest(name, self._onData, onTimeout)
+        logger.debug("Express Interest name: %s", interest)
+        onTimeout = partial(self.onTimeout, forever=forever, name=self.name)
+        self.pit[interest] = self.face.expressInterest(interest, self._onData, onTimeout)
 
     def removePendingInterest(self, name):
         self.face.removePendingInterest(self.pit[name])
