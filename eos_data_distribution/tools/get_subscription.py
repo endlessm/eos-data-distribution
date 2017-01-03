@@ -20,7 +20,6 @@
 import argparse
 import itertools
 import json
-import logging
 import os
 import re
 import sys
@@ -66,9 +65,6 @@ def get_default_store_dir():
         return "./eos_subscription_data"
 
 def main():
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
     parser = argparse.ArgumentParser(description="Download content for a number of subscription IDs or app IDs")
     parser.add_argument("-t", "--store-dir", default=get_default_store_dir(), help="where to store the downloaded files")
     parser.add_argument("ids", nargs='+')

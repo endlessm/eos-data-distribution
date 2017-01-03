@@ -25,10 +25,10 @@ def process_args(parser):
     parser.add_argument("-v", action="count")
 
     args = parser.parse_args()
-    if args.v == 0:
-        logging.basicConfig(level=logging.INFO)
-    else:
+    if args.v > 1:
         logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     return args
 

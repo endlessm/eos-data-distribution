@@ -18,7 +18,6 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import argparse
-import logging
 import sys
 import time
 
@@ -31,7 +30,6 @@ from eos_data_distribution.tools import util
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser()
     parser.add_argument("name")
     parser.add_argument("filename")
