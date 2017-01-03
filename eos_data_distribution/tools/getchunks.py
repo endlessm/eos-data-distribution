@@ -52,3 +52,6 @@ def main():
     consumer.connect('complete', complete)
     loop = GLib.MainLoop()
     loop.run()
+
+if __name__ == '__main__':
+    main()

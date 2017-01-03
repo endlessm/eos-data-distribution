@@ -38,3 +38,6 @@ def main():
     producer = FileProducer(args.name, f, auto=True)
     loop = GLib.MainLoop()
     loop.run()
+
+if __name__ == '__main__':
+    main()

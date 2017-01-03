@@ -85,3 +85,6 @@ def main():
     batch.connect('complete', lambda *a: loop.quit())
 
     loop.run()
+
+if __name__ == '__main__':
+    main()
