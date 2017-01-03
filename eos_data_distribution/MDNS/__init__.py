@@ -19,13 +19,16 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 try:
     import avahi
     import dbus
     import avahi.ServiceTypeDatabase
     from gi.repository import GObject
 except ImportError as e:
-    print("A required python module is missing!\n%s" % (e))
+    logger.error("A required python module is missing!\n%s",e)
     sys.exit()
 
 try:
@@ -70,7 +73,7 @@ class ServiceDiscovery(GObject.GObject):
             self.system_bus = dbus.SystemBus()
             self.system_bus.add_signal_receiver(self.avahi_dbus_connect_cb, "NameOwnerChanged", "org.freedesktop.DBus", arg0="org.freedesktop.Avahi")
         except dbus.DBusException as e:
-            pprint.pprint(e)
+            logger.error("Error Owning name on DBus: %s", e)
             sys.exit(1)
 
         self.db = ServiceTypeDatabase()
@@ -79,10 +82,10 @@ class ServiceDiscovery(GObject.GObject):
 
     def avahi_dbus_connect_cb(self, a, connect, disconnect):
         if connect != "":
-            print("We are disconnected from avahi-daemon")
+            logger.info("We are disconnected from avahi-daemon")
             self._stop()
         else:
-            print("We are connected to avahi-daemon")
+            logger.info("We are connected to avahi-daemon")
             if self.started: self._start()
 
     def siocgifname(self, interface):
@@ -95,12 +98,9 @@ class ServiceDiscovery(GObject.GObject):
         h_type = self.db.get_human_type(type)
         self.emit('service-added', interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, avahi.txt_array_to_string_array(txt), flags)
 
-    def print_error(self, err):
-        print("Error:", str(err))
-
     def service_add(self, interface, protocol, name, type, domain, flags):
-        print("Found service '%s' of type '%s' in domain '%s' on %s.%i." %
-              (name, type, domain, self.siocgifname(interface), protocol))
+        logger.info("Found service '%s' of type '%s:%s' in domain '%s' on %s.%i." %
+              (name, type, flags, domain, self.siocgifname(interface), avahi.LOOKUP_RESULT_LOCAL))
 
         # this check is for local services
         #        try:
@@ -109,7 +109,7 @@ class ServiceDiscovery(GObject.GObject):
         #        except dbus.DBusException:
         #            pass
 
-        self.server.ResolveService(interface, protocol, name, type, domain, avahi.PROTO_INET, dbus.UInt32(0), reply_handler=self.service_resolved, error_handler=self.print_error)
+        self.server.ResolveService(interface, protocol, name, type, domain, avahi.PROTO_INET, dbus.UInt32(0), reply_handler=self.service_resolved, error_handler=logger.error)
 
     def service_remove(self, interface, protocol, name, type, domain, flags):
         self.emit('service-removed', interface, protocol, name, type, domain, flags)
@@ -123,7 +123,7 @@ class ServiceDiscovery(GObject.GObject):
         if self.already_browsing(type):
             return
 
-        print("Browsing for services of type '%s' in domain '%s' on %s.%i ..." %
+        logger.info("Browsing for services of type '%s' in domain '%s' on %s.%i ..." %
               (type, domain, self.siocgifname(interface), protocol))
 
         browser = self.server.ServiceBrowserNew(interface, protocol, type, domain, dbus.UInt32(0))
@@ -159,7 +159,7 @@ class ServiceDiscovery(GObject.GObject):
         try:
             self.server = dbus.Interface(self.system_bus.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
         except:
-            print("Check that the Avahi daemon is running!")
+            logger.info("Check that the Avahi daemon is running!")
             return
 
         try:
@@ -168,7 +168,7 @@ class ServiceDiscovery(GObject.GObject):
             self.use_host_names = False
 
         self.domain = self.server.GetDomainName()
-        print("Starting discovery")
+        logger.info("Starting discovery")
 
         for service in self.services:
             self.add_service_type(service)
@@ -179,7 +179,7 @@ class ServiceDiscovery(GObject.GObject):
 
     def stop(self):
         if len(self.domain) == 0:
-            print("Discovery already stopped")
+            logger.info("Discovery already stopped")
             return
 
-        print("Discovery stopped")
+        logger.info("Discovery stopped")
