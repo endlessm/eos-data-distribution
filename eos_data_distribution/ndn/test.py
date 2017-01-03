@@ -46,7 +46,7 @@ def run_test(args, name):
 
     if args.output:
         consumer = file.FileConsumer(name, filename=args.output, auto=True)
-        consumer.connect('complete', lambda  *a: loop.quit())
+        consumer.connect('complete', lambda *a: loop.quit())
     loop.run()
 
 def run_file_producer(producer_class):
