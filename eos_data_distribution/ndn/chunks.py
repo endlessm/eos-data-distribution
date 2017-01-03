@@ -22,7 +22,7 @@ import os
 
 from gi.repository import GObject
 
-from pyndn import Name, Data, MetaInfo, ContentType
+from pyndn import Name, Interest, Data, MetaInfo, ContentType
 
 from . import base
 
@@ -97,6 +97,9 @@ class Consumer(base.Consumer):
         self._segments = None
         self._num_outstanding_interests = 0
         self._qualified_name = None
+
+        self.interest = Interest(name)
+        self.interest.setMustBeFresh(True)
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         self.connect('data', self._on_data)
