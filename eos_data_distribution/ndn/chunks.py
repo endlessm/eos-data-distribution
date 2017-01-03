@@ -103,6 +103,7 @@ class Consumer(base.Consumer):
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         self.connect('data', self._on_data)
+        logger.debug('init chunks.Consumer: %s', name)
 
     def start(self):
         # Make an initial request for the barename. We should get a fully
@@ -135,6 +136,7 @@ class Consumer(base.Consumer):
 
     def _request_segment(self, n):
         ndn_name = Name(self._qualified_name).appendSegment(n)
+        logger.debug('is this an interest ? %s', ndn_name)
         self.expressInterest(ndn_name, forever=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING

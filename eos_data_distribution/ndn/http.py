@@ -93,11 +93,13 @@ class Getter(GObject.GObject):
         self._headers = fetch_http_headers(self._session, self.url)
         self._size = get_content_size(self._headers)
         self._last_modified = get_last_modified(self._headers)
+        logger.debug('getter init: %s', url)
 
     def soup_get(self, data, n, cancellable=None):
         msg = Soup.Message.new('GET', self.url)
         msg.request_headers.append('Range', 'bytes=%d-%d' % (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
         self._session.send_async(msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
+        logger.debug('getter: soup_get: %d', n)
 
     def _got_stream(self, msg, task, data):
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
@@ -109,12 +111,14 @@ class Getter(GObject.GObject):
     def _got_buf(self, data, buf):
         data.setContent(buf)
         self.emit('data', data)
+        logger.debug ('getter: got buf')
 
 class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
         super(Producer, self).__init__(name, *args, **kwargs)
         self._getter = Getter(url, session=session, chunk_size=self.chunk_size)
         self._getter.connect('data', lambda o, d: self.sendFinish(d))
+        logger.debug('producer init')
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size
