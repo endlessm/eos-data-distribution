@@ -24,18 +24,26 @@ import re
 import argparse
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def process_args(*extra):
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--name")
     parser.add_argument("-o", "--output")
+    parser.add_argument("-v", action="count")
     [parser.add_argument(a) for a in extra]
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.v == 0:
+        logging.basicConfig(level=logging.INFO)
+    else:
+        logging.basicConfig(level=logging.DEBUG)
+
+    return args
 
 def run_test(args, name):
     loop = GLib.MainLoop()
+
     if args.output:
         consumer = file.FileConsumer(name, filename=args.output, auto=True)
         consumer.connect('complete', lambda  *a: loop.quit())
