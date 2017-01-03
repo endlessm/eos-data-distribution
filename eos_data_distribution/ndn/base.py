@@ -30,7 +30,7 @@ from gi.repository import GLib
 from pyndn.node import Node
 from pyndn.security import KeyChain
 from pyndn.transport.unix_transport import UnixTransport
-from pyndn import Name, Data, Face, MetaInfo
+from pyndn import Name, Data, Face
 
 logger = logging.getLogger(__name__)
 
