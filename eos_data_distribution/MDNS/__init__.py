@@ -42,8 +42,8 @@ class ServiceTypeDatabase:
         self.pretty_name = avahi.ServiceTypeDatabase.ServiceTypeDatabase()
 
     def get_human_type(self, type):
-        if type in self.pretty_name:
-            return self.pretty_name[type]
+        if str(type) in self.pretty_name:
+            return getattr(self.pretty_name, type)
         else:
             return type
 
