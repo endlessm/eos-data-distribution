@@ -201,8 +201,6 @@ class Consumer(Base):
 
     def _onData(self, interest, data):
         self._callbackCount += 1
-        # that is complicated… getContent() returns an ndn.Blob, that needs
-        # to call into buf() to get a bytearray…
         self.emit('data', interest, data)
 
     def expressInterest(self, name=None, forever=False):
