@@ -103,11 +103,9 @@ class ServiceDiscovery(GObject.GObject):
               (name, type, flags, domain, self.siocgifname(interface), avahi.LOOKUP_RESULT_LOCAL))
 
         # this check is for local services
-        #        try:
-        #            if flags & avahi.LOOKUP_RESULT_LOCAL:
-        #                return
-        #        except dbus.DBusException:
-        #            pass
+        if flags & avahi.LOOKUP_RESULT_LOCAL:
+            logger.info ('droping local service')
+            return
 
         self.server.ResolveService(interface, protocol, name, type, domain, avahi.PROTO_INET, dbus.UInt32(0), reply_handler=self.service_resolved, error_handler=logger.error)
 
