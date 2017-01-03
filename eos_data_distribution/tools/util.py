@@ -1,7 +1,8 @@
+#!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2014-2016 Regents of the University of California.
-# Author: Jeff Thompson <jefft0@remap.ucla.edu>
+# Copyright (C) 2016 Endless Computers INC.
+# Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -18,27 +19,16 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import argparse
-import sys
-import time
+import logging
 
-from pyndn import Name
+def process_args(parser):
+    parser.add_argument("-v", action="count")
 
-from gi.repository import GLib
+    args = parser.parse_args()
+    if args.v == 0:
+        logging.basicConfig(level=logging.INFO)
+    else:
+        logging.basicConfig(level=logging.DEBUG)
 
-from eos_data_distribution.ndn.file import FileProducer
-from eos_data_distribution.tools import util
+    return args
 
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("name")
-    parser.add_argument("filename")
-    args = util.process_args(parser)
-
-    f = open(args.filename, 'rb')
-    producer = FileProducer(args.name, f, auto=True)
-    loop = GLib.MainLoop()
-    loop.run()
-
-if __name__ == '__main__':
-    main()

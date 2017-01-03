@@ -27,6 +27,7 @@ from pyndn import Name
 from gi.repository import GLib
 
 from eos_data_distribution.ndn.file import FileConsumer
+from eos_data_distribution.tools import util
 
 
 def main():
@@ -36,7 +37,7 @@ def main():
     parser.add_argument("filename")
     parser.add_argument("-l", "--limit", type=int, default=0)
 
-    args = parser.parse_args()
+    args = util.process_args(parser)
 
     consumer = FileConsumer(args.name, args.filename, auto=True)
 
