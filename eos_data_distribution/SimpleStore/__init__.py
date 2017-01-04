@@ -28,11 +28,13 @@ r = re.compile(r'^/+')
 
 
 class Producer(object):
-    def __init__(self, base=None, prefix='/', exts=('.shard', '.json'), split=None):
+    def __init__(self, base=None, prefix='/',
+                 exts=('.shard', '.json'), split=None, cost=None):
         self.base = base
         self.exts = exts
         self.split = split or base
         self.prefix = prefix
+        self.cost = cost
 
         # XXX(xaiki): this is a lot of bookeeping, can probably be reduced
         self.dirs = dict()
@@ -69,7 +71,7 @@ class Producer(object):
 
         name = self._path_to_name(filename)
         file = open(filename, 'rb')
-        producer = FileProducer(name, file, auto=True)
+        producer = FileProducer(name, file, cost=self.cost, auto=True)
         self.dirpubs[basedir].update({name: producer})
 
     def walk_dir(self, basedir):

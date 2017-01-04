@@ -24,6 +24,7 @@ from pyndn import Name
 
 from . import http
 from . import chunks
+from .. import defaults
 
 logger = logging.getLogger(__name__)
 FRESHNESS_PERIOD = 1000 #ms
@@ -38,7 +39,7 @@ class Producer(chunks.Producer):
         # XXX -- we mangle the name in the constructor, this is slow
         self._qualified_name = Name(name).append(self._getter._last_modified)
 
-        super(Producer, self).__init__(name, cost=http.DEFAULT_COST, *args, **kwargs)
+        super(Producer, self).__init__(name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size

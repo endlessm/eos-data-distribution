@@ -18,3 +18,8 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
+
+class RouteCost(object):
+    HTTP = 100
+    LOCAL_NETWORK = 20
+    USB = 10
