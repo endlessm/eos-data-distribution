@@ -28,6 +28,7 @@ from gi.repository import GObject
 from gi.repository import GLib
 
 from pyndn.node import Node
+from pyndn.control_parameters import ControlParameters
 from pyndn.security import KeyChain
 from pyndn.transport.unix_transport import UnixTransport
 from pyndn import Name, Data, Face, Interest
@@ -147,17 +148,18 @@ class Base(GObject.GObject):
         self.pit[interest] = self.face.expressInterest(interest, onData, onTimeout)
         return interest
 
-    def makeCommandInterest(self, cmd, prefix=None, controlParameters={},
+    def makeCommandInterest(self, cmd, prefix=None, controlParameters=None,
                             keyChain=None, certificateName=None,
                             *args, **kwargs):
         if not prefix: prefix=self.name
+        if not controlParameters: controlParameters = ControlParameters()
         if not self._keyChain or not self._certificateName:
             self.generateKeys()
 
         if not keyChain: keyChain = self._keyChain
         if not certificateName: certificateName = self._certificateName
 
-        controlParameters['name'] = prefix
+        controlParameters.setName(prefix)
         return command.makeInterest(cmd, controlParameters=controlParameters,
                                     keyChain=keyChain,
                                     certificateName=certificateName,
@@ -211,7 +213,7 @@ class Producer(Base):
         self._prefixes[prefix] = self._registerPrefix(prefix, flags, *args, **kwargs)
         return prefix
 
-    def _registerPrefix(self, prefix, cost=None, controlParameters={},
+    def _registerPrefix(self, prefix, cost=None, controlParameters=None,
                            onInterest=None, onRegisterFailed=None,
                            onRegisterSuccess=None,
                            *args, **kwargs):
@@ -219,9 +221,9 @@ class Producer(Base):
         if not onInterest: onInterest = self._onInterest
         if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
         if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
+        if not controlParameters: controlParameters = ControlParameters()
 
-        if cost: controlParameters['cost'] = int(cost)
-        logger.debug("Register Prefix: %s", controlParameters)
+        if cost: controlParameters.setCost(int(cost))
         interest = self.makeCommandInterest('/nfd/rib/register', prefix,
                                             controlParameters=controlParameters, *args, **kwargs)
         node = self.face._node

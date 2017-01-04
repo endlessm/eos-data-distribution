@@ -28,45 +28,23 @@ logger = logging.getLogger(__name__)
 
 _commandInterestGenerator = CommandInterestGenerator()
 
-def makeCommandInterest(*args, **kwargs):
+def generateInterest(*args, **kwargs):
     logger.debug("args kwargs: %s %s", args, kwargs)
     _commandInterestGenerator.generate(*args, **kwargs)
-
-controlMap = {
-    'name': 'setName',
-    'faceid': 'setFaceId',
-    'uri' : 'setUri',
-    'control': 'setLocalControlFeature',
-    'origin': 'setOrigin',
-    'cost': 'setCost',
-    'flags': 'setFlags',
-    'mask': 'setMask',
-    'strategy': 'setStrategy',
-    'expiration': 'setExpirationPeriod',
-    'persistency': 'setFacePersistency',
-    'flagbit': 'setFlagBit'
-}
 
 def addNextHop(faceUri, name, cost=0, *args, **kwargs):
     face = Face(faceUri)
 
-    controlParameters = {}
-    if cost: controlParameters['cost'] = int(cost)
+    controlParameters = ControlParameters()
+    if cost: controlParameters.setCost(int(cost))
     interest = makeInterest('/nfd/fib/add-nexthop', name,
                             controlParameters=controlParameters,
                             *args, **kwargs)
     face.expressInterest(interest)
     return face
 
-def makeInterest(cmd, flags=None, local=True,
-                 keyChain=None, certificateName=None,
-                 controlParameters={}):
-    cp = ControlParameters()
-
-    logger.debug('control Parameters: %s', controlParameters)
-    for c in controlParameters:
-        getattr(cp,controlMap[c])(controlParameters[c])
-
+def makeInterest(cmd, local=True, controlParameters={},
+                 keyChain=None, certificateName=None):
     assert(cmd.startswith('/'))
 
     commandInterest = Interest()
@@ -79,10 +57,10 @@ def makeInterest(cmd, flags=None, local=True,
         # The host is remote, so set a longer timeout.
         commandInterest.setInteresLifetimeMilliseconds(4000.0)
     # NFD only accepts TlvWireFormat packets.
-    commandInterest.getName().append(cp.wireEncode(TlvWireFormat.get()))
-    makeCommandInterest(commandInterest,
-                        keyChain, certificateName,
-                        TlvWireFormat.get())
+    commandInterest.getName().append(controlParameters.wireEncode(TlvWireFormat.get()))
+    generateInterest(commandInterest,
+                     keyChain, certificateName,
+                     TlvWireFormat.get())
 
     return commandInterest
 
