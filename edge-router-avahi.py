@@ -38,12 +38,8 @@ SERVICES = [
 gatways, ips = None, None
 
 
-def flatten(l):
-    return [i for s in l for i in s]
-
-
 class EdgeRouter(object):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         super(EdgeRouter, self).__init__()
 
         sda = ServiceDiscovery(SERVICES)
