@@ -53,5 +53,15 @@ class Producer(chunks.Producer):
         self.sendFinish(data)
 
 if __name__ == '__main__':
+    import re
     from . import test
-    test.run_url_producer(Producer)
+
+    args = test.process_args("url")
+
+    if args.name:
+        name = args.name
+    else:
+        name = re.sub('https?://', '', args.url)
+
+    producer = Producer(name=name, url=args.url, auto=True)
+    test.run_test(args, name)

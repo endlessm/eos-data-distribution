@@ -258,4 +258,12 @@ class FileConsumer(chunks.Consumer):
 
 if __name__ == '__main__':
     from . import test
-    test.run_file_producer(FileProducer)
+    args = process_args("filename")
+
+    if args.name:
+        name = args.name
+    else:
+        name = args.filename
+
+    producer = producer_class(name=name, file=args.filename, auto=True)
+    run_test(args, name)

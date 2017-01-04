@@ -20,7 +20,6 @@
 
 from . import file
 from gi.repository import GLib
-import re
 import argparse
 
 import logging
@@ -48,26 +47,4 @@ def run_test(args, name):
         consumer = file.FileConsumer(name, filename=args.output, auto=True)
         consumer.connect('complete', lambda *a: loop.quit())
     loop.run()
-
-def run_file_producer(producer_class):
-    args = process_args("filename")
-
-    if args.name:
-        name = args.name
-    else:
-        name = args.filename
-
-    producer = producer_class(name=name, file=args.filename, auto=True)
-    run_test(args, name)
-
-def run_url_producer(producer_class):
-    args = process_args("url")
-
-    if args.name:
-        name = args.name
-    else:
-        name = re.sub('https?://', '', args.url)
-
-    producer = producer_class(name=name, url=args.url, auto=True)
-    run_test(args, name)
 
