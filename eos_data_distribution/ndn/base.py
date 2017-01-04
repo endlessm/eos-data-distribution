@@ -172,7 +172,9 @@ class Producer(Base):
         'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
     }
 
-    def __init__(self, name=None, auto=False, *args, **kwargs):
+    def __init__(self, name=None, cost=None, auto=False, *args, **kwargs):
+        self.cost = cost
+
         super(Producer, self).__init__(name=name, *args, **kwargs)
 
         self.generateKeys()
@@ -209,15 +211,28 @@ class Producer(Base):
         self._prefixes[prefix] = self._registerPrefix(prefix, flags, *args, **kwargs)
         return prefix
 
-    def _registerPrefix(self, prefix, flags=None,
+    def _registerPrefix(self, prefix, cost=None, controlParameters={},
                            onInterest=None, onRegisterFailed=None,
                            onRegisterSuccess=None,
-                        *args, **kwargs):
+                           *args, **kwargs):
+        if not cost: cost = self.cost
         if not onInterest: onInterest = self._onInterest
         if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
         if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
 
-        return self.face.registerPrefix(prefix, self._onInterest, self.onRegisterFailed, self.onRegisterSuccess, flags=flags)
+        if cost: controlParameters['cost'] = int(cost)
+        logger.debug("Register Prefix: %s", controlParameters)
+        interest = self.makeCommandInterest('/nfd/rib/register', prefix,
+                                            controlParameters=controlParameters, *args, **kwargs)
+        node = self.face._node
+        response = Node._RegisterResponse(
+            prefix, onRegisterFailed, onRegisterSuccess, node.getNextEntryId(), node,
+            onInterest, self.face
+        )
+        self._expressInterest(interest, prefix,
+                              onData=response.onData,
+                              onTimeout=response.onTimeout)
+        return id
 
     def onRegisterFailed(self, prefix):
         self._responseCount += 1
