@@ -36,9 +36,11 @@ def get_chunk_component(name):
 
 
 class Producer(base.Producer):
-    def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
-        super(Producer, self).__init__(name=name, *args, **kwargs)
+    def __init__(self, name, cost=None, chunk_size=CHUNK_SIZE, *args, **kwargs):
+        self.cost = cost
         self.chunk_size = chunk_size
+
+        super(Producer, self).__init__(name=name, *args, **kwargs)
         self.connect('interest', self._on_interest)
 
     def _get_final_block_id(self):

@@ -267,3 +267,4 @@ if __name__ == '__main__':
 
     producer = producer_class(name=name, file=args.filename, auto=True)
     run_test(args, name)
+

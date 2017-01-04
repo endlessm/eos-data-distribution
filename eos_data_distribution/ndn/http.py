@@ -29,6 +29,7 @@ from gi.repository import GObject
 from . import chunks
 
 logger = logging.getLogger(__name__)
+DEFAULT_COST = 10
 
 
 def make_soup_session():
@@ -115,10 +116,9 @@ class Getter(GObject.GObject):
 
 class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
-        super(Producer, self).__init__(name, *args, **kwargs)
+        super(Producer, self).__init__(name, cost=DEFAULT_COST, *args, **kwargs)
         self._getter = Getter(url, session=session, chunk_size=self.chunk_size)
         self._getter.connect('data', lambda o, d: self.sendFinish(d))
-        logger.debug('producer init')
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size

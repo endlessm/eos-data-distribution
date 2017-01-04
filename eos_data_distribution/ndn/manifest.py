@@ -28,6 +28,7 @@ from . import chunks
 logger = logging.getLogger(__name__)
 FRESHNESS_PERIOD = 1000 #ms
 
+
 # the manifest producer is an http Producer that answers on a different name
 class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
@@ -37,7 +38,7 @@ class Producer(chunks.Producer):
         # XXX -- we mangle the name in the constructor, this is slow
         self._qualified_name = Name(name).append(self._getter._last_modified)
 
-        super(Producer, self).__init__(name, *args, **kwargs)
+        super(Producer, self).__init__(name, cost=http.DEFAULT_COST, *args, **kwargs)
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size
