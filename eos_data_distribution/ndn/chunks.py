@@ -22,7 +22,7 @@ import os
 
 from gi.repository import GObject
 
-from pyndn import Name, Interest, Data, MetaInfo, ContentType
+from pyndn import Name, Node, Interest, Data, MetaInfo, ContentType
 
 from . import base
 
@@ -75,6 +75,29 @@ class Producer(base.Producer):
         logger.debug('got interest: %s, %d/%d', name, seg, final_segment)
 
         self._send_chunk(data, seg)
+
+    def _registerPrefix(self, prefix, cost=None, controlParameters={},
+                           onInterest=None, onRegisterFailed=None,
+                           onRegisterSuccess=None,
+                           *args, **kwargs):
+        if not cost: cost = self.cost
+        if not onInterest: onInterest = self._onInterest
+        if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
+        if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
+
+        if cost: controlParameters['cost'] = int(cost)
+        logger.debug("Register Prefix: %s", controlParameters)
+        interest = self.makeCommandInterest('/nfd/rib/register', prefix,
+                                            controlParameters=controlParameters, *args, **kwargs)
+        node = self.face._node
+        response = Node._RegisterResponse(
+            prefix, onRegisterFailed, onRegisterSuccess, node.getNextEntryId(), node,
+            onInterest, self.face
+        )
+        self._expressInterest(interest, prefix,
+                              onData=response.onData,
+                              onTimeout=response.onTimeout)
+        return id
 
 
 class SegmentState(object):

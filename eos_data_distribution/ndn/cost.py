@@ -20,34 +20,8 @@
 import logging
 
 from . import base
-from pyndn.node import Node
 
 logger = logging.getLogger(__name__)
-
-class Producer(base.Producer):
-    def __init__(self, *args, **kwargs):
-        super(Producer, self).__init__(*args, **kwargs)
-
-    def _registerPrefix(self, prefix, cost=None, controlParameters={},
-                           onInterest=None, onRegisterFailed=None,
-                           onRegisterSuccess=None,
-                           *args, **kwargs):
-        if not onInterest: onInterest = self._onInterest
-        if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
-        if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
-
-        if cost: controlParameters['cost'] = int(cost)
-        interest = self.makeCommandInterest('/nfd/rib/register', prefix,
-                                            controlParameters=controlParameters, *args, **kwargs)
-        node = self.face._node
-        response = Node._RegisterResponse(
-            prefix, onRegisterFailed, onRegisterSuccess, node.getNextEntryId(), node,
-            onInterest, self.face
-        )
-        self._expressInterest(interest, prefix,
-                              onData=response.onData,
-                              onTimeout=response.onTimeout)
-        return id
 
 if __name__ == '__main__':
     from gi.repository import GLib
