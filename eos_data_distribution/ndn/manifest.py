@@ -55,14 +55,16 @@ class Producer(chunks.Producer):
 
 if __name__ == '__main__':
     import re
-    from . import test
+    from tests import utils
 
-    args = test.process_args("url")
+    parser = utils.process_args()
+    parser.add_argument("-c", "--cost", default=10)
+    args = parser.parse_args()
 
     if args.name:
         name = args.name
     else:
         name = re.sub('https?://', '', args.url)
 
-    producer = Producer(name=name, url=args.url, auto=True)
-    test.run_test(args, name)
+    producer = Producer(name=name, url=args.url)
+    utils.run_producer_test(producer, name, args)

@@ -1,7 +1,6 @@
-#!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Computers INC.
+# Copyright (C) 2016 Endless Mobile INC.
 # Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,33 +17,30 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-from . import file
-from gi.repository import GLib
-import argparse
+from .. import base
 
-import logging
-logger = logging.getLogger(__name__)
+if __name__ == '__main__':
+    from eos_data_distribution.ndn import base
+    import argparse
+    from . import utils
 
-def process_args(*extra):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--name")
-    parser.add_argument("-o", "--output")
-    parser.add_argument("-v", action="count")
-    [parser.add_argument(a) for a in extra]
+    import logging
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.DEBUG)
 
+    parser = utils.process_args(description='Register with cost Test')
+    parser.add_argument("-c", "--cost", default=10)
     args = parser.parse_args()
-    if args.v == 0:
-        logging.basicConfig(level=logging.INFO)
-    else:
-        logging.basicConfig(level=logging.DEBUG)
 
-    return args
+    name = args.name
+    if not name:
+        name = Name('/endless/test')
 
-def run_test(args, name):
-    loop = GLib.MainLoop()
+    producer = base.Producer(name, cost=args.cost)
+    producer.registerPrefix(name,
+                            onRegisterFailed=lambda *a: logger.info('FAILED: %s', a),
+                            onRegisterSuccess=lambda *a: logger.info('SUCCESS: %s', a),
+    )
 
-    if args.output:
-        consumer = file.FileConsumer(name, filename=args.output, auto=True)
-        consumer.connect('complete', lambda *a: loop.quit())
-    loop.run()
+    utils.run_producer_test(producer, name, args)
 
