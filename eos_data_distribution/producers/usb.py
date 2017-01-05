@@ -35,21 +35,27 @@ from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def is_mount_interesting(mount):
+    """Is the given mount interesting: does it have an associated drive,
+       and does it contain NDN cache data?"""
+    return (mount.get_drive() and
+            path.exists(path.join(mount.get_root().get_path(),
+                                  ENDLESS_NDN_CACHE_PATH)))
+
+
 def mount_added_cb(monitor, mount, store):
+    if not is_mount_interesting(mount):
+        return logger.warning("No NDN data found on %s (%s)",
+                              mount.get_name(), mount.get_uuid() or "no UUID")
+
     drive = mount.get_drive()
     root = mount.get_root()
     base = path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
-    if drive:
-        pprint.pprint(drive.get_name())
-
-    if path.exists(base):
-        logger.info("Starting import from %s (%s)",
-                    drive.get_name(), drive.get_identifier())
-        store.publish_all_names(base)
-    else:
-        logger.warning("No NDN data found on %s (%s)",
-                       drive.get_name(), drive.get_identifier())
+    logger.info("Starting import from %s (%s)",
+                drive.get_name(), drive.get_identifier() or "no identifier")
+    store.publish_all_names(base)
 
 
 def mount_removed_cb(monitor, mount, store):
