@@ -20,6 +20,7 @@
 import logging
 import pprint
 from os import path
+import sys
 
 import gi
 gi.require_version('Gio', '2.0')
@@ -34,6 +35,10 @@ from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+# Timeout after which this daemon will exit if no interesting mounts exist.
+IDLE_TIMEOUT = 30  # seconds
 
 
 def is_mount_interesting(mount):
@@ -62,6 +67,34 @@ def mount_removed_cb(monitor, mount, store):
     root = mount.get_root()
     root_path = root.get_path()
     pprint.pprint([store.remove_name(n) for p, n in store.producers.items() if p.startswith(root_path)])
+    maybe_time_out()
+
+
+def interesting_mounts_exist():
+    """Check whether any of the present mounts are interesting"""
+    monitor = Gio.VolumeMonitor.get()
+
+    for mount in monitor.get_mounts():
+        if is_mount_interesting(mount):
+            return True
+
+    return False
+
+
+def maybe_time_out():
+    """Set up a timeout to exit the daemon if no interesting mounts exist"""
+    if interesting_mounts_exist():
+        return
+
+    GLib.timeout_add_seconds(IDLE_TIMEOUT, timeout_cb)
+
+
+def timeout_cb():
+    if not interesting_mounts_exist():
+        logger.info("Timed out as no interesting mounts exist")
+        sys.exit(0)
+
+    return GLib.SOURCE_REMOVE
 
 
 def main():
@@ -73,6 +106,9 @@ def main():
         mount_added_cb(monitor, mount, store)
     monitor.connect("mount-added", mount_added_cb, store)
     monitor.connect("mount-removed", mount_removed_cb, store)
+
+    maybe_time_out()
+
     loop.run()
 
 
