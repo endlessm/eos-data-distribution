@@ -60,6 +60,8 @@ if __name__ == '__main__':
 
     parser = utils.process_args()
     parser.add_argument("-c", "--cost", default=10)
+    parser.add_argument("-o", "--output")
+    parser.add_argument("url")
     args = parser.parse_args()
 
     if args.name:

@@ -43,7 +43,6 @@ class ArgParseWrapper(object):
 def process_args(description=None, *args, **kwargs):
     parser = ArgParseWrapper(description)
     parser.add_argument("-n", "--name")
-    parser.add_argument("-o", "--output")
     parser.add_argument("-v", action="count")
 
     return parser

@@ -70,12 +70,19 @@ if __name__ == '__main__':
 def main():
     from gi.repository import GLib
     from . import base
-    import argparse
+    from tests import utils
 
     logging.basicConfig(level=logging.DEBUG)
 
-    parser = argparse.ArgumentParser(description='Command Interest Tests')
-    parser.add_argument("-n", "--name")
+    parser = utils.process_args(description='Command Interest Tests')
+    parser.add_argument("--faceid", "-i")
+    parser.add_argument("--uri", "-u")
+    parser.add_argument("--local-control-feature", "-l")
+    parser.add_argument("--origin", "-o")
+    parser.add_argument("--cost", "-c")
+    parser.add_argument("--forwarding-flags", "-F")
+    parser.add_argument("--strategy", "-s")
+    parser.add_argument("--expiration-period", "-e")
     parser.add_argument("command")
 
     args = parser.parse_args()
@@ -83,9 +90,19 @@ def main():
     if not name:
         name = Name('/endless/test')
 
-    args = parser.parse_args()
-    consumer = base.Consumer(name)
-    interest = consumer.makeCommandInterest(args.command, name)
+    controlParameters = ControlParameters()
+    controlParameters.setName(name)
+    if args.faceid: controlParameters.setCost(int(args.cost))
+    if args.uri: controlParameters.setUri(args.uri)
+    if args.l: controlParameters.setLocalControlFeature(args.l)
+    if args.origin: controlParameters.setOrigin(int(args.origin))
+    if args.cost: controlParameters.setCost(int(args.cost))
+    if args.F: controlParameters.setForwardingFlags(int(args.F))
+    if args.strategy: controlParameters.setStrategy(Name(args.strategy))
+    if args.e: controlParameters.setExpirationPeriod(int(args.e))
+
+    face = base.get_default_face()
+    interest = consumer.makeCommandInterest(args.command, name, controlParameters=controlParameters)
     consumer._expressInterest(interest)
     consumer.connect('data', lambda *a: logger.info(a))
     consumer.connect('interest-timeout', lambda *a: logger.info(a))

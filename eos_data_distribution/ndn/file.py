@@ -258,7 +258,9 @@ class FileConsumer(chunks.Consumer):
 
 if __name__ == '__main__':
     from tests import util
-    args = util.process_args("filename").parse_args()
+    parser = util.process_args("filename")
+    parser.add_argument("-o", "--output")
+    args = parser.parse_args()
 
     name = args.name or args.filename
 
