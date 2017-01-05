@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Computers INC.
+# Copyright (C) 2016 Endless Mobile INC.
 # Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -24,9 +24,10 @@ import gi
 
 from gi.repository import GLib
 from gi.repository import GObject
-#from gi.repository import Gio
 
 from eos_data_distribution.MDNS import ServiceDiscovery
+from eos_data_distribution.ndn import command
+from eos_data_distribution import defaults
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,36 +36,27 @@ SERVICES = [
     # "_nfd._tcp",
     "_nfd._udp"]
 
-gatways, ips = None, None
-
-
 class EdgeRouter(object):
     def __init__(self):
         super(EdgeRouter, self).__init__()
 
         sda = ServiceDiscovery(SERVICES)
-        sda.start()
 
         sda.connect('service-added', self.service_added_cb)
         sda.connect('service-removed', self.service_removed_cb)
 
+        sda.start()
         self.sda = sda
-        self.ips = []
-        self.gateways = []
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
-
         ifname = sda.siocgifname(interface)
         print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, ifname, protocol)
+        command.addNextHop(faceURI, cost=defaults.RouteCost.LOCAL_NETWORK)
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
-        print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, sda.siocgifname(interface), protocol)
         ifname = sda.siocgifname(interface)
-
-    def network_changed_cb(monitor, available):
-        print "network changed"
-        gatways = netifaces.gateways()
-
+        print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, ifname, protocol)
+        command.removeNextHop(faceURI, cost=defaults.RouteCost.LOCAL_NETWORK)
 
 if __name__ == "__main__":
     #    nm = Gio.NetworkMonitor.get_default()
