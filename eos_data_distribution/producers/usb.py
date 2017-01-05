@@ -20,6 +20,7 @@
 import logging
 import pprint
 from os import path
+import signal
 import sys
 
 import gi
@@ -94,8 +95,16 @@ def timeout_cb():
     return GLib.SOURCE_REMOVE
 
 
+def signal_cb():
+    logger.info("Exiting on signal")
+    sys.exit(0)
+
+
 def main():
     loop = GLib.MainLoop()
+
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, signal_cb)
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, signal_cb)
     monitor = Gio.VolumeMonitor.get()
     store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=ENDLESS_NDN_CACHE_PATH)
 
