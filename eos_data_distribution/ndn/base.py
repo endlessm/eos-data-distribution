@@ -151,7 +151,7 @@ class Base(GObject.GObject):
     def makeCommandInterest(self, cmd, prefix=None, controlParameters=None,
                             keyChain=None, certificateName=None,
                             *args, **kwargs):
-        if not prefix: prefix=self.name
+        if not prefix: prefix = self.name
         if not controlParameters: controlParameters = ControlParameters()
         if not self._keyChain or not self._certificateName:
             self.generateKeys()
@@ -250,9 +250,9 @@ class Producer(Base):
         logger.info("Un-Register prefix: %s", name)
         try:
             self.face.removeRegisteredPrefix(self._prefixes[name])
-            del (self._prefixes[name])
+            del(self._prefixes[name])
         except:
-            logger.warning("tried to unregister a prefix that never was registred: %s", prefix)
+            logger.warning("tried to unregister a prefix that never was registered: %s", prefix)
             pass
 
 

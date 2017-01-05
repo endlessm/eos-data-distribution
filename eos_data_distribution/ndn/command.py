@@ -1,6 +1,6 @@
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Mobile INC.
+# Copyright (C) 2016 Endless Mobile, Inc.
 # Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -48,14 +48,14 @@ def makeInterest(cmd, local=True, controlParameters={},
     assert(cmd.startswith('/'))
 
     commandInterest = Interest()
-    if local:
+    if local: # the values of the timeouts come from the default PyNDN implementation
         commandInterest.setName(Name("/localhost%s" % cmd))
         # The interest is answered by the local host, so set a short timeout.
         commandInterest.setInterestLifetimeMilliseconds(2000.0)
     else:
         commandInterest.setName(Name("/localhop%s" % cmd))
         # The host is remote, so set a longer timeout.
-        commandInterest.setInteresLifetimeMilliseconds(4000.0)
+        commandInterest.setInterestLifetimeMilliseconds(4000.0)
     # NFD only accepts TlvWireFormat packets.
     commandInterest.getName().append(controlParameters.wireEncode(TlvWireFormat.get()))
     generateInterest(commandInterest,
@@ -65,6 +65,9 @@ def makeInterest(cmd, local=True, controlParameters={},
     return commandInterest
 
 if __name__ == '__main__':
+    main()
+
+def main():
     from gi.repository import GLib
     from . import base
     import argparse

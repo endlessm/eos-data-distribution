@@ -34,9 +34,19 @@ def get_chunk_component(name):
     # The chunk component of a name is the last part...
     return name.get(-1)
 
+def get_chunkless_name(name):
+    # XXX: Use more sophisticated parsing algorithm to strip non-chunk parts.
+    chunk_component = get_chunk_component(name)
+    if chunk_component.isSegment():
+        chunkless_name = name.getPrefix(-1)
+    else:
+        chunkless_name = name
+    return str(chunkless_name)
+
 
 class Producer(base.Producer):
     def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
+        assert(chunk_size > 0)
         self.chunk_size = chunk_size
 
         super(Producer, self).__init__(name=name, *args, **kwargs)

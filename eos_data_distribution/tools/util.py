@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Computers INC.
+# Copyright (C) 2016 Endless Computers, Inc.
 # Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify

@@ -73,7 +73,7 @@ class ServiceDiscovery(GObject.GObject):
             self.system_bus = dbus.SystemBus()
             self.system_bus.add_signal_receiver(self.avahi_dbus_connect_cb, "NameOwnerChanged", "org.freedesktop.DBus", arg0="org.freedesktop.Avahi")
         except dbus.DBusException as e:
-            logger.error("Error Owning name on DBus: %s", e)
+            logger.error("Error Owning name on D-Bus: %s", e)
             sys.exit(1)
 
         self.db = ServiceTypeDatabase()
@@ -104,7 +104,7 @@ class ServiceDiscovery(GObject.GObject):
 
         # this check is for local services
         if flags & avahi.LOOKUP_RESULT_LOCAL:
-            logger.info ('droping local service')
+            logger.info('Dropping local service')
             return
 
         self.server.ResolveService(interface, protocol, name, type, domain, avahi.PROTO_INET, dbus.UInt32(0), reply_handler=self.service_resolved, error_handler=logger.error)

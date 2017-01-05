@@ -29,7 +29,7 @@ from gi.repository import GLib
 from gi.repository import Soup
 
 from .names import SUBSCRIPTIONS_SOMA
-from .ndn import http, Producer, manifest
+from .ndn import chunks, http, Producer, manifest
 
 logger = logging.getLogger(__name__)
 
@@ -63,13 +63,7 @@ class Fetcher(object):
 
         name = interest.getName()
 
-        # XXX: Use more sophisticated parsing algorithm to strip non-chunk parts.
-        chunk_component = name.get(-1)
-        if chunk_component.isSegment():
-            chunkless_name = name.getPrefix(-1)
-        else:
-            chunkless_name = name
-        key = str(chunkless_name)
+        key = chunks.get_chunkless_name(name)
 
         # If we already have a producer for this name, then we're good...
         if key in self._subproducers:

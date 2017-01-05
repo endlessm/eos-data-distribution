@@ -72,17 +72,15 @@ def get_content_size(headers):
 def get_last_modified(headers):
     # note that we can't use ETag as we need things to be ordered
     date = Soup.Date.new_from_string(headers.get_one('Last-Modified'))
+    if date == None: return None
     return date.to_string(Soup.DateFormat.ISO8601)
 
-class Getter(GObject.GObject):
-    __gsignals__ = {
-        'data': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
-    }
-
-    def __init__(self, url, session=None, chunk_size=chunks.CHUNK_SIZE):
+class Getter(object):
+    def __init__(self, url, onData, session=None, chunk_size=chunks.CHUNK_SIZE):
         super(Getter, self).__init__()
 
         self.url = url
+        self.onData = onData
         self.chunk_size = chunk_size
 
         self._session = session
@@ -111,14 +109,13 @@ class Getter(GObject.GObject):
 
     def _got_buf(self, data, buf):
         data.setContent(buf)
-        self.emit('data', data)
-        logger.debug ('getter: got buf')
+        self.onData(data);
 
 class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
         super(Producer, self).__init__(name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
-        self._getter = Getter(url, session=session, chunk_size=self.chunk_size)
-        self._getter.connect('data', lambda o, d: self.sendFinish(d))
+        self._getter = Getter(url, session=session, chunk_size=self.chunk_size,
+                              onData=lambda d: self.sendFinish(d))
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size
