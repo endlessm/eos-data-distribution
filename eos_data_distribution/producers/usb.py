@@ -60,8 +60,8 @@ def mount_added_cb(monitor, mount, store):
 
 def mount_removed_cb(monitor, mount, store):
     root = mount.get_root()
-    p = root.get_path()
-    pprint.pprint([store.remove_name(n) for p, n in store.producers.items() if p.startswith(p)])
+    root_path = root.get_path()
+    pprint.pprint([store.remove_name(n) for p, n in store.producers.items() if p.startswith(root_path)])
 
 
 def main():
