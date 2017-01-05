@@ -42,10 +42,8 @@ IDLE_TIMEOUT = 30  # seconds
 
 
 def is_mount_interesting(mount):
-    """Is the given mount interesting: does it have an associated drive,
-       and does it contain NDN cache data?"""
-    return (mount.get_drive() and
-            path.exists(path.join(mount.get_root().get_path(),
+    """Is the given mount interesting: does it contain NDN cache data?"""
+    return (path.exists(path.join(mount.get_root().get_path(),
                                   ENDLESS_NDN_CACHE_PATH)))
 
 
@@ -54,12 +52,11 @@ def mount_added_cb(monitor, mount, store):
         return logger.warning("No NDN data found on %s (%s)",
                               mount.get_name(), mount.get_uuid() or "no UUID")
 
-    drive = mount.get_drive()
     root = mount.get_root()
     base = path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
     logger.info("Starting import from %s (%s)",
-                drive.get_name(), drive.get_identifier() or "no identifier")
+                mount.get_name(), mount.get_uuid() or "no UUID")
     store.publish_all_names(base)
 
 
