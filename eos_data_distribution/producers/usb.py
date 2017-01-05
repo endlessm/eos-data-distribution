@@ -44,10 +44,12 @@ def mount_added_cb(monitor, mount, store):
         pprint.pprint(drive.get_name())
 
     if path.exists(base):
-        logger.info("Starting import")
+        logger.info("Starting import from %s (%s)",
+                    drive.get_name(), drive.get_identifier())
         store.publish_all_names(base)
     else:
-        logger.warning("No NDN data found !")
+        logger.warning("No NDN data found on %s (%s)",
+                       drive.get_name(), drive.get_identifier())
 
 
 def mount_removed_cb(monitor, mount, store):
