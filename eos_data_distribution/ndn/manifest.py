@@ -35,7 +35,7 @@ class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
         self._getter = http.Getter(url, onData=self._send_finish, session=session)
         self._last_modified = http.get_last_modified(self._getter._headers)
-        if self._last_modified == None:
+        if not self._last_modified:
             raise ValueError("Could not get Last-Modified")
 
         # XXX -- we mangle the name in the constructor, this is slow

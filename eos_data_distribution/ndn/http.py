@@ -66,14 +66,14 @@ def fetch_http_headers(session, url):
 
 def get_content_size(headers):
     content_range = headers.get_one('Content-Range')
-    if content_range == None: return -1
+    if not content_range: return -1
     size = int(content_range.split('/')[1])
     return size
 
 def get_last_modified(headers):
     # note that we can't use ETag as we need things to be ordered
     date = Soup.Date.new_from_string(headers.get_one('Last-Modified'))
-    if date == None: return None
+    if not date: return None
     return date.to_string(Soup.DateFormat.ISO8601)
 
 class Getter(object):
