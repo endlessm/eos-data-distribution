@@ -151,7 +151,7 @@ class Base(GObject.GObject):
     def expressCommandInterest(self, cmd, prefix=None,
                                onFailed=None, onTimeout=None, onSuccess=None,
                                *args, **kwargs):
-        assert type(prefix) is Name
+        if prefix: assert type(prefix) is Name
 
         interest = self._makeCommandInterest(cmd, prefix=prefix, *args, **kwargs)
         node = self.face._node
@@ -163,7 +163,7 @@ class Base(GObject.GObject):
     def _makeCommandInterest(self, cmd, prefix=None, controlParameters=None,
                             keyChain=None, certificateName=None,
                             *args, **kwargs):
-        if not prefix: prefix = self.name
+
         if not controlParameters: controlParameters = ControlParameters()
         if not self._keyChain or not self._certificateName:
             self.generateKeys()
