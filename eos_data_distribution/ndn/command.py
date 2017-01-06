@@ -128,9 +128,6 @@ def makeInterest(cmd, local=True, controlParameters={},
 
     return commandInterest
 
-if __name__ == '__main__':
-    main()
-
 def main():
     from gi.repository import GLib
     from . import base
@@ -152,22 +149,31 @@ def main():
     args = parser.parse_args()
     name = args.name
     if not name:
-        name = Name('/endless/test')
+        name = '/endless/test'
+    name = Name(name)
 
     controlParameters = ControlParameters()
-    controlParameters.setName(name)
+
     if args.uri: controlParameters.setUri(args.uri)
-    if args.l: controlParameters.setLocalControlFeature(args.l)
+    if args.local_control_feature: controlParameters.setLocalControlFeature(args.local_control_feature)
     if args.origin: controlParameters.setOrigin(args.origin)
     if args.cost: controlParameters.setCost(args.cost)
-    if args.F: controlParameters.setForwardingFlags(args.F)
+    if args.forwarding_flags: controlParameters.setForwardingFlags(args.forwarding_flags)
     if args.strategy: controlParameters.setStrategy(Name(args.strategy))
-    if args.e: controlParameters.setExpirationPeriod(args.e)
+    if args.expiration_period: controlParameters.setExpirationPeriod(args.expiration_period)
 
-    face = base.get_default_face()
-    interest = consumer.makeCommandInterest(args.command, name, controlParameters=controlParameters)
-    consumer._expressInterest(interest)
-    consumer.connect('data', lambda *a: logger.info(a))
-    consumer.connect('interest-timeout', lambda *a: logger.info(a))
+    loop = GLib.MainLoop()
 
-    GLib.MainLoop().run()
+    def print_and_quit(*args, **kwargs):
+        logger.info(*args, **kwargs)
+        loop.quit()
+
+    logger.info('running command: %s on %s', args.command, name)
+    ndn = base.Base(name)
+    ndn.expressCommandInterest(args.command, name, controlParameters=controlParameters,
+                               onFailed =  lambda *a: print_and_quit('FAILED: %s', a),
+                               onSuccess = lambda *a: print_and_quit('SUCCESS: %s', a))
+    loop.run()
+
+if __name__ == '__main__':
+    main()
