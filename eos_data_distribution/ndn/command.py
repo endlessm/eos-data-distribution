@@ -170,13 +170,10 @@ def main():
     parser.add_argument("command")
 
     args = parser.parse_args()
-    name = args.name
-    if not name:
-        name = '/endless/test'
-    name = Name(name)
 
     controlParameters = ControlParameters()
 
+    if args.name: controlParameters.setName(Name(args.name))
     if args.uri: controlParameters.setUri(args.uri)
     if args.local_control_feature: controlParameters.setLocalControlFeature(args.local_control_feature)
     if args.origin: controlParameters.setOrigin(args.origin)
@@ -191,9 +188,9 @@ def main():
         logger.info(*args, **kwargs)
         loop.quit()
 
-    logger.info('running command: %s on %s', args.command, name)
-    ndn = base.Base(name)
-    ndn.expressCommandInterest(args.command, name, controlParameters=controlParameters,
+    logger.info('running command: %s on %s', args.command, args.name)
+    ndn = base.Base(args.name)
+    ndn.expressCommandInterest(args.command, args.name, controlParameters=controlParameters,
                                onFailed =  lambda *a: print_and_quit('FAILED: %s', a),
                                onSuccess = lambda *a: print_and_quit('SUCCESS: %s', a))
     loop.run()
