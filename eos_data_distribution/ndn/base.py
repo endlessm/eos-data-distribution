@@ -151,6 +151,8 @@ class Base(GObject.GObject):
     def expressCommandInterest(self, cmd, prefix=None,
                                onFailed=None, onTimeout=None, onSuccess=None,
                                *args, **kwargs):
+        assert type(prefix) is Name
+
         interest = self._makeCommandInterest(cmd, prefix=prefix, *args, **kwargs)
         node = self.face._node
         response = command._CommandResponse(prefix, face=self.face,
@@ -234,8 +236,8 @@ class Producer(Base):
         if not onInterest: onInterest = self._onInterest
         if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
         if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
-        if not controlParameters: controlParameters = ControlParameters()
 
+        if not controlParameters: controlParameters = ControlParameters()
         if cost: controlParameters.setCost(int(cost))
 
         def _addToRegisteredPrefixTable(prefix):
