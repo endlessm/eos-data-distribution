@@ -106,6 +106,29 @@ def addNextHop(faceUri, name, cost=0, *args, **kwargs):
                             *args, **kwargs)
     face.expressInterest(interest)
     return face
+def dumpControlParameter(cp):
+    return ("""
+    Control Parameter dump:
+    name:     %s
+    faceId:   %s
+    uri:      %s
+    localControlfeature: %s
+    origin:   %s
+    cost:     %s
+    forwardingFlags:     %s
+    strategy: %s
+    expirationPeriod:    %s
+""" % (
+    cp._name,
+    cp._faceId,
+    cp._uri,
+    cp._localControlFeature,
+    cp._origin,
+    cp._cost,
+    cp._forwardingFlags,
+    cp._strategy,
+    cp._expirationPeriod
+))
 
 def makeInterest(cmd, local=True, controlParameters={},
                  keyChain=None, certificateName=None):
