@@ -20,6 +20,7 @@
 import logging
 
 from pyndn.control_parameters import ControlParameters
+from pyndn.control_response import ControlResponse
 from pyndn.encoding.tlv_wire_format import TlvWireFormat
 from pyndn.util.command_interest_generator import CommandInterestGenerator
 from pyndn import Interest, Name
@@ -27,6 +28,70 @@ from pyndn import Interest, Name
 logger = logging.getLogger(__name__)
 
 _commandInterestGenerator = CommandInterestGenerator()
+
+class _CommandResponse(object):
+    """
+    A _CommandResponse receives the response Data packet from a
+    command interest sent to the connected NDN hub. If this gets a bad
+    response or a timeout, call onFailed.
+
+    this is adapted from PyNDN2's _RegisterResponse object
+    """
+    def __init__(self, prefix, onFailed, onSuccess, onInterest, face):
+        self._prefix = prefix
+        self._onFailed = onFailed
+        self._onSuccess = onSuccess
+        self._onInterest = onInterest
+        self._face = face
+
+    def onData(self, interest, responseData):
+        """
+        We received the response.
+        """
+        # Decode responseData.getContent() and check for a success code.
+        controlResponse = ControlResponse()
+        try:
+            controlResponse.wireDecode(responseData.getContent(), TlvWireFormat.get())
+        except ValueError as ex:
+            logger.info(
+              "command failed: Error decoding the NFD response: %s",
+              str(ex))
+            try:
+                self._onFailed(self._prefix)
+            except:
+                logging.exception("Error in onFailed")
+            return
+
+        # Status code 200 is "OK".
+        if controlResponse.getStatusCode() != 200:
+            logger.info(
+              "command failed: Expected NFD status code 200, got: %d",
+              controlResponse.getStatusCode())
+            try:
+                self._onFailed(self._prefix)
+            except:
+                logging.exception("Error in onFailed")
+            return
+
+        logger.info(
+          "command succeeded with the NFD forwarder for prefix %s",
+          self._prefix.toUri())
+        if self._onSuccess != None:
+            try:
+                self._onSuccess(self._prefix)
+            except:
+                logging.exception("Error in onSuccess")
+
+    def onTimeout(self, interest):
+        """
+        We timed out waiting for the response.
+        """
+        logger.info("Timeout for NFD command.")
+        try:
+            self._onFailed(self._prefix)
+        except:
+            logging.exception("Error in onFailed")
+
 
 def generateInterest(*args, **kwargs):
     logger.debug("args kwargs: %s %s", args, kwargs)
