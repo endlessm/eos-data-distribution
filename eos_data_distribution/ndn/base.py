@@ -27,11 +27,9 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-from pyndn.node import Node
-from pyndn.control_parameters import ControlParameters
 from pyndn.security import KeyChain
 from pyndn.transport.unix_transport import UnixTransport
-from pyndn import Name, Data, Face, Interest
+from pyndn import Name, Node, Data, Face, Interest, InterestFilter, ControlParameters
 
 from . import command
 
@@ -226,13 +224,39 @@ class Producer(Base):
         if not controlParameters: controlParameters = ControlParameters()
 
         if cost: controlParameters.setCost(int(cost))
-        interest = self.makeCommandInterest('/nfd/rib/register', prefix,
-                                            controlParameters=controlParameters, *args, **kwargs)
+
+        def _addToRegisteredPrefixTable(prefix, registeredPrefixId, node):
+            # Success, so we can add to the registered prefix table.
+            if registeredPrefixId != 0:
+                interestFilterId = 0
+                if self._onInterest != None:
+                    # registerPrefix was called with the "combined" form
+                    # that includes the callback, so add an
+                    # InterestFilterEntry.
+                    interestFilterId = node.getNextEntryId()
+                    node.setInterestFilter(
+                      interestFilterId, InterestFilter(prefix),
+                      onInterest, self.face)
+
+                if not node._registeredPrefixTable.add(
+                      registeredPrefixId, prefix, interestFilterId):
+                    # removeRegisteredPrefix was already called with the
+                    # registeredPrefixId.
+                    if interestFilterId > 0:
+                        # Remove the related interest filter we just added.
+                        node.unsetInterestFilter(interestFilterId)
+
+                    return
+
+        interest = self._makeCommandInterest('/nfd/rib/register', prefix,
+                                            controlParameters=controlParameters,
+                                            *args, **kwargs)
+
         node = self.face._node
-        response = Node._RegisterResponse(
-            prefix, onRegisterFailed, onRegisterSuccess, node.getNextEntryId(), node,
-            onInterest, self.face
-        )
+        response = command._CommandResponse(prefix, face=self.face,
+            onFailed=onRegisterFailed, onInterest=onInterest,
+            onSuccess=lambda p: _addToRegisteredPrefixTable(
+                p, node.getNextEntryId(), node))
         self._expressInterest(interest, prefix,
                               onData=response.onData,
                               onTimeout=response.onTimeout)
