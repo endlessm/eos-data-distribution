@@ -148,7 +148,17 @@ class Base(GObject.GObject):
         self.pit[interest] = self.face.expressInterest(interest, onData, onTimeout)
         return interest
 
-    def makeCommandInterest(self, cmd, prefix=None, controlParameters=None,
+    def expressCommandInterest(self, cmd, prefix=None,
+                               onFailed=None, onTimeout=None, onSuccess=None,
+                               *args, **kwargs):
+        interest = self._makeCommandInterest(cmd, prefix=prefix, *args, **kwargs)
+        node = self.face._node
+        response = command._CommandResponse(prefix, face=self.face,
+            onFailed=onFailed, onSuccess=onSuccess)
+        return self._expressInterest(interest, prefix,
+                                    onData=response.onData, onTimeout=response.onTimeout)
+
+    def _makeCommandInterest(self, cmd, prefix=None, controlParameters=None,
                             keyChain=None, certificateName=None,
                             *args, **kwargs):
         if not prefix: prefix = self.name
@@ -217,6 +227,9 @@ class Producer(Base):
                            onInterest=None, onRegisterFailed=None,
                            onRegisterSuccess=None,
                            *args, **kwargs):
+        node = self.face._node
+        registeredPrefixId = node.getNextEntryId()
+
         if not cost: cost = self.cost
         if not onInterest: onInterest = self._onInterest
         if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
@@ -225,11 +238,11 @@ class Producer(Base):
 
         if cost: controlParameters.setCost(int(cost))
 
-        def _addToRegisteredPrefixTable(prefix, registeredPrefixId, node):
+        def _addToRegisteredPrefixTable(prefix):
             # Success, so we can add to the registered prefix table.
             if registeredPrefixId != 0:
                 interestFilterId = 0
-                if self._onInterest != None:
+                if onInterest != None:
                     # registerPrefix was called with the "combined" form
                     # that includes the callback, so add an
                     # InterestFilterEntry.
@@ -248,19 +261,13 @@ class Producer(Base):
 
                     return
 
-        interest = self._makeCommandInterest('/nfd/rib/register', prefix,
-                                            controlParameters=controlParameters,
-                                            *args, **kwargs)
+            if onRegisterSuccess: onRegisterSuccess(prefix, registeredPrefixId)
 
-        node = self.face._node
-        response = command._CommandResponse(prefix, face=self.face,
-            onFailed=onRegisterFailed, onInterest=onInterest,
-            onSuccess=lambda p: _addToRegisteredPrefixTable(
-                p, node.getNextEntryId(), node))
-        self._expressInterest(interest, prefix,
-                              onData=response.onData,
-                              onTimeout=response.onTimeout)
-        return id
+        self.expressCommandInterest('/nfd/rib/register', prefix,
+                                    controlParameters=controlParameters,
+                                    onFailed=onRegisterFailed,
+                                    onSuccess=_addToRegisteredPrefixTable)
+        return registeredPrefixId
 
     def onRegisterFailed(self, prefix):
         self._responseCount += 1

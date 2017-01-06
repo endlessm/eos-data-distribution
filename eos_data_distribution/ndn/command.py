@@ -37,11 +37,10 @@ class _CommandResponse(object):
 
     this is adapted from PyNDN2's _RegisterResponse object
     """
-    def __init__(self, prefix, onFailed, onSuccess, onInterest, face):
+    def __init__(self, prefix, onFailed, onSuccess, face):
         self._prefix = prefix
         self._onFailed = onFailed
         self._onSuccess = onSuccess
-        self._onInterest = onInterest
         self._face = face
 
     def onData(self, interest, responseData):
