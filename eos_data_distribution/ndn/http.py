@@ -66,6 +66,7 @@ def fetch_http_headers(session, url):
 
 def get_content_size(headers):
     content_range = headers.get_one('Content-Range')
+    if content_range == None: return -1
     size = int(content_range.split('/')[1])
     return size
 
@@ -91,7 +92,8 @@ class Getter(object):
         # in the constructor here...
         self._headers = fetch_http_headers(self._session, self.url)
         self._size = get_content_size(self._headers)
-        self._last_modified = get_last_modified(self._headers)
+        if self._size == -1:
+            raise ValueError("Could not determine Content-Size")
         logger.debug('getter init: %s', url)
 
     def soup_get(self, data, n, cancellable=None):
