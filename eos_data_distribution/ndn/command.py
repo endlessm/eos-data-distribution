@@ -64,8 +64,8 @@ class _CommandResponse(object):
         # Status code 200 is "OK".
         if controlResponse.getStatusCode() != 200:
             logger.info(
-              "command failed: Expected NFD status code 200, got: %d",
-              controlResponse.getStatusCode())
+              "command failed: Expected NFD status code 200, got: %d: %s",
+                controlResponse.getStatusCode(), controlResponse.getStatusText())
             try:
                 self._onFailed(self._prefix)
             except:
