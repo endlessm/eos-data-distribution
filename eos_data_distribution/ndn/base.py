@@ -98,6 +98,17 @@ def get_default_face():
     return GLibUnixFace()
 
 
+def generate_keys(name):
+    # Use the system default key chain and certificate name to sign commands.
+    keyChain = KeyChain()
+    try:
+        certificateName = keyChain.getDefaultCertificateName()
+    except:
+        logger.warning("Could not get default certificate name, creating a new one from %s", name)
+        certificateName = keyChain.createIdentityAndCertificate(name)
+    return (keyChain, certificateName)
+
+
 class Base(GObject.GObject):
     def __init__(self, name, face=None):
         GObject.GObject.__init__(self)
@@ -115,19 +126,10 @@ class Base(GObject.GObject):
         self._certificateName = None
         self.pit = dict()
 
-    def generateKeys(self):
-        # Use the system default key chain and certificate name to sign commands.
-        keyChain = KeyChain()
-        self._keyChain = keyChain
-        try:
-            self._certificateName = keyChain.getDefaultCertificateName()
-        except:
-            name = Name(self.name)
-            logger.warning("Could not get default certificate name, creating a new one from %s", name)
-            self._certificateName = keyChain.createIdentityAndCertificate(name)
-        self._responseCount = 0
-
-        self.face.setCommandSigningInfo(keyChain, self._certificateName)
+    def generateKeys(self, name=None):
+        if not name: name = self.name
+        (self._keyChain, self._certificateName) = generate_keys(name)
+        self.face.setCommandSigningInfo(self._keyChain, self._certificateName)
 
     def sign(self, data):
         return self._keyChain.sign(data, self._certificateName)
