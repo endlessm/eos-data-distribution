@@ -50,7 +50,7 @@ def face_uri_from_triplet(type, host, port):
     return "%s://%s:%s" % (proto, host, port)
 
 
-def build_registery_key(name, type, domain):
+def build_registry_key(name, type, domain):
     return "%s-%s-%s" % (name, type, domain)
 
 
@@ -72,24 +72,23 @@ class EdgeRouter(object):
         # XXX: check that we could set-strategy
         self.ndn.expressCommandInterest(
             '/nfd/strategy-choice/set', controlParameters=cp)
-        self._registery = dict()
+        self._registry = dict()
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
         ifname = sda.siocgifname(interface)
         print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, ifname, protocol)
         faceUri = face_uri_from_triplet(type, host, port)
         check_call(["nfdc", "add-nexthop",
-                    "-c", "%d" % defaults.RouteCost.LOCAL_NETWORK,
-                    "%s" % SUBSCRIPTIONS_SOMA,
-                    faceUri])
-        self._registery[build_registery_key(name, type, domain)] = faceUri
+                    "-c", str(defaults.RouteCost.LOCAL_NETWORK),
+                    str(SUBSCRIPTIONS_SOMA), faceUri])
+        self._registry[build_registry_key(name, type, domain)] = faceUri
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
         ifname = sda.siocgifname(interface)
         print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, ifname, protocol)
-        faceUri = self._registery[build_registery_key(name, type, domain)]
+        faceUri = self._registry[build_registry_key(name, type, domain)]
         check_call(
-            ["nfdc", "remove-nexthop", "%s" % SUBSCRIPTIONS_SOMA, faceUri])
+            ["nfdc", "remove-nexthop", str(SUBSCRIPTIONS_SOMA), faceUri])
 
 if __name__ == "__main__":
     #    nm = Gio.NetworkMonitor.get_default()

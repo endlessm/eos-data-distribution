@@ -62,9 +62,11 @@ class ServiceDiscovery(GObject.GObject):
             (object, int, str, str, str, str))
     }
 
-    def __init__(self, services=[], interface=avahi.IF_UNSPEC, protocol=avahi.PROTO_INET):
+    def __init__(self, services=[], filters=[avahi.LOOKUP_RESULT_LOCAL],
+                 interface=avahi.IF_UNSPEC, protocol=avahi.PROTO_INET):
         GObject.GObject.__init__(self)
 
+        self.filters = filters
         self.services = services
         self.interface = interface
         self.protocol = protocol
