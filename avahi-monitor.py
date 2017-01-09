@@ -25,9 +25,11 @@ import gi
 from gi.repository import GLib
 from gi.repository import GObject
 
+from subprocess import check_call
+
 from eos_data_distribution.MDNS import ServiceDiscovery
-from eos_data_distribution.ndn import command
 from eos_data_distribution import defaults
+from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,6 +37,16 @@ SERVICES = [
     # Disable TCP, we really only want UDP or ethernet
     # "_nfd._tcp",
     "_nfd._udp"]
+
+def face_uri_from_triplet(type, host, port):
+    if type == '_nfd._udp':
+        proto = 'udp4'
+    else:
+        proto = 'tcp4'
+    return "%s://%s:%s"%(proto, host, port)
+
+def build_registery_key(name, type, domain):
+    return "%s-%s-%s"%(name, type, domain)
 
 class EdgeRouter(object):
     def __init__(self):
@@ -47,16 +59,23 @@ class EdgeRouter(object):
 
         sda.start()
         self.sda = sda
+        self._registery = dict()
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
         ifname = sda.siocgifname(interface)
         print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, ifname, protocol)
-        command.addNextHop(faceURI, cost=defaults.RouteCost.LOCAL_NETWORK)
+        faceUri = face_uri_from_triplet(type, host, port)
+        check_call(["nfdc", "add-nexthop",
+                    "-c", "%d"%defaults.RouteCost.LOCAL_NETWORK,
+                    "%s"%SUBSCRIPTIONS_SOMA,
+                    faceUri])
+        self._registery[build_registery_key(name, type, domain)] = faceUri
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
         ifname = sda.siocgifname(interface)
         print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, ifname, protocol)
-        command.removeNextHop(faceURI, cost=defaults.RouteCost.LOCAL_NETWORK)
+        faceUri = self._registery[build_registery_key(name, type, domain)]
+        check_call(["nfdc", "remove-nexthop", "%s"%SUBSCRIPTIONS_SOMA, faceUri])
 
 if __name__ == "__main__":
     #    nm = Gio.NetworkMonitor.get_default()
