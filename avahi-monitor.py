@@ -41,17 +41,21 @@ SERVICES = [
     # "_nfd._tcp",
     "_nfd._udp"]
 
+
 def face_uri_from_triplet(type, host, port):
     if type == '_nfd._udp':
         proto = 'udp4'
     else:
         proto = 'tcp4'
-    return "%s://%s:%s"%(proto, host, port)
+    return "%s://%s:%s" % (proto, host, port)
+
 
 def build_registery_key(name, type, domain):
-    return "%s-%s-%s"%(name, type, domain)
+    return "%s-%s-%s" % (name, type, domain)
+
 
 class EdgeRouter(object):
+
     def __init__(self):
         super(EdgeRouter, self).__init__()
 
@@ -66,7 +70,8 @@ class EdgeRouter(object):
         cp = ControlParameters()
         cp.setStrategy('/localhost/nfd/strategy/multicast')
         # XXX: check that we could set-strategy
-        self.ndn.expressCommandInterest('/nfd/strategy-choice/set', controlParameters=cp)
+        self.ndn.expressCommandInterest(
+            '/nfd/strategy-choice/set', controlParameters=cp)
         self._registery = dict()
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
@@ -74,8 +79,8 @@ class EdgeRouter(object):
         print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, ifname, protocol)
         faceUri = face_uri_from_triplet(type, host, port)
         check_call(["nfdc", "add-nexthop",
-                    "-c", "%d"%defaults.RouteCost.LOCAL_NETWORK,
-                    "%s"%SUBSCRIPTIONS_SOMA,
+                    "-c", "%d" % defaults.RouteCost.LOCAL_NETWORK,
+                    "%s" % SUBSCRIPTIONS_SOMA,
                     faceUri])
         self._registery[build_registery_key(name, type, domain)] = faceUri
 
@@ -83,7 +88,8 @@ class EdgeRouter(object):
         ifname = sda.siocgifname(interface)
         print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, ifname, protocol)
         faceUri = self._registery[build_registery_key(name, type, domain)]
-        check_call(["nfdc", "remove-nexthop", "%s"%SUBSCRIPTIONS_SOMA, faceUri])
+        check_call(
+            ["nfdc", "remove-nexthop", "%s" % SUBSCRIPTIONS_SOMA, faceUri])
 
 if __name__ == "__main__":
     #    nm = Gio.NetworkMonitor.get_default()
