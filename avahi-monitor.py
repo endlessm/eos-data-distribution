@@ -27,9 +27,12 @@ from gi.repository import GObject
 
 from subprocess import check_call
 
-from eos_data_distribution.MDNS import ServiceDiscovery
+from pyndn.control_parameters import ControlParameters
+
 from eos_data_distribution import defaults
+from eos_data_distribution.ndn import base
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
+from eos_data_distribution.MDNS import ServiceDiscovery
 
 logging.basicConfig(level=logging.INFO)
 
@@ -59,6 +62,11 @@ class EdgeRouter(object):
 
         sda.start()
         self.sda = sda
+        self.ndn = base.Base(name=SUBSCRIPTIONS_SOMA)
+        cp = ControlParameters()
+        cp.setStrategy('/localhost/nfd/strategy/multicast')
+        # XXX: check that we could set-strategy
+        self.ndn.expressCommandInterest('/nfd/strategy-choice/set', controlParameters=cp)
         self._registery = dict()
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
