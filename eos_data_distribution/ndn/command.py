@@ -67,7 +67,7 @@ class _CommandResponse(object):
               "command failed: Expected NFD status code 200, got: %d: %s",
                 controlResponse.getStatusCode(), controlResponse.getStatusText())
             try:
-                self._onFailed(self._prefix)
+                if self._onFailed: self._onFailed(self._prefix)
             except:
                 logging.exception("Error in onFailed")
             return
