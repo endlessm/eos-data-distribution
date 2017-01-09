@@ -70,7 +70,7 @@ class ServiceDiscovery(GObject.GObject):
             self.system_bus = dbus.SystemBus()
             self.system_bus.add_signal_receiver(self.avahi_dbus_connect_cb, "NameOwnerChanged", "org.freedesktop.DBus", arg0="org.freedesktop.Avahi")
         except dbus.DBusException as e:
-            pprint.pprint(e)
+            print("Failed to connect to the system bus: %s" % e.message)
             sys.exit(1)
 
         self.db = ServiceTypeDatabase()
