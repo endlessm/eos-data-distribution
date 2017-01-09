@@ -3,4 +3,7 @@
 export PYBUILD_DISABLE=test
 #export DH_VERBOSE = 1
 %:
-	dh $@ --with python2 --buildsystem=pybuild
+	dh $@ --with python2,systemd --buildsystem=pybuild
+
+override_dh_install:
+	dh_install --fail-missing
