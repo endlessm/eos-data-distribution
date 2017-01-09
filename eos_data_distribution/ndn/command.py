@@ -96,16 +96,6 @@ def generateInterest(*args, **kwargs):
     logger.debug("args kwargs: %s %s", args, kwargs)
     _commandInterestGenerator.generate(*args, **kwargs)
 
-def addNextHop(faceUri, name, cost=0, *args, **kwargs):
-    face = Face(faceUri)
-
-    controlParameters = ControlParameters()
-    if cost: controlParameters.setCost(int(cost))
-    interest = makeInterest('/nfd/fib/add-nexthop', name,
-                            controlParameters=controlParameters,
-                            *args, **kwargs)
-    face.expressInterest(interest)
-    return face
 def dumpControlParameter(cp):
     return ("""
     Control Parameter dump:
@@ -130,7 +120,7 @@ def dumpControlParameter(cp):
     cp._expirationPeriod
 ))
 
-def makeInterest(cmd, local=True, controlParameters={},
+def makeInterest(cmd, local=True, controlParameters={}, interestLifeTime=None,
                  keyChain=None, certificateName=None):
     assert(cmd.startswith('/'))
 
@@ -143,7 +133,12 @@ def makeInterest(cmd, local=True, controlParameters={},
         commandInterest.setName(Name("/localhop%s" % cmd))
         # The host is remote, so set a longer timeout.
         commandInterest.setInterestLifetimeMilliseconds(4000.0)
+    if interestLifeTime: commandInterest.setInterestLifetimeMilliseconds(interestLifeTime)
     # NFD only accepts TlvWireFormat packets.
+
+    logger.debug("DUMP: %s", dumpControlParameter(controlParameters))
+    logger.debug("wire encoding: %s", str(controlParameters.wireEncode(TlvWireFormat.get())).encode('quopri'))
+
     commandInterest.getName().append(controlParameters.wireEncode(TlvWireFormat.get()))
     generateInterest(commandInterest,
                      keyChain, certificateName,
@@ -159,7 +154,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
 
     parser = utils.process_args(description='Command Interest Tests')
-    parser.add_argument("--faceid", "-i")
+    parser.add_argument("--faceid", "-i", type=int)
     parser.add_argument("--uri", "-u")
     parser.add_argument("--local-control-feature", "-l")
     parser.add_argument("--origin", "-o", type=int)
@@ -173,7 +168,9 @@ def main():
 
     controlParameters = ControlParameters()
 
-    if args.name: controlParameters.setName(Name(args.name))
+    name = None
+    if args.name: name = Name(args.name)
+    if args.faceid: controlParameters.setFaceId(args.faceid)
     if args.uri: controlParameters.setUri(args.uri)
     if args.local_control_feature: controlParameters.setLocalControlFeature(args.local_control_feature)
     if args.origin: controlParameters.setOrigin(args.origin)
@@ -188,9 +185,10 @@ def main():
         logger.info(*args, **kwargs)
         loop.quit()
 
-    logger.info('running command: %s on %s', args.command, args.name)
-    ndn = base.Base(args.name)
-    ndn.expressCommandInterest(args.command, args.name, controlParameters=controlParameters,
+    logger.info('running command: %s on %s', args.command, name)
+    ndn = base.Base(name)
+    ndn.expressCommandInterest(args.command, name, controlParameters=controlParameters,
+                               interestLifeTime=10000,
                                onFailed =  lambda *a: print_and_quit('FAILED: %s', a),
                                onSuccess = lambda *a: print_and_quit('SUCCESS: %s', a))
     loop.run()
