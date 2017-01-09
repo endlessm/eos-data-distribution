@@ -1,0 +1,5 @@
+ACTION!="add", GOTO="edd_usb_producer_end"
+
+ACTION=="add", SUBSYSTEM=="block", TAG+="systemd", ENV{SYSTEMD_WANTS}="edd-usb-producer.service"
+
+LABEL="edd_usb_producer_end"
