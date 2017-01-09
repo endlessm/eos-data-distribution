@@ -151,6 +151,7 @@ class Base(GObject.GObject):
     def expressCommandInterest(self, cmd, prefix=None,
                                onFailed=None, onTimeout=None, onSuccess=None,
                                *args, **kwargs):
+        if not prefix and self.name: prefix = self.name
         if prefix: assert type(prefix) is Name
 
         interest = self._makeCommandInterest(cmd, prefix=prefix, *args, **kwargs)
