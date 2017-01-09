@@ -99,12 +99,12 @@ class ServiceDiscovery(GObject.GObject):
         self.emit('service-added', interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, avahi.txt_array_to_string_array(txt), flags)
 
     def service_add(self, interface, protocol, name, type, domain, flags):
-        logger.info("Found service '%s' of type '%s:%s' in domain '%s' on %s.%i." %
+        logger.debug("Found service '%s' of type '%s:%s' in domain '%s' on %s.%i." %
               (name, type, flags, domain, self.siocgifname(interface), avahi.LOOKUP_RESULT_LOCAL))
 
         # this check is for local services
         if flags & avahi.LOOKUP_RESULT_LOCAL:
-            logger.info('Dropping local service')
+            logger.debug('Dropping local service')
             return
 
         self.server.ResolveService(interface, protocol, name, type, domain, avahi.PROTO_INET, dbus.UInt32(0), reply_handler=self.service_resolved, error_handler=logger.error)
