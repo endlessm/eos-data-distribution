@@ -1,3 +1,0 @@
-eos_data_distribution/producers/70-edd-usb-producer.rules usr/lib/udev/rules.d
-eos_data_distribution/producers/edd-usb-producer.service lib/systemd/system
-

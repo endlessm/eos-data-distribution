@@ -28,3 +28,14 @@ Description: NDN producers and daemons (Python 2)
  network.
  .
  This package contains the services and library for Python 2.
+
+Package: edd-usb-producer
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python:Depends},
+Description: NDN USB Producer
+ Named Data Networking provides name-based access to data over the
+ network.
+ .
+ This package contains the auto-launched USB Daemon service

@@ -1,0 +1,2 @@
+debian/avahi/70-edd-usb-producer.rules usr/lib/udev/rules.d
+
