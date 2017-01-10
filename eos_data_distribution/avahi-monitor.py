@@ -20,11 +20,6 @@
 
 import logging
 
-import gi
-
-from gi.repository import GLib
-from gi.repository import GObject
-
 from subprocess import check_call
 
 from pyndn.control_parameters import ControlParameters
@@ -54,10 +49,15 @@ def build_registry_key(name, type, domain):
     return "%s-%s-%s" % (name, type, domain)
 
 
-class EdgeRouter(object):
+class AvahiMonitor(object):
+
+    """
+    Listen for _nfd.* on avahi, when we see a new server (a new NFD) we add
+    a static link to it using nfdc
+    """
 
     def __init__(self):
-        super(EdgeRouter, self).__init__()
+        super(AvahiMonitor, self).__init__()
 
         sda = ServiceDiscovery(SERVICES)
 
@@ -90,10 +90,15 @@ class EdgeRouter(object):
         check_call(
             ["nfdc", "remove-nexthop", str(SUBSCRIPTIONS_SOMA), faceUri])
 
-if __name__ == "__main__":
-    #    nm = Gio.NetworkMonitor.get_default()
-    #    nm.connect('network-changed', network_changed_cb)
-    er = EdgeRouter()
+
+def main():
+    from gi.repository import GLib
+
+    monitor = AvahiMonitor()
 
     loop = GLib.MainLoop()
     loop.run()
+
+
+if __name__ == "__main__":
+    main()
