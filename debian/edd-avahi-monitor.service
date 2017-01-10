@@ -13,19 +13,17 @@
 # You should have received a copy of the GNU General Public License along with
 # NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Author: Philip Withnall <withnall@endlessm.com>
+# Author: Niv Sardi <xaiki@endlessm.com>
 
 [Unit]
-Description=EDD USB Producer
+Description=NDN Avahi Monitor
+Wants=nfd.service
+After=nfd.service
 
 [Service]
-Type=simple
-ExecStart=/usr/bin/edd-usb-producer
-Restart=on-abort
-Environment=GIO_USE_VFS=local
-Environment=GVFS_DISABLE_FUSE=1
-Environment=GVFS_REMOTE_VOLUME_MONITOR_IGNORE=1
 Environment=HOME=/var/lib/ndn/nfd
+ExecStart=/usr/bin/edd-avahi-monitor
+Restart=on-abort
 CapabilityBoundingSet=
 PrivateNetwork=yes
 PrivateDevices=yes
@@ -33,3 +31,6 @@ ProtectSystem=full
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
