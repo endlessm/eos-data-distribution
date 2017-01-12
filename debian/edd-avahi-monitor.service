@@ -21,7 +21,6 @@ Wants=nfd.service
 After=nfd.service
 
 [Service]
-Environment=HOME=/var/lib/ndn/nfd
 ExecStart=/usr/bin/edd-avahi-monitor
 Restart=on-abort
 CapabilityBoundingSet=

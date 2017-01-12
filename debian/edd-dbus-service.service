@@ -21,7 +21,6 @@ Wants=nfd.service
 After=nfd.service
 
 [Service]
-Environment=HOME=/var/lib/ndn/nfd
 ExecStart=/usr/bin/edd-dbus-service
 Restart=on-abort
 CapabilityBoundingSet=
