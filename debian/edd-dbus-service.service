@@ -16,7 +16,7 @@
 # Author: Niv Sardi <xaiki@endlessm.com>
 
 [Unit]
-Description=NDN/EKN DBUS Bridge
+Description=NDN/EKN D-Bus Bridge
 Wants=nfd.service
 After=nfd.service
 

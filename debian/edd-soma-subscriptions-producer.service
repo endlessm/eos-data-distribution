@@ -25,7 +25,6 @@ Environment=HOME=/var/lib/ndn/nfd
 ExecStart=/usr/bin/edd-soma-subscriptions-producer
 Restart=on-abort
 CapabilityBoundingSet=
-PrivateNetwork=yes
 PrivateDevices=yes
 ProtectSystem=full
 ProtectHome=yes
