@@ -19,6 +19,7 @@
 Description=NDN Avahi Monitor
 Wants=nfd.service
 After=nfd.service
+After=network.target
 
 [Service]
 ExecStart=/usr/bin/edd-avahi-monitor
