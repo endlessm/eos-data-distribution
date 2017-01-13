@@ -7,13 +7,3 @@ export PYBUILD_DISABLE=test
 
 override_dh_install:
 	dh_install --fail-missing
-
-override_dh_systemd_enable:
-	# dh_systemd will only install debian/${package_name}.service automatically
-	# we here kindly invite it to install our other service files
-	dh_systemd_enable -ppython-eos-data-distribution --name=edd-avahi-monitor.service edd-avahi-monitor.service.service
-	dh_systemd_enable -ppython-eos-data-distribution --name=edd-dbus-service.service edd-dbus-service.service.service
-	dh_systemd_enable -ppython-eos-data-distribution --name=edd-ostree-store.service edd-ostree-store.service.service
-	dh_systemd_enable -ppython-eos-data-distribution --name=edd-soma-subscriptions-producer.service edd-soma-subscriptions-producer.service.service
-	dh_systemd_enable -ppython-eos-data-distribution --name=edd-usb-producer.service edd-usb-producer.service.service
-

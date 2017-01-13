@@ -1,2 +1,6 @@
 debian/avahi/70-edd-usb-producer.rules usr/lib/udev/rules.d
 debian/com.endlessm.EknSubscriptionsDownloader.service usr/share/dbus-1/services
+debian/edd-avahi-monitor.service lib/systemd/system
+debian/edd-ostree-store.service lib/systemd/system
+debian/edd-soma-subscriptions-producer.service lib/systemd/system
+debian/edd-usb-producer.service lib/systemd/system
