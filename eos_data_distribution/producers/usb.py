@@ -44,7 +44,7 @@ IDLE_TIMEOUT = 30  # seconds
 def is_mount_interesting(mount):
     """Is the given mount interesting: does it contain NDN cache data?"""
     return (path.exists(path.join(mount.get_root().get_path(),
-                                  ENDLESS_NDN_CACHE_PATH)))
+                                  defaults.ENDLESS_NDN_CACHE_PATH)))
 
 
 def mount_added_cb(monitor, mount, store):
