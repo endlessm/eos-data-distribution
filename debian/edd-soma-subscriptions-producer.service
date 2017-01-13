@@ -24,6 +24,7 @@ After=network.target
 [Service]
 ExecStart=/usr/bin/edd-soma-subscriptions-producer
 Restart=on-abort
+User=ndn-user
 CapabilityBoundingSet=
 PrivateDevices=yes
 ProtectSystem=full

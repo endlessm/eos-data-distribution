@@ -23,6 +23,7 @@ After=nfd.service
 [Service]
 ExecStart=/usr/bin/edd-ostree-store
 Restart=on-abort
+User=ndn-user
 CapabilityBoundingSet=
 PrivateNetwork=yes
 PrivateDevices=yes
