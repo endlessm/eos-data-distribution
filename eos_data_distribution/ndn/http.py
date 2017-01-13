@@ -24,8 +24,10 @@ import gi
 gi.require_version('Soup', '2.4')
 
 from gi.repository import Soup
+from gi.repository import GObject
 
 from . import chunks
+from .. import defaults
 
 logger = logging.getLogger(__name__)
 
@@ -53,23 +55,34 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunk
 
     read_bytes_async()
 
-def get_content_size(session, url):
+def fetch_http_headers(session, url):
     # XXX: SOMA's subscriptions-frontend doesn't handle HEAD requests yet because S3
     # is a bit silly with signed requests. For now, request a bytes=0-0 range and
-    # look at the Content-Range.
+    # return the full response_headers.
     msg = Soup.Message.new("GET", url)
     msg.request_headers.append('Range', 'bytes=0-0')
     session.send(msg, None)
-    content_range = msg.response_headers.get_one('Content-Range')
+    return msg.response_headers
+
+def get_content_size(headers):
+    content_range = headers.get_one('Content-Range')
+    if not content_range: return -1
     size = int(content_range.split('/')[1])
     return size
 
+def get_last_modified(headers):
+    # note that we can't use ETag as we need things to be ordered
+    date = Soup.Date.new_from_string(headers.get_one('Last-Modified'))
+    if not date: return None
+    return date.to_string(Soup.DateFormat.ISO8601)
 
-class Producer(chunks.Producer):
-    def __init__(self, name, url, session=None, *args, **kwargs):
-        super(Producer, self).__init__(name, *args, **kwargs)
+class Getter(object):
+    def __init__(self, url, onData, session=None, chunk_size=chunks.CHUNK_SIZE):
+        super(Getter, self).__init__()
 
         self.url = url
+        self.onData = onData
+        self.chunk_size = chunk_size
 
         self._session = session
         if self._session is None:
@@ -77,18 +90,17 @@ class Producer(chunks.Producer):
 
         # XXX -- this is a bit ugly that we're making an HTTP request
         # in the constructor here...
-        self._size = get_content_size(self._session, self.url)
+        self._headers = fetch_http_headers(self._session, self.url)
+        self._size = get_content_size(self._headers)
+        if self._size == -1:
+            raise ValueError("Could not determine Content-Size")
+        logger.debug('getter init: %s', url)
 
-    def _get_final_segment(self):
-        return self._size // self.chunk_size
-
-    def _send_chunk(self, data, n):
-        self._soup_get(data, self.url, n)
-
-    def _soup_get(self, data, uri, n, cancellable=None):
-        msg = Soup.Message.new('GET', uri)
+    def soup_get(self, data, n, cancellable=None):
+        msg = Soup.Message.new('GET', self.url)
         msg.request_headers.append('Range', 'bytes=%d-%d' % (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
         self._session.send_async(msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
+        logger.debug('getter: soup_get: %d', n)
 
     def _got_stream(self, msg, task, data):
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
@@ -99,25 +111,35 @@ class Producer(chunks.Producer):
 
     def _got_buf(self, data, buf):
         data.setContent(buf)
-        self.sendFinish(data)
+        self.onData(data);
 
+class Producer(chunks.Producer):
+    def __init__(self, name, url, session=None, *args, **kwargs):
+        super(Producer, self).__init__(name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
+        self._getter = Getter(url, session=session, chunk_size=self.chunk_size,
+                              onData=lambda d: self.sendFinish(d))
+
+    def _get_final_segment(self):
+        return self._getter._size // self.chunk_size
+
+    def _send_chunk(self, data, n):
+        self._getter.soup_get(data, n)
 
 if __name__ == '__main__':
-    from gi.repository import GLib
     import re
+    from . import test
 
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--name")
+    parser = test.process_args()
+    parser.add_argument("-c", "--cost", default=10)
+    parser.add_argument("-o", "--output")
     parser.add_argument("url")
-
     args = parser.parse_args()
+
+
     if args.name:
         name = args.name
     else:
         name = re.sub('https?://', '', args.url)
 
-    producer = Producer(name, args.url, auto=True)
-
-    GLib.MainLoop().run()
+    producer = Producer(name=name, url=args.url)
+    test.run_producer_test(producer, name, args)

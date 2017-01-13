@@ -17,28 +17,30 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import logging
+from .. import base
 
-from gi.repository import GObject
+if __name__ == '__main__':
+    from eos_data_distribution.ndn import base
+    import argparse
+    from . import utils
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    import logging
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.DEBUG)
 
-class Batch(GObject.GObject):
-    __gsignals__ = {
-        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
-    }
+    parser = utils.process_args(description='Register with cost Test')
+    parser.add_argument("-c", "--cost", default=10)
+    args = parser.parse_args()
 
-    def __init__(self, workers, type="Batch"):
-        super(Batch, self).__init__()
-        self._type = type
-        self._incomplete_workers = set(workers)
-        for worker in self._incomplete_workers:
-            worker.connect('complete', self._on_batch_complete)
-            worker.start()
+    name = args.name
+    if not name:
+        name = Name('/endless/test')
 
-    def _on_batch_complete(self, worker):
-        logger.info("%s complete: %s", self._type, worker)
-        self._incomplete_workers.remove(worker)
-        if len(self._incomplete_workers) == 0:
-            self.emit('complete')
+    producer = base.Producer(name, cost=args.cost)
+    producer.registerPrefix(name,
+                            onRegisterFailed=lambda *a: logger.info('FAILED: %s', a),
+                            onRegisterSuccess=lambda *a: logger.info('SUCCESS: %s', a),
+    )
+
+    utils.run_producer_test(producer, name, args)
+

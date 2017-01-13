@@ -26,15 +26,19 @@ from pyndn import Name
 from gi.repository import GLib
 
 from eos_data_distribution.ndn.file import FileProducer
+from eos_data_distribution.tools import util
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("name")
     parser.add_argument("filename")
-    args = parser.parse_args()
+    args = util.process_args(parser)
 
     f = open(args.filename, 'rb')
     producer = FileProducer(args.name, f, auto=True)
     loop = GLib.MainLoop()
     loop.run()
+
+if __name__ == '__main__':
+    main()

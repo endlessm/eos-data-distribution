@@ -110,15 +110,20 @@ class FileConsumer(chunks.Consumer):
     def start(self):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
+
+        # XXX: Disable this for now, since it doesn't work with the
+        # qualified name mangling we do.
+
         try:
-            self._read_segment_table()
+            pass
+            # self._read_segment_table()
         except ValueError as e:
             pass
 
         if self._segments is not None:
             self._schedule_interests()
         else:
-            self._request_segment(0)
+            super(FileConsumer, self).start()
 
     def _save_chunk(self, n, data):
         buf = data.getContent().toBytes()
@@ -250,3 +255,15 @@ class FileConsumer(chunks.Consumer):
         os.rename(self._part_filename, self._filename)
         os.unlink(self._sgt_filename)
         super(FileConsumer, self)._on_complete()
+
+if __name__ == '__main__':
+    from tests import util
+    parser = util.process_args("filename")
+    parser.add_argument("-o", "--output")
+    args = parser.parse_args()
+
+    name = args.name or args.filename
+
+    producer = Producer(name=name, file=args.filename)
+    util.run_producer_test(producer, name, args)
+

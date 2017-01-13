@@ -22,7 +22,7 @@ import os
 
 from gi.repository import GObject
 
-from pyndn import Name, Data, MetaInfo, ContentType
+from pyndn import Name, Interest, Data, MetaInfo, ContentType
 
 from . import base
 
@@ -34,11 +34,22 @@ def get_chunk_component(name):
     # The chunk component of a name is the last part...
     return name.get(-1)
 
+def get_chunkless_name(name):
+    # XXX: Use more sophisticated parsing algorithm to strip non-chunk parts.
+    chunk_component = get_chunk_component(name)
+    if chunk_component.isSegment():
+        chunkless_name = name.getPrefix(-1)
+    else:
+        chunkless_name = name
+    return str(chunkless_name)
+
 
 class Producer(base.Producer):
     def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
-        super(Producer, self).__init__(name=name, *args, **kwargs)
+        assert(chunk_size > 0)
         self.chunk_size = chunk_size
+
+        super(Producer, self).__init__(name=name, *args, **kwargs)
         self.connect('interest', self._on_interest)
 
     def _get_final_block_id(self):
@@ -96,12 +107,21 @@ class Consumer(base.Consumer):
         self._num_segments = None
         self._segments = None
         self._num_outstanding_interests = 0
+        self._qualified_name = None
+
+        self.interest = Interest(name)
+        self.interest.setMustBeFresh(True)
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         self.connect('data', self._on_data)
+        logger.debug('init chunks.Consumer: %s', name)
 
     def start(self):
-        self._request_segment(0)
+        # Make an initial request for the barename. We should get a fully
+        # qualified request back for the first segment, with a timestamp and
+        # segment number. Future requests will request the fully qualified
+        # name.
+        self.expressInterest(self.name, forever=True)
 
     def _save_chunk(self, n, data):
         pass
@@ -126,7 +146,8 @@ class Consumer(base.Consumer):
             self._request_segment(next_segment)
 
     def _request_segment(self, n):
-        ndn_name = Name(self.name).appendSegment(n)
+        ndn_name = Name(self._qualified_name).appendSegment(n)
+        logger.debug('is this an interest ? %s', ndn_name)
         self.expressInterest(ndn_name, forever=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING
@@ -162,6 +183,12 @@ class Consumer(base.Consumer):
 
         name = data.getName()
         logger.info('got data: %s', name)
+
+        if self._qualified_name is None:
+            # Strip off the chunk component for our final FQDN...
+            # XXX: We should probably have a better parsing algorithm at some point
+            # rather than relying on the chunk component being last.
+            self._qualified_name = name.getPrefix(-1)
 
         seg = get_chunk_component(name).toSegment()
         self._save_chunk(seg, data)

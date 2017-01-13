@@ -1,6 +1,7 @@
+#!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Mobile, Inc.
+# Copyright (C) 2016 Endless Computers, Inc.
 # Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,28 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import argparse
 import logging
 
-from gi.repository import GObject
+def process_args(parser):
+    parser.add_argument("-v", action="count")
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    args = parser.parse_args()
+    if args.v > 1:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
-class Batch(GObject.GObject):
-    __gsignals__ = {
-        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
-    }
+    return args
 
-    def __init__(self, workers, type="Batch"):
-        super(Batch, self).__init__()
-        self._type = type
-        self._incomplete_workers = set(workers)
-        for worker in self._incomplete_workers:
-            worker.connect('complete', self._on_batch_complete)
-            worker.start()
-
-    def _on_batch_complete(self, worker):
-        logger.info("%s complete: %s", self._type, worker)
-        self._incomplete_workers.remove(worker)
-        if len(self._incomplete_workers) == 0:
-            self.emit('complete')

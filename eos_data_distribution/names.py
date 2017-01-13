@@ -19,5 +19,18 @@
 
 from pyndn import Name
 
-SUBSCRIPTIONS_INSTALLED = Name('/com.endlessm/subscriptions/installed')
-SUBSCRIPTIONS_SOMA = Name('/com.endlessm/subscriptions/soma')
+# Why isn't our name com.endlessm ?
+
+# while com.endlessm is a valid name, it doesn't make sense semantically,
+# as 'com.endlessm' represents 2 levels of naming and hence should be
+# /com/endlessm/.
+# but as we have no knowledge of how /com will be handled we can't really
+# use that.
+# strictly speaking and semantically, it would make more sense to use
+# /endless-ndn/ (compared to /ndn/ used by the testbed).
+# but /endlessm will do, and can be linked later on to /com/endlessm
+# once a /com authority exists.
+
+
+SUBSCRIPTIONS_INSTALLED = Name('/endlessm/subscriptions/installed')
+SUBSCRIPTIONS_SOMA = Name('/endlessm/subscriptions/soma')

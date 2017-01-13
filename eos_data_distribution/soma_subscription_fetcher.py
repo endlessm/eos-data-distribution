@@ -29,7 +29,7 @@ from gi.repository import GLib
 from gi.repository import Soup
 
 from .names import SUBSCRIPTIONS_SOMA
-from .ndn import http, Producer
+from .ndn import chunks, http, Producer, manifest
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +57,13 @@ class Fetcher(object):
         self._subproducers = {}
 
     def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
-        # We handle one fo two paths:
+        # We handle one of two paths:
         #   /com.endlessm/subscriptions/soma/subscription/$sub_id/manifest.json/$chunk
         #   /com.endlessm/subscriptions/soma/shard/$shard_url/$chunk
 
         name = interest.getName()
-        chunkless_name = name.getPrefix(-1)
-        key = str(chunkless_name)
+
+        key = chunks.get_chunkless_name(name)
 
         # If we already have a producer for this name, then we're good...
         if key in self._subproducers:
@@ -76,7 +76,7 @@ class Fetcher(object):
             subscription_id = route.get(1).getValue().toRawStr()
             filename = route.get(2).getValue().toRawStr()
             assert filename == 'manifest.json'
-            self._subproducers[key] = http.Producer(chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face, auto=True)
+            self._subproducers[key] = manifest.Producer(chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face, auto=True)
         elif component == 'shard':
             shard_url = route.get(1).getValue().toRawStr()
             self._subproducers[key] = http.Producer(chunkless_name, shard_url, face=face, auto=True)

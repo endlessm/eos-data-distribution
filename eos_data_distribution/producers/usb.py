@@ -29,9 +29,9 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gio
 from gi.repository import GLib
 
-from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
+from eos_data_distribution import defaults
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ def mount_added_cb(monitor, mount, store):
                               mount.get_name(), mount.get_uuid() or "no UUID")
 
     root = mount.get_root()
-    base = path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
+    base = path.join(root.get_path(), defaults.ENDLESS_NDN_CACHE_PATH)
 
     logger.info("Starting import from %s (%s)",
                 mount.get_name(), mount.get_uuid() or "no UUID")
@@ -106,7 +106,9 @@ def main():
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, signal_cb)
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, signal_cb)
     monitor = Gio.VolumeMonitor.get()
-    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=ENDLESS_NDN_CACHE_PATH)
+    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA,
+                                split=defaults.ENDLESS_NDN_CACHE_PATH,
+                                cost=defaults.RouteCost.USB)
 
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)
