@@ -12,3 +12,11 @@ build/
 .coverage
 .cache/
 dist/
+.pybuild/
+debian/debhelper-build-stamp
+debian/files
+debian/python-eos-data-distribution.postinst.debhelper
+debian/python-eos-data-distribution.postrm.debhelper
+debian/python-eos-data-distribution.prerm.debhelper
+debian/python-eos-data-distribution.substvars
+debian/python-eos-data-distribution/
