@@ -108,7 +108,7 @@ setup(
             'edd-usb-producer = eos_data_distribution.producers.usb:main',
             'edd-getchunks = eos_data_distribution.tools.getchunks:main',
             'edd-putchunks = eos_data_distribution.tools.putchunks:main',
-            'edd-avahi-monitor = eos_data_distribution.avahi-monitor:main',
+            'edd-avahi-monitor = eos_data_distribution.avahi_monitor:main',
             'edd-dbus-service = eos_data_distribution.dbus_service:main',
             'edd-get-subscription = eos_data_distribution.tools.get_subscription:main',
         ],
