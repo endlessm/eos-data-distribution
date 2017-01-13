@@ -109,7 +109,7 @@ class Consumer(base.Consumer):
         self._num_outstanding_interests = 0
         self._qualified_name = None
 
-        self.interest = Interest(name)
+        self.interest = Interest(Name(name))
         self.interest.setMustBeFresh(True)
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
@@ -121,7 +121,7 @@ class Consumer(base.Consumer):
         # qualified request back for the first segment, with a timestamp and
         # segment number. Future requests will request the fully qualified
         # name.
-        self.expressInterest(self.name, forever=True)
+        self.expressInterest(self.interest, forever=True)
 
     def _save_chunk(self, n, data):
         pass
