@@ -28,16 +28,14 @@ from pyndn import Name, Data
 import gi
 from gi.repository import GObject
 
+from . import defaults, ndn
 from .names import SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
-from . import ndn
 from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-FRESHNESS_PERIOD = 1000 #ms
 
 class Fetcher(GObject.GObject):
     __gsignals__ = {
@@ -122,5 +120,5 @@ class Producer(object):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
         data = Data(interest.getName())
         data.setContent(response)
-        data.getMetaInfo().setFreshnessPeriod(FRESHNESS_PERIOD)
+        data.getMetaInfo().setFreshnessPeriod(defaults.FRESHNESS_PERIOD)
         self._producer.sendFinish(data)

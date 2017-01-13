@@ -19,6 +19,8 @@
 
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
+FRESHNESS_PERIOD = 1000 #ms
+
 class RouteCost(object):
     HTTP = 100
     LOCAL_NETWORK = 20

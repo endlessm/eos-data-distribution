@@ -27,7 +27,6 @@ from . import chunks
 from .. import defaults
 
 logger = logging.getLogger(__name__)
-FRESHNESS_PERIOD = 1000 #ms
 
 
 # the manifest producer is an http Producer that answers on a different name
@@ -52,7 +51,7 @@ class Producer(chunks.Producer):
         self._getter.soup_get(data, n)
 
     def _send_finish(self, data):
-        data.getMetaInfo().setFreshnessPeriod(FRESHNESS_PERIOD)
+        data.getMetaInfo().setFreshnessPeriod(defaults.FRESHNESS_PERIOD)
 
         self.sendFinish(data)
 
