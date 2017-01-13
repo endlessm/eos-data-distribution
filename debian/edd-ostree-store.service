@@ -21,7 +21,7 @@ Wants=nfd.service
 After=nfd.service
 
 [Service]
-ExecStart=/usr/bin/edd-ostree-store
+ExecStart=/usr/bin/edd-ostree-store -t /var/cache/eos-data-distribution
 Restart=on-abort
 User=ndn-user
 Environment=GIO_USE_VFS=local

@@ -4,3 +4,4 @@ debian/edd-avahi-monitor.service lib/systemd/system
 debian/edd-ostree-store.service lib/systemd/system
 debian/edd-soma-subscriptions-producer.service lib/systemd/system
 debian/edd-usb-producer.service lib/systemd/system
+debian/eos-data-distribution.conf usr/lib/tmpfiles.d

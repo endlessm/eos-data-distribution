@@ -10,6 +10,12 @@ if [ "$1" = configure ]; then
       --disabled-password \
       --group \
       ndn-user
+
+  # A world-readable directory for the ostree; this is also created via
+  # systemd tmpfiles.d, since /var is wiped out in the conversion to an ostree
+  # image
+  mkdir -m 755 -p /var/cache/eos-data-distribution
+  chown ndn-user:ndn-user /var/cache/eos-data-distribution
 fi
 
 #DEBHELPER#
