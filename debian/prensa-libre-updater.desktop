@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Prensa Libre Updater
+Exec=dbus-send --session --type=method_call --dest=com.endlessm.EknSubscriptionsDownloader /com/endlessm/EknSubscriptionsDownloader com.endlessm.EknSubscriptionsDownloader.DownloadSubscription string:10521bb3a18b573f088f84e59c9bbb6c2e2a1a67
+Icon=software-update-available
+Terminal=false

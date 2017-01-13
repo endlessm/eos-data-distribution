@@ -5,3 +5,5 @@ debian/edd-ostree-store.service lib/systemd/system
 debian/edd-soma-subscriptions-producer.service lib/systemd/system
 debian/edd-usb-producer.service lib/systemd/system
 debian/eos-data-distribution.conf usr/lib/tmpfiles.d
+debian/soy502-updater.desktop usr/share/applications
+debian/prensa-libre-updater.desktop usr/share/applications
