@@ -93,7 +93,7 @@ class Getter(object):
         self._headers = fetch_http_headers(self._session, self.url)
         self._size = get_content_size(self._headers)
         if self._size == -1:
-            raise ValueError("Could not determine Content-Size")
+            raise ValueError("Could not determine Content-Size for %s" % url)
         logger.debug('getter init: %s', url)
 
     def soup_get(self, data, n, cancellable=None):
