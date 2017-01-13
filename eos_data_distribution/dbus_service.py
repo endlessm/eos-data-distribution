@@ -17,6 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import errno
+import os
 import json
 from shutil import copyfile
 from os import path
@@ -46,8 +48,19 @@ IFACE = '''<node>
 IFACE_INFO = Gio.DBusNodeInfo.new_for_xml(IFACE).interfaces[0]
 
 
+def mkdir_p(dirname):
+    try:
+        os.makedirs(dirname)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+            pass
+        else:
+            raise
+
+
 def apply_subscription_update(subscription_id, src_manifest_path, shards):
     user_subscriptions_folder = path.expanduser('~/.local/share/com.endlessm.subscriptions/%s/' % (subscription_id, ))
+    mkdir_p(user_subscriptions_folder)
 
     # now look at this manifest, that i just found
     with open(src_manifest_path, 'r') as f:
