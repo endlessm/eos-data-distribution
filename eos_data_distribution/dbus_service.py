@@ -23,10 +23,12 @@ from os import path
 
 import gi
 gi.require_version('GLib', '2.0')
+gi.require_version('Notify', '0.7')
 
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
+from gi.repository import Notify
 
 from pyndn import Name, Face
 
@@ -79,6 +81,8 @@ class DBusService(object):
         self._consumer = Consumer(name='dummy')
         self._consumer.connect('data', self._on_data)
 
+        self._notification = Notify.Notification.new("", "")
+
     def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
         # Dispatch.
         getattr(self, 'impl_%s' % (method_name, ))(invocation, parameters)
@@ -88,13 +92,21 @@ class DBusService(object):
         subscription_reply = json.loads(response_text)
         apply_subscription_update(subscription_reply['subscription_id'], subscription_reply['manifest_path'], subscription_reply['shards'])
 
+        self._notification.update("Update has finished downloading...", "")
+        self._notification.show()
+
     def impl_DownloadSubscription(self, invocation, parameters):
         subscription_id, = parameters.unpack()
         name = Name(SUBSCRIPTIONS_INSTALLED).append(subscription_id)
         self._consumer.expressInterest(name, forever=True)
         invocation.return_value(None)
 
+        self._notification.update("Update has started...", "")
+        self._notification.show()
+
 
 def main():
+    Notify.init("Content Updates")
+
     service = DBusService()
     GLib.MainLoop().run()
