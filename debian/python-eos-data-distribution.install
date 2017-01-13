@@ -1,2 +1,2 @@
 debian/avahi/70-edd-usb-producer.rules usr/lib/udev/rules.d
-
+debian/com.endlessm.EknSubscriptionsDownloader.service usr/share/dbus-1/services
