@@ -41,7 +41,7 @@ def get_chunkless_name(name):
         chunkless_name = name.getPrefix(-1)
     else:
         chunkless_name = name
-    return str(chunkless_name)
+    return chunkless_name
 
 
 class Producer(base.Producer):
