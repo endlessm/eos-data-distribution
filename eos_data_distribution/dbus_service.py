@@ -32,7 +32,7 @@ from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Notify
 
-from pyndn import Name, Face
+from pyndn import Name, Face, Interest
 
 from eos_data_distribution.ndn import Consumer
 from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
@@ -112,7 +112,9 @@ class DBusService(object):
     def impl_DownloadSubscription(self, invocation, parameters):
         subscription_id, = parameters.unpack()
         name = Name(SUBSCRIPTIONS_INSTALLED).append(subscription_id)
-        self._consumer.expressInterest(name, forever=True)
+        interest = Interest(name)
+        interest.setMustBeFresh(True)
+        self._consumer.expressInterest(interest, forever=True)
         invocation.return_value(None)
 
         self._notification.update("Update has started...", "")

@@ -23,13 +23,13 @@ import os
 import re
 from os import path
 
-from pyndn import Name
+from pyndn import Name, Data
 
 import gi
 from gi.repository import GObject
 
+from . import defaults, ndn
 from .names import SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
-from . import ndn
 from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
@@ -118,4 +118,7 @@ class Producer(object):
 
     def _on_subscription_response(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
-        self._producer.send(interest.getName(), response)
+        data = Data(interest.getName())
+        data.setContent(response)
+        data.getMetaInfo().setFreshnessPeriod(defaults.FRESHNESS_PERIOD)
+        self._producer.sendFinish(data)
