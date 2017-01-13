@@ -6,7 +6,11 @@ Build-Depends:
  debhelper (>= 10),
  dh-python,
  dh-systemd,
+ gir1.2-notify-0.7,
+ gir1.2-soup-2.4,
  python-all,
+ python-avahi,
+ python-dbus,
  python-pyndn,
  python-pytest,
  python-setuptools,
@@ -25,6 +29,11 @@ Depends:
  ${python:Depends},
  adduser,
  nfd,
+ gir1.2-notify-0.7,
+ gir1.2-soup-2.4,
+ python-avahi,
+ python-dbus,
+ python-pyndn,
 Description: NDN producers and daemons (Python 2)
  Named Data Networking provides name-based access to data over the
  network.

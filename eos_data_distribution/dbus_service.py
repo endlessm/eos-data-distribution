@@ -81,6 +81,7 @@ class DBusService(object):
         self._consumer = Consumer(name='dummy')
         self._consumer.connect('data', self._on_data)
 
+        # FIXME: Port to GNotification instead
         self._notification = Notify.Notification.new("", "")
 
     def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):

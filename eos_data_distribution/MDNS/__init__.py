@@ -32,6 +32,7 @@ except ImportError as e:
     sys.exit()
 
 try:
+    # FIXME: Port to use D-Bus support from GIO instead of python-dbus
     import dbus.glib
 except ImportError as e:
     pass
