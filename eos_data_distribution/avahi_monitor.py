@@ -20,6 +20,8 @@
 
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 from subprocess import check_call
 
 from pyndn.control_parameters import ControlParameters
@@ -28,8 +30,6 @@ from eos_data_distribution import defaults
 from eos_data_distribution.ndn import base
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.MDNS import ServiceDiscovery
-
-logging.basicConfig(level=logging.INFO)
 
 SERVICES = [
     # Disable TCP, we really only want UDP or ethernet

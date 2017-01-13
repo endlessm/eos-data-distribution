@@ -1,0 +1,35 @@
+# Copyright (c) 2017,  Endless Mobile, Inc.
+#
+# This file is NOT part of NFD (Named Data Networking Forwarding Daemon).
+#
+# NFD is free software: you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# NFD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Author: Philip Withnall <withnall@endlessm.com>
+
+[Unit]
+Description=EDD USB Producer
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/edd-usb-producer
+Restart=on-abort
+User=ndn-user
+Environment=GIO_USE_VFS=local
+Environment=GVFS_DISABLE_FUSE=1
+Environment=GVFS_REMOTE_VOLUME_MONITOR_IGNORE=1
+CapabilityBoundingSet=
+PrivateNetwork=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

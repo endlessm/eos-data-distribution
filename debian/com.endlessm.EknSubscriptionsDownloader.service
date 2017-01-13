@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.endlessm.EknSubscriptionsDownloader
+Exec=/usr/bin/edd-dbus-service
