@@ -23,7 +23,7 @@ import os
 import re
 from os import path
 
-from pyndn import Name
+from pyndn import Name, Data
 
 import gi
 from gi.repository import GObject
@@ -36,6 +36,8 @@ from .parallel import Batch
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+FRESHNESS_PERIOD = 1000 #ms
 
 class Fetcher(GObject.GObject):
     __gsignals__ = {
@@ -118,4 +120,7 @@ class Producer(object):
 
     def _on_subscription_response(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
-        self._producer.send(interest.getName(), response)
+        data = Data(interest.getName())
+        data.setContent(response)
+        data.getMetaInfo().setFreshnessPeriod(FRESHNESS_PERIOD)
+        self._producer.sendFinish(data)
