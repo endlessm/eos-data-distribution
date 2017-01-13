@@ -21,6 +21,7 @@ import re
 from collections import defaultdict
 from os import path, walk
 
+from pyndn import Name
 from ..DirTools import Monitor
 from ..ndn.file import FileProducer
 
@@ -47,7 +48,7 @@ class Producer(object):
             basename = r.sub('', filename.split(self.split)[1])
         except:
             basename = filename
-        return path.join(self.prefix, basename)
+        return Name(path.join(self.prefix.toUri(), basename))
 
     def unpublish(self, basedir):
         [self.unpublish_name(n) for n in self.dirpubs[basedir]]
