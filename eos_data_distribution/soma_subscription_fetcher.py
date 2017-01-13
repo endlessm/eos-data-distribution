@@ -63,7 +63,8 @@ class Fetcher(object):
 
         name = interest.getName()
 
-        key = chunks.get_chunkless_name(name)
+        chunkless_name = chunks.get_chunkless_name(name)
+        key = str(chunkless_name)
 
         # If we already have a producer for this name, then we're good...
         if key in self._subproducers:
