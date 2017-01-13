@@ -24,6 +24,9 @@ After=nfd.service
 ExecStart=/usr/bin/edd-ostree-store
 Restart=on-abort
 User=ndn-user
+Environment=GIO_USE_VFS=local
+Environment=GVFS_DISABLE_FUSE=1
+Environment=GVFS_REMOTE_VOLUME_MONITOR_IGNORE=1
 CapabilityBoundingSet=
 PrivateNetwork=yes
 PrivateDevices=yes
