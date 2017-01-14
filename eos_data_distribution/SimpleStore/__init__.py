@@ -28,7 +28,7 @@ from ..ndn.file import FileProducer
 class Producer(object):
     def __init__(self, base=None, prefix='/',
                  exts=('.shard', '.json'), split=None, cost=None):
-        self.base = base
+        self.base = path.realpath(base)
         self.exts = exts
         self.split = split or base
         self.prefix = prefix
@@ -59,7 +59,7 @@ class Producer(object):
         del self.dirpubs[basedir][n]
 
     def _publish_name(self, M, p, m, f, o, evt, e=None, d=None):
-        return self.publish_name(f, d)
+        return self.publish_name(f.get_path(), d)
 
     def publish_name(self, filename, basedir):
         if not filename.endswith(self.exts):
@@ -80,7 +80,7 @@ class Producer(object):
     def publish_all_names(self, basedir):
         self.walk_dir(basedir)
         monitor = Monitor(basedir)
-        [monitor.connect(s, self._publish_name, basedir) for s in monitor.filterSignals(['created', 'moved-in', 'renamed'])]
-        [monitor.connect(s, self._unpublish_name, basedir) for s in monitor.filterSignals(['moved-out', 'renamed'])]
+        [monitor.connect(s, self._publish_name, basedir) for s in ['created', 'moved-in', 'renamed']]
+        [monitor.connect(s, self._unpublish_name, basedir) for s in ['moved-out', 'renamed']]
         self.dirs[basedir] = monitor
 
