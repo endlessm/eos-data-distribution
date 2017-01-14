@@ -45,7 +45,7 @@ def main():
     subscription_producer = SubscriptionProducer(args.store_dir)
     subscription_producer.start()
 
-    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_INSTALLED)
+    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_SOMA)
     GLib.MainLoop().run()
 
 
