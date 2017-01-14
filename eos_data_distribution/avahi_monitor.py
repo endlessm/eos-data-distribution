@@ -66,12 +66,18 @@ class AvahiMonitor(object):
 
         sda.start()
         self.sda = sda
+        """
         self.ndn = base.Base(name=SUBSCRIPTIONS_SOMA)
         cp = ControlParameters()
         cp.setStrategy('/localhost/nfd/strategy/multicast')
         # XXX: check that we could set-strategy
         self.ndn.expressCommandInterest(
             '/nfd/strategy-choice/set', controlParameters=cp)
+        """
+
+        # XXX: Use the above native code for this.
+        check_call(["nfdc", "set-strategy", str(SUBSCRIPTIONS_SOMA), 'ndn:/localhost/nfd/strategy/multicast'])
+
         self._registry = dict()
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
