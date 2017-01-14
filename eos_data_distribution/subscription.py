@@ -20,7 +20,6 @@
 import logging
 import json
 import os
-import re
 from os import path
 
 from pyndn import Name, Data
@@ -51,7 +50,8 @@ class Fetcher(GObject.GObject):
         self._face = face
         self._store_dir = store_dir
 
-        self._manifest_filename = path.join(self._store_dir, self.subscription_id, 'manifest.json')
+        self._manifest_suffix = 'subscription/%s/manifest.json' % (self.subscription_id)
+        self._manifest_filename = path.join(self._store_dir, self._manifest_suffix)
         self._shard_filenames = []
 
     def start(self):
@@ -59,7 +59,7 @@ class Fetcher(GObject.GObject):
         return self
 
     def _fetch_manifest(self):
-        manifest_ndn_name = "%s/subscription/%s/manifest.json" % (SUBSCRIPTIONS_SOMA, self.subscription_id)
+        manifest_ndn_name = Name('%s/%s' % (SUBSCRIPTIONS_SOMA, self._manifest_suffix))
         manifest_consumer = FileConsumer(manifest_ndn_name, self._manifest_filename, auto=True)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
 
@@ -69,9 +69,9 @@ class Fetcher(GObject.GObject):
 
         consumers = []
         for shard in manifest['shards']:
-            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append('shard').append(shard['download_uri'])
-            local_path = 'shard/%s' % (re.sub('https?://', '', shard['download_uri']))
-            shard_filename = path.realpath(path.join(self._store_dir, local_path))
+            shard_suffix = 'shard/%s' % (shard['download_uri'], )
+            shard_ndn_name = Name('%s/%s' % (SUBSCRIPTIONS_SOMA, shard_suffix))
+            shard_filename = path.realpath(path.join(self._store_dir, shard_suffix))
             self._shard_filenames.append(shard_filename)
             consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face)
             consumers.append(consumer)
