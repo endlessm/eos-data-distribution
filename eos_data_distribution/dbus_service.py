@@ -106,7 +106,7 @@ class DBusService(object):
         subscription_reply = json.loads(response_text)
         apply_subscription_update(subscription_reply['subscription_id'], subscription_reply['manifest_path'], subscription_reply['shards'])
 
-        self._notification.update("Update has finished downloading...", "")
+        self._notification.update("La actualización ha finalizado la descarga.", "")
         self._notification.show()
 
     def impl_DownloadSubscription(self, invocation, parameters):
@@ -117,7 +117,7 @@ class DBusService(object):
         self._consumer.expressInterest(interest, forever=True)
         invocation.return_value(None)
 
-        self._notification.update("Update has started...", "")
+        self._notification.update("La actualización ha iniciado la descarga.", "")
         self._notification.show()
 
 
