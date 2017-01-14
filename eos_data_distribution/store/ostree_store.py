@@ -25,7 +25,7 @@ from gi.repository import GObject
 from gi.repository import GLib
 
 from eos_data_distribution import SimpleStore
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
+from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.subscription import Producer as SubscriptionProducer
 
 logging.basicConfig(level=logging.INFO)
