@@ -17,15 +17,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import re
 from collections import defaultdict
 from os import path, walk
 
 from pyndn import Name
 from ..DirTools import Monitor
 from ..ndn.file import FileProducer
-
-r = re.compile(r'^/+')
 
 
 class Producer(object):
@@ -44,11 +41,9 @@ class Producer(object):
         if base: self.publish_all_names(base)
 
     def _path_to_name(self, filename):
-        try:
-            basename = r.sub('', filename.split(self.split)[1])
-        except:
-            basename = filename
-        return Name(path.join(self.prefix.toUri(), basename))
+        assert filename.startswith(self.base)
+        file_path = filename[len(self.base):].lstrip('/')
+        return Name('%s/%s' % (self.prefix.toUri(), file_path))
 
     def unpublish(self, basedir):
         [self.unpublish_name(n) for n in self.dirpubs[basedir]]

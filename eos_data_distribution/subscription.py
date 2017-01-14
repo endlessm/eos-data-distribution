@@ -20,6 +20,7 @@
 import logging
 import json
 import os
+import urllib
 from os import path
 
 from pyndn import Name, Data
@@ -69,9 +70,9 @@ class Fetcher(GObject.GObject):
 
         consumers = []
         for shard in manifest['shards']:
-            shard_suffix = 'shard/%s' % (shard['download_uri'], )
-            shard_ndn_name = Name('%s/%s' % (SUBSCRIPTIONS_SOMA, shard_suffix))
-            shard_filename = path.realpath(path.join(self._store_dir, shard_suffix))
+            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append('shard').append(shard['download_uri'])
+            escaped_filename = urllib.quote(shard['download_uri'], safe='')
+            shard_filename = path.realpath(path.join(self._store_dir, 'shard', escaped_filename))
             self._shard_filenames.append(shard_filename)
             consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face)
             consumers.append(consumer)
