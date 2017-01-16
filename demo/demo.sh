@@ -34,6 +34,8 @@ killall tmux;
 
 rm -rf ${TEMP_DIR}/*
 
+mkdir -p ${BASE_PATH}/{tmp,DL}
+
 export PYTHONPATH=${BASE_PATH}
 
 tmux new -d -s my-session 'watch -d nfd-status; sleep infinity' \; \
