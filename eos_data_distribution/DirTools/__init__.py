@@ -20,6 +20,11 @@ class Monitor(GObject.GObject):
                 'Asked to monitor something that is not a dir: %s' % (dir, ))
         self.monitorAll(f)
 
+    # XXX: this is needed because older version of Gio.Monitor implement
+    # different signals.
+    def filterSignals(self, a):
+        return [e for e in a if e in EventToSignal.keys()]
+
     def monitorAll(self, f):
         if not self.monitor(f):
             return

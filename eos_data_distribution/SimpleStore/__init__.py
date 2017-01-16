@@ -83,7 +83,7 @@ class Producer(object):
         self.walk_dir(basedir)
         monitor = Monitor(basedir)
         [monitor.connect(s, self._publish_name, basedir)
-         for s in ['created', 'moved-in', 'renamed']]
+         for s in monitor.filterSignals(['created', 'moved-in', 'renamed'])]
         [monitor.connect(s, self._unpublish_name, basedir)
-         for s in ['moved-out', 'renamed']]
+         for s in monitor.filterSignals(['moved-out', 'renamed'])]
         self.dirs[basedir] = monitor
