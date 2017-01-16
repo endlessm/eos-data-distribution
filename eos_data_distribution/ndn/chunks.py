@@ -207,7 +207,7 @@ class Consumer(base.Consumer):
         self._check_final_segment(meta_info.getFinalBlockId().toSegment())
 
         name = data.getName()
-        logger.info('got data: %s', name)
+        logger.debug('got data: %s', name)
 
         if self._qualified_name is None:
             # Strip off the chunk component for our final FQDN...
