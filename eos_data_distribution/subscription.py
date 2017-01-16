@@ -105,9 +105,9 @@ class Fetcher(GObject.GObject):
 class Producer(object):
 
     """
-    # The Producer listens for intents to /endless/installed/foo,
-    # downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
-    # and then generates a "signalling response" for them.
+    The Producer listens for intents to /endless/installed/foo,
+    downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
+    and then generates a "signalling response" for them.
     """
 
     def __init__(self, store_dir):
