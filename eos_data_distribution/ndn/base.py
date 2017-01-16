@@ -110,6 +110,8 @@ class Base(GObject.GObject):
         GObject.GObject.__init__(self)
         self.name = Name(name)
 
+        # GLibUnixFace is the only Face implementation to do things in a GLib
+        # main loop, so we require it.
         if face is not None:
             assert isinstance(face, GLibUnixFace)
             self.face = face
