@@ -112,11 +112,8 @@ class Base(GObject.GObject):
 
         # GLibUnixFace is the only Face implementation to do things in a GLib
         # main loop, so we require it.
-        if face is not None:
-            assert isinstance(face, GLibUnixFace)
-            self.face = face
-        else:
-            self.face = get_default_face()
+        self.face = face or get_default_face()
+        assert isinstance(self.face, GLibUnixFace)
 
         self._callbackCount = 0
         self._responseCount = 0
