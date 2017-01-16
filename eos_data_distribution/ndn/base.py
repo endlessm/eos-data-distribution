@@ -76,14 +76,6 @@ class GLibUnixFace(Face):
         self._commandKeyChain = None
         self._commandCertificateName = Name()
 
-    def callLater(self, delayMilliseconds, callback):
-        # Wrapper to ensure we remove the source.
-        def wrap():
-            callback()
-            return GLib.SOURCE_REMOVE
-
-        GLib.timeout_add(delayMilliseconds, wrap)
-
 
 def singleton(f):
     instance = [None]
