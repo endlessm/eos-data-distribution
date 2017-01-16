@@ -73,6 +73,10 @@ class Fetcher(object):
         if key in self._subproducers:
             return
 
+        # we can't have a component, we're getting bootstrapping interests
+        if chunkless_name.size() <= SUBSCRIPTIONS_SOMA.size():
+            return
+
         route = chunkless_name.getSubName(SUBSCRIPTIONS_SOMA.size())
         component = route.get(0).getValue().toRawStr()
 
