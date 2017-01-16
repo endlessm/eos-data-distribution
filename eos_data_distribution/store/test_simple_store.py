@@ -3,7 +3,7 @@ import time
 
 from os import path, utime
 
-from .. import SimpleStore
+from .. import simple_store
 
 
 def touch(fname, times=None):
@@ -19,7 +19,7 @@ class TestClass:
 
     def test_producer(self, tmpdir):
         d = tmpdir.mkdir("ndn")
-        p = SimpleStore.Producer()
+        p = simple_store.Producer()
         tmpdirpath = str(d.realpath())
         tmpfilepath = path.join(tmpdirpath, 'test.shard')
 

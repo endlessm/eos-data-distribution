@@ -30,7 +30,7 @@ from gi.repository import Gio
 from gi.repository import GLib
 
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
-from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
+from eos_data_distribution.store import simple_store
 from eos_data_distribution import defaults
 
 logging.basicConfig(level=logging.INFO)
@@ -107,9 +107,9 @@ def main():
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, signal_cb)
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, signal_cb)
     monitor = Gio.VolumeMonitor.get()
-    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA,
-                                split=defaults.ENDLESS_NDN_CACHE_PATH,
-                                cost=defaults.RouteCost.USB)
+    store = simple_store.Producer(prefix=SUBSCRIPTIONS_SOMA,
+                                  split=defaults.ENDLESS_NDN_CACHE_PATH,
+                                  cost=defaults.RouteCost.USB)
 
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)
