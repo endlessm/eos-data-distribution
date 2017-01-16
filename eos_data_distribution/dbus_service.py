@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 import errno
 import os
 import json
