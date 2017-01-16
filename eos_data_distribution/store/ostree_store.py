@@ -25,7 +25,7 @@ from gi.repository import GObject
 from gi.repository import GLib
 
 from eos_data_distribution import names, subscription
-from . import simple_store
+from eos_data_distribution.store import simple_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
