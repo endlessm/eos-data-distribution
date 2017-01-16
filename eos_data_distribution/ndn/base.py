@@ -130,10 +130,12 @@ class Base(GObject.GObject):
     def sign(self, data):
         return self._keyChain.sign(data, self._certificateName)
 
-    def expressInterest(self, interest=None, *args, **kwargs):
+    def expressInterest(self, interest=None, name=None, *args, **kwargs):
         if interest is None:
             interest = Interest(self.name)
-        return self._expressInterest(interest, self.name, *args, **kwargs)
+        if name is None:
+            name = self.name
+        return self._expressInterest(interest, name, *args, **kwargs)
 
     def _expressInterest(self, interest, name=None,
                          forever=False, onData=None, onTimeout=None):
