@@ -90,6 +90,7 @@ def main():
 
     batch = Batch(fetchers, "Subscriptions")
     batch.connect('complete', lambda *a: loop.quit())
+    batch.start()
 
     loop.run()
 
