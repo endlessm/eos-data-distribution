@@ -22,7 +22,7 @@ class FileProducer(chunks.Producer):
         self._file_size = get_file_size(self.f)
 
     def _get_final_segment(self):
-        return self._file_size // self.chunk_size
+        return ((self._file_size + self.chunk_size - 1) // self.chunk_size) - 1
 
     def _get_chunk(self, n):
         pos = self.chunk_size * n
