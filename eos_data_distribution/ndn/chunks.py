@@ -30,9 +30,11 @@ logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = 4096
 
+
 def get_chunk_component(name):
     # The chunk component of a name is the last part...
     return name.get(-1)
+
 
 def get_chunkless_name(name):
     # XXX: Use more sophisticated parsing algorithm to strip non-chunk parts.
@@ -45,6 +47,7 @@ def get_chunkless_name(name):
 
 
 class Producer(base.Producer):
+
     def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
         assert(chunk_size > 0)
         self.chunk_size = chunk_size
@@ -139,7 +142,8 @@ class Consumer(base.Consumer):
             try:
                 next_segment = self._segments.index(SegmentState.UNSENT)
             except ValueError as e:
-                # If we have no unsent segments left, then check for completion.
+                # If we have no unsent segments left, then check for
+                # completion.
                 self._check_for_complete()
                 return
 
@@ -195,6 +199,7 @@ class Consumer(base.Consumer):
         self._segments[seg] = SegmentState.COMPLETE
 
         num_complete_segments = self._segments.count(SegmentState.COMPLETE)
-        self.emit('progress', (float(num_complete_segments) / len(self._segments)) * 100)
+        self.emit(
+            'progress', (float(num_complete_segments) / len(self._segments)) * 100)
 
         self._schedule_interests()

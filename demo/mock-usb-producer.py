@@ -37,7 +37,8 @@ if __name__ == '__main__':
     parser.add_argument("dir")
     args = parser.parse_args()
 
-    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=path.realpath(args.dir))
+    store = SimpleStoreProducer(
+        prefix=SUBSCRIPTIONS_SOMA, split=path.realpath(args.dir))
     logger.info('creating store: %s', args.__dict__)
     store.publish_all_names(path.realpath(args.dir))
 

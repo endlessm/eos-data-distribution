@@ -5,12 +5,14 @@ from os import path, utime
 
 from .. import SimpleStore
 
+
 def touch(fname, times=None):
     with open(fname, 'a'):
         utime(fname, times)
 
 
 class TestClass:
+
     @pytest.fixture
     def callback(self):
         return 0

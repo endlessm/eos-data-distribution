@@ -37,6 +37,7 @@ from .parallel import Batch
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class Fetcher(GObject.GObject):
     __gsignals__ = {
         'response': (GObject.SIGNAL_RUN_FIRST, None, (str, )),
@@ -51,8 +52,10 @@ class Fetcher(GObject.GObject):
         self._face = face
         self._store_dir = store_dir
 
-        self._manifest_suffix = 'subscription/%s/manifest.json' % (self.subscription_id)
-        self._manifest_filename = path.join(self._store_dir, self._manifest_suffix)
+        self._manifest_suffix = 'subscription/%s/manifest.json' % (
+            self.subscription_id)
+        self._manifest_filename = path.join(
+            self._store_dir, self._manifest_suffix)
         self._shard_filenames = []
 
     def start(self):
@@ -60,8 +63,10 @@ class Fetcher(GObject.GObject):
         return self
 
     def _fetch_manifest(self):
-        manifest_ndn_name = Name('%s/%s' % (SUBSCRIPTIONS_SOMA, self._manifest_suffix))
-        manifest_consumer = FileConsumer(manifest_ndn_name, self._manifest_filename, auto=True)
+        manifest_ndn_name = Name(
+            '%s/%s' % (SUBSCRIPTIONS_SOMA, self._manifest_suffix))
+        manifest_consumer = FileConsumer(
+            manifest_ndn_name, self._manifest_filename, auto=True)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
 
     def _fetch_manifest_complete(self, consumer):
@@ -70,11 +75,14 @@ class Fetcher(GObject.GObject):
 
         consumers = []
         for shard in manifest['shards']:
-            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append('shard').append(shard['download_uri'])
+            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append(
+                'shard').append(shard['download_uri'])
             escaped_filename = urllib.quote(shard['download_uri'], safe='')
-            shard_filename = path.realpath(path.join(self._store_dir, 'shard', escaped_filename))
+            shard_filename = path.realpath(
+                path.join(self._store_dir, 'shard', escaped_filename))
             self._shard_filenames.append(shard_filename)
-            consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face)
+            consumer = FileConsumer(
+                shard_ndn_name, shard_filename, face=self._face)
             consumers.append(consumer)
             logger.info("Starting consumer: %s", (consumer, ))
 
@@ -94,7 +102,10 @@ class Fetcher(GObject.GObject):
 # The Producer listens for intents to /endless/installed/foo,
 # downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
 # and then generates a "signalling response" for them.
+
+
 class Producer(object):
+
     def __init__(self, store_dir):
         self._store_dir = store_dir
         self._fetchers = {}
@@ -113,7 +124,8 @@ class Producer(object):
             return
 
         fetcher = Fetcher(self._store_dir, subscription_id, face=face)
-        fetcher.connect('response', lambda fetcher, response: self._on_subscription_response(fetcher, interest, response))
+        fetcher.connect('response', lambda fetcher, response:
+                        self._on_subscription_response(fetcher, interest, response))
         self._fetchers[subscription_id] = fetcher
         fetcher.start()
 

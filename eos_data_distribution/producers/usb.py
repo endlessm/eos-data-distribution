@@ -63,7 +63,8 @@ def mount_added_cb(monitor, mount, store):
 def mount_removed_cb(monitor, mount, store):
     root = mount.get_root()
     root_path = root.get_path()
-    removed_names = [store.remove_name(n) for p, n in store.dirpubs.items() if p.startswith(root_path)]
+    removed_names = [store.remove_name(n)
+                     for p, n in store.dirpubs.items() if p.startswith(root_path)]
     logger.debug("Removed names: %s" % removed_names)
     maybe_time_out()
 

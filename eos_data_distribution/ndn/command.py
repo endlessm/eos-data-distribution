@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 
 _commandInterestGenerator = CommandInterestGenerator()
 
+
 class _CommandResponse(object):
+
     """
     A _CommandResponse receives the response Data packet from a
     command interest sent to the connected NDN hub. If this gets a bad
@@ -37,6 +39,7 @@ class _CommandResponse(object):
 
     this is adapted from PyNDN2's _RegisterResponse object
     """
+
     def __init__(self, prefix, onFailed, onSuccess, face):
         self._prefix = prefix
         self._onFailed = onFailed
@@ -50,10 +53,11 @@ class _CommandResponse(object):
         # Decode responseData.getContent() and check for a success code.
         controlResponse = ControlResponse()
         try:
-            controlResponse.wireDecode(responseData.getContent(), TlvWireFormat.get())
+            controlResponse.wireDecode(
+                responseData.getContent(), TlvWireFormat.get())
         except ValueError as ex:
             logger.info(
-              "command failed: Error decoding the NFD response: %s",
+                "command failed: Error decoding the NFD response: %s",
               str(ex))
             try:
                 self._onFailed(self._prefix)
@@ -64,16 +68,17 @@ class _CommandResponse(object):
         # Status code 200 is "OK".
         if controlResponse.getStatusCode() != 200:
             logger.info(
-              "command failed: Expected NFD status code 200, got: %d: %s",
+                "command failed: Expected NFD status code 200, got: %d: %s",
                 controlResponse.getStatusCode(), controlResponse.getStatusText())
             try:
-                if self._onFailed: self._onFailed(self._prefix)
+                if self._onFailed:
+                    self._onFailed(self._prefix)
             except:
                 logging.exception("Error in onFailed")
             return
 
         logger.info(
-          "command succeeded with the NFD forwarder for prefix %s",
+            "command succeeded with the NFD forwarder for prefix %s",
           self._prefix.toUri())
         if self._onSuccess != None:
             try:
@@ -96,6 +101,7 @@ def generateInterest(*args, **kwargs):
     logger.debug("args kwargs: %s %s", args, kwargs)
     _commandInterestGenerator.generate(*args, **kwargs)
 
+
 def dumpControlParameter(cp):
     return ("""
     Control Parameter dump:
@@ -109,23 +115,24 @@ def dumpControlParameter(cp):
     strategy: %s
     expirationPeriod:    %s
 """ % (
-    cp._name,
-    cp._faceId,
-    cp._uri,
-    cp._localControlFeature,
-    cp._origin,
-    cp._cost,
-    cp._forwardingFlags,
-    cp._strategy,
-    cp._expirationPeriod
-))
+            cp._name,
+            cp._faceId,
+            cp._uri,
+            cp._localControlFeature,
+            cp._origin,
+            cp._cost,
+            cp._forwardingFlags,
+            cp._strategy,
+            cp._expirationPeriod
+            ))
+
 
 def makeInterest(cmd, local=True, controlParameters={}, interestLifeTime=None,
                  keyChain=None, certificateName=None):
     assert(cmd.startswith('/'))
 
     commandInterest = Interest()
-    if local: # the values of the timeouts come from the default PyNDN implementation
+    if local:  # the values of the timeouts come from the default PyNDN implementation
         commandInterest.setName(Name("/localhost%s" % cmd))
         # The interest is answered by the local host, so set a short timeout.
         commandInterest.setInterestLifetimeMilliseconds(2000.0)
@@ -133,18 +140,22 @@ def makeInterest(cmd, local=True, controlParameters={}, interestLifeTime=None,
         commandInterest.setName(Name("/localhop%s" % cmd))
         # The host is remote, so set a longer timeout.
         commandInterest.setInterestLifetimeMilliseconds(4000.0)
-    if interestLifeTime: commandInterest.setInterestLifetimeMilliseconds(interestLifeTime)
+    if interestLifeTime:
+        commandInterest.setInterestLifetimeMilliseconds(interestLifeTime)
     # NFD only accepts TlvWireFormat packets.
 
     logger.debug("DUMP: %s", dumpControlParameter(controlParameters))
-    logger.debug("wire encoding: %s", str(controlParameters.wireEncode(TlvWireFormat.get())).encode('quopri'))
+    logger.debug("wire encoding: %s", str(
+        controlParameters.wireEncode(TlvWireFormat.get())).encode('quopri'))
 
-    commandInterest.getName().append(controlParameters.wireEncode(TlvWireFormat.get()))
+    commandInterest.getName().append(
+        controlParameters.wireEncode(TlvWireFormat.get()))
     generateInterest(commandInterest,
                      keyChain, certificateName,
                      TlvWireFormat.get())
 
     return commandInterest
+
 
 def main():
     from gi.repository import GLib
@@ -169,15 +180,24 @@ def main():
     controlParameters = ControlParameters()
 
     name = None
-    if args.name: name = Name(args.name)
-    if args.faceid: controlParameters.setFaceId(args.faceid)
-    if args.uri: controlParameters.setUri(args.uri)
-    if args.local_control_feature: controlParameters.setLocalControlFeature(args.local_control_feature)
-    if args.origin: controlParameters.setOrigin(args.origin)
-    if args.cost: controlParameters.setCost(args.cost)
-    if args.forwarding_flags: controlParameters.setForwardingFlags(args.forwarding_flags)
-    if args.strategy: controlParameters.setStrategy(Name(args.strategy))
-    if args.expiration_period: controlParameters.setExpirationPeriod(args.expiration_period)
+    if args.name:
+        name = Name(args.name)
+    if args.faceid:
+        controlParameters.setFaceId(args.faceid)
+    if args.uri:
+        controlParameters.setUri(args.uri)
+    if args.local_control_feature:
+        controlParameters.setLocalControlFeature(args.local_control_feature)
+    if args.origin:
+        controlParameters.setOrigin(args.origin)
+    if args.cost:
+        controlParameters.setCost(args.cost)
+    if args.forwarding_flags:
+        controlParameters.setForwardingFlags(args.forwarding_flags)
+    if args.strategy:
+        controlParameters.setStrategy(Name(args.strategy))
+    if args.expiration_period:
+        controlParameters.setExpirationPeriod(args.expiration_period)
 
     loop = GLib.MainLoop()
 
@@ -187,10 +207,12 @@ def main():
 
     logger.info('running command: %s on %s', args.command, name)
     ndn = base.Base(name)
-    ndn.expressCommandInterest(args.command, name, controlParameters=controlParameters,
+    ndn.expressCommandInterest(
+        args.command, name, controlParameters=controlParameters,
                                interestLifeTime=10000,
-                               onFailed =  lambda *a: print_and_quit('FAILED: %s', a),
-                               onSuccess = lambda *a: print_and_quit('SUCCESS: %s', a))
+                               onFailed=lambda *
+                                   a: print_and_quit('FAILED: %s', a),
+                               onSuccess=lambda *a: print_and_quit('SUCCESS: %s', a))
     loop.run()
 
 if __name__ == '__main__':

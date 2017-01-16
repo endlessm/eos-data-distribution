@@ -40,11 +40,13 @@ class GLibUnixTransport(UnixTransport):
     _watch_id = 0
 
     def connect(self, connectionInfo, elementListener, onConnected):
-        super(GLibUnixTransport, self).connect(connectionInfo, elementListener, onConnected)
+        super(GLibUnixTransport, self).connect(
+            connectionInfo, elementListener, onConnected)
 
         fd = self._socket.fileno()
         io_channel = GLib.IOChannel.unix_new(fd)
-        self._watch_id = GLib.io_add_watch(io_channel, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self._socket_ready)
+        self._watch_id = GLib.io_add_watch(
+            io_channel, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self._socket_ready)
 
     def _socket_ready(self, channel, cond):
         nBytesRead = self._socket.recv_into(self._buffer)
@@ -64,6 +66,7 @@ class GLibUnixTransport(UnixTransport):
 
 
 class GLibUnixFace(Face):
+
     def __init__(self):
         transport = GLibUnixTransport()
         file_path = self._getUnixSocketFilePathForLocalhost()
@@ -84,6 +87,7 @@ class GLibUnixFace(Face):
 
 def singleton(f):
     instance = [None]
+
     def inner():
         if instance[0] is None:
             instance[0] = f()
@@ -102,12 +106,14 @@ def generate_keys(name):
     try:
         certificateName = keyChain.getDefaultCertificateName()
     except:
-        logger.warning("Could not get default certificate name, creating a new one from %s", name)
+        logger.warning(
+            "Could not get default certificate name, creating a new one from %s", name)
         certificateName = keyChain.createIdentityAndCertificate(name)
     return (keyChain, certificateName)
 
 
 class Base(GObject.GObject):
+
     def __init__(self, name, face=None):
         GObject.GObject.__init__(self)
         self.name = Name(name)
@@ -125,7 +131,8 @@ class Base(GObject.GObject):
         self.pit = dict()
 
     def generateKeys(self, name=None):
-        if not name: name = self.name
+        if not name:
+            name = self.name
         (self._keyChain, self._certificateName) = generate_keys(name)
         self.face.setCommandSigningInfo(self._keyChain, self._certificateName)
 
@@ -139,38 +146,48 @@ class Base(GObject.GObject):
 
     def _expressInterest(self, interest, name=None,
                          forever=False, onData=None, onTimeout=None):
-        if not name: name = self.name
-        if not onData: onData = self._onData
-        if not onTimeout: onTimeout = partial(self.onTimeout,
-                            forever=forever, name=name)
+        if not name:
+            name = self.name
+        if not onData:
+            onData = self._onData
+        if not onTimeout:
+            onTimeout = partial(self.onTimeout,
+                                forever=forever, name=name)
 
         logger.debug("Express Interest name: %s", interest)
-        self.pit[interest] = self.face.expressInterest(interest, onData, onTimeout)
+        self.pit[interest] = self.face.expressInterest(
+            interest, onData, onTimeout)
         return interest
 
     def expressCommandInterest(self, cmd, prefix=None,
                                onFailed=None, onTimeout=None, onSuccess=None,
                                *args, **kwargs):
-        if not prefix and self.name: prefix = self.name
-        if prefix: assert type(prefix) is Name
+        if not prefix and self.name:
+            prefix = self.name
+        if prefix:
+            assert type(prefix) is Name
 
-        interest = self._makeCommandInterest(cmd, prefix=prefix, *args, **kwargs)
+        interest = self._makeCommandInterest(
+            cmd, prefix=prefix, *args, **kwargs)
         node = self.face._node
         response = command._CommandResponse(prefix, face=self.face,
-            onFailed=onFailed, onSuccess=onSuccess)
+                                            onFailed=onFailed, onSuccess=onSuccess)
         return self._expressInterest(interest, prefix,
-                                    onData=response.onData, onTimeout=response.onTimeout)
+                                     onData=response.onData, onTimeout=response.onTimeout)
 
     def _makeCommandInterest(self, cmd, prefix=None, controlParameters=None,
-                            keyChain=None, certificateName=None,
-                            *args, **kwargs):
+                             keyChain=None, certificateName=None,
+                             *args, **kwargs):
 
-        if not controlParameters: controlParameters = ControlParameters()
+        if not controlParameters:
+            controlParameters = ControlParameters()
         if not self._keyChain or not self._certificateName:
             self.generateKeys()
 
-        if not keyChain: keyChain = self._keyChain
-        if not certificateName: certificateName = self._certificateName
+        if not keyChain:
+            keyChain = self._keyChain
+        if not certificateName:
+            certificateName = self._certificateName
 
         controlParameters.setName(prefix)
         return command.makeInterest(cmd, controlParameters=controlParameters,
@@ -195,7 +212,8 @@ class Producer(Base):
         self.generateKeys()
         self._prefixes = dict()
 
-        if auto: self.start()
+        if auto:
+            self.start()
 
     def start(self):
         self.registerPrefix()
@@ -223,23 +241,30 @@ class Producer(Base):
             prefix = self.name
 
         logger.info("Register prefix: %s", prefix)
-        self._prefixes[prefix] = self._registerPrefix(prefix, flags, *args, **kwargs)
+        self._prefixes[prefix] = self._registerPrefix(
+            prefix, flags, *args, **kwargs)
         return prefix
 
     def _registerPrefix(self, prefix, cost=None, controlParameters=None,
-                           onInterest=None, onRegisterFailed=None,
-                           onRegisterSuccess=None,
-                           *args, **kwargs):
+                        onInterest=None, onRegisterFailed=None,
+                        onRegisterSuccess=None,
+                        *args, **kwargs):
         node = self.face._node
         registeredPrefixId = node.getNextEntryId()
 
-        if not cost: cost = self.cost
-        if not onInterest: onInterest = self._onInterest
-        if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
-        if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
+        if not cost:
+            cost = self.cost
+        if not onInterest:
+            onInterest = self._onInterest
+        if not onRegisterFailed:
+            onRegisterFailed = self.onRegisterFailed
+        if not onRegisterSuccess:
+            onRegisterSuccess = self.onRegisterSuccess
 
-        if not controlParameters: controlParameters = ControlParameters()
-        if cost: controlParameters.setCost(int(cost))
+        if not controlParameters:
+            controlParameters = ControlParameters()
+        if cost:
+            controlParameters.setCost(int(cost))
 
         def _addToRegisteredPrefixTable(prefix):
             # Success, so we can add to the registered prefix table.
@@ -251,11 +276,11 @@ class Producer(Base):
                     # InterestFilterEntry.
                     interestFilterId = node.getNextEntryId()
                     node.setInterestFilter(
-                      interestFilterId, InterestFilter(prefix),
+                        interestFilterId, InterestFilter(prefix),
                       onInterest, self.face)
 
                 if not node._registeredPrefixTable.add(
-                      registeredPrefixId, prefix, interestFilterId):
+                        registeredPrefixId, prefix, interestFilterId):
                     # removeRegisteredPrefix was already called with the
                     # registeredPrefixId.
                     if interestFilterId > 0:
@@ -264,7 +289,8 @@ class Producer(Base):
 
                     return
 
-            if onRegisterSuccess: onRegisterSuccess(prefix, registeredPrefixId)
+            if onRegisterSuccess:
+                onRegisterSuccess(prefix, registeredPrefixId)
 
         self.expressCommandInterest('/nfd/rib/register', prefix,
                                     controlParameters=controlParameters,
@@ -288,7 +314,8 @@ class Producer(Base):
             self.face.removeRegisteredPrefix(self._prefixes[name])
             del(self._prefixes[name])
         except:
-            logger.warning("tried to unregister a prefix that never was registered: %s", prefix)
+            logger.warning(
+                "tried to unregister a prefix that never was registered: %s", prefix)
             pass
 
 
@@ -304,7 +331,8 @@ class Consumer(Base):
         #        self.generateKeys()
         self._prefixes = dict()
 
-        if auto: self.start()
+        if auto:
+            self.start()
 
     def start(self):
         self.expressInterest()

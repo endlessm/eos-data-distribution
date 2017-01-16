@@ -28,7 +28,7 @@ try:
     import avahi.ServiceTypeDatabase
     from gi.repository import GObject
 except ImportError as e:
-    logger.error("A required python module is missing!\n%s",e)
+    logger.error("A required python module is missing!\n%s", e)
     sys.exit()
 
 try:
@@ -39,6 +39,7 @@ except ImportError as e:
 
 
 class ServiceTypeDatabase:
+
     def __init__(self):
         self.pretty_name = avahi.ServiceTypeDatabase.ServiceTypeDatabase()
 
@@ -54,7 +55,8 @@ class ServiceDiscovery(GObject.GObject):
         'service-added': (
             GObject.SIGNAL_RUN_FIRST,
             None,
-            # interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags
+            # interface, protocol, name, type, h_type, domain, host, aprotocol,
+            # address, port, txt, flags
             (object, int, str, str, str, str, str, str, str, str, str, str)),
         'service-removed': (
             GObject.SIGNAL_RUN_FIRST,
@@ -74,7 +76,8 @@ class ServiceDiscovery(GObject.GObject):
 
         try:
             self.system_bus = dbus.SystemBus()
-            self.system_bus.add_signal_receiver(self.avahi_dbus_connect_cb, "NameOwnerChanged", "org.freedesktop.DBus", arg0="org.freedesktop.Avahi")
+            self.system_bus.add_signal_receiver(
+                self.avahi_dbus_connect_cb, "NameOwnerChanged", "org.freedesktop.DBus", arg0="org.freedesktop.Avahi")
         except dbus.DBusException as e:
             logger.error("Error Owning name on D-Bus: %s", e)
             sys.exit(1)
@@ -89,7 +92,8 @@ class ServiceDiscovery(GObject.GObject):
             self._stop()
         else:
             logger.info("We are connected to avahi-daemon")
-            if self.started: self._start()
+            if self.started:
+                self._start()
 
     def siocgifname(self, interface):
         if interface <= 0:
@@ -99,36 +103,43 @@ class ServiceDiscovery(GObject.GObject):
 
     def service_resolved(self, interface, protocol, name, type, domain, host, aprotocol, address, port, txt, flags):
         h_type = self.db.get_human_type(type)
-        self.emit('service-added', interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, avahi.txt_array_to_string_array(txt), flags)
+        self.emit(
+            'service-added', interface, protocol, name, type, h_type, domain,
+                  host, aprotocol, address, port, avahi.txt_array_to_string_array(txt), flags)
 
     def service_add(self, interface, protocol, name, type, domain, flags):
         logger.debug("Found service '%s' of type '%s:%s' in domain '%s' on %s.%i." %
-              (name, type, flags, domain, self.siocgifname(interface), avahi.LOOKUP_RESULT_LOCAL))
+                     (name, type, flags, domain, self.siocgifname(interface), avahi.LOOKUP_RESULT_LOCAL))
 
         # this check is for local services
         if flags & avahi.LOOKUP_RESULT_LOCAL:
             logger.debug('Dropping local service')
             return
 
-        self.server.ResolveService(interface, protocol, name, type, domain, avahi.PROTO_INET, dbus.UInt32(0), reply_handler=self.service_resolved, error_handler=logger.error)
+        self.server.ResolveService(interface, protocol, name, type, domain, avahi.PROTO_INET, dbus.UInt32(
+            0), reply_handler=self.service_resolved, error_handler=logger.error)
 
     def service_remove(self, interface, protocol, name, type, domain, flags):
-        self.emit('service-removed', interface, protocol, name, type, domain, flags)
+        self.emit('service-removed', interface,
+                  protocol, name, type, domain, flags)
 
     def already_browsing(self, type):
         return (self.interface, self.protocol, type, self.domain) in self.service_browsers
 
     def add_service_type(self, type):
-        interface, protocol, domain = (self.interface, self.protocol, self.domain)
-        # Are we already browsing this domain for this type? 
+        interface, protocol, domain = (
+            self.interface, self.protocol, self.domain)
+        # Are we already browsing this domain for this type?
         if self.already_browsing(type):
             return
 
         logger.info("Browsing for services of type '%s' in domain '%s' on %s.%i ..." %
-              (type, domain, self.siocgifname(interface), protocol))
+                    (type, domain, self.siocgifname(interface), protocol))
 
-        browser = self.server.ServiceBrowserNew(interface, protocol, type, domain, dbus.UInt32(0))
-        bus = dbus.Interface(self.system_bus.get_object(avahi.DBUS_NAME, browser), avahi.DBUS_INTERFACE_SERVICE_BROWSER)
+        browser = self.server.ServiceBrowserNew(
+            interface, protocol, type, domain, dbus.UInt32(0))
+        bus = dbus.Interface(self.system_bus.get_object(
+            avahi.DBUS_NAME, browser), avahi.DBUS_INTERFACE_SERVICE_BROWSER)
         bus.connect_to_signal('ItemNew', self.service_add)
         bus.connect_to_signal('ItemRemove', self.service_remove)
 
@@ -158,7 +169,8 @@ class ServiceDiscovery(GObject.GObject):
 
     def _start(self):
         try:
-            self.server = dbus.Interface(self.system_bus.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
+            self.server = dbus.Interface(self.system_bus.get_object(
+                avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
         except:
             logger.info("Check that the Avahi daemon is running!")
             return

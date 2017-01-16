@@ -38,9 +38,10 @@ if __name__ == '__main__':
 
     producer = base.Producer(name, cost=args.cost)
     producer.registerPrefix(name,
-                            onRegisterFailed=lambda *a: logger.info('FAILED: %s', a),
-                            onRegisterSuccess=lambda *a: logger.info('SUCCESS: %s', a),
-    )
+                            onRegisterFailed=lambda *
+                            a: logger.info('FAILED: %s', a),
+                            onRegisterSuccess=lambda *
+                            a: logger.info('SUCCESS: %s', a),
+                            )
 
     utils.run_producer_test(producer, name, args)
-
