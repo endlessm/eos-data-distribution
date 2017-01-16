@@ -299,7 +299,7 @@ class Producer(Base):
 
     def onRegisterSuccess(self, prefix, registered):
         self.emit('register-success', prefix, registered)
-        logger.info("Register succeded for prefix: %s, %s", prefix, registered)
+        logger.info("Register succeeded for prefix: %s, %s", prefix, registered)
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
