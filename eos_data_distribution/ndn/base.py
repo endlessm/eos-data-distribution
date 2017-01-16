@@ -160,7 +160,6 @@ class Base(GObject.GObject):
 
         interest = self._makeCommandInterest(
             cmd, prefix=prefix, *args, **kwargs)
-        node = self.face._node
         response = command._CommandResponse(prefix, face=self.face,
                                             onFailed=onFailed, onSuccess=onSuccess)
         return self._expressInterest(interest, prefix,
