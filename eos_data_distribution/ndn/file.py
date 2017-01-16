@@ -96,6 +96,7 @@ def bitmap_to_num(bitmap):
     assert len(bitmap) == 8
     n = 0
     for idx, bit in enumerate(bitmap[::-1]):
+        assert bit in [0, 1]
         n |= bit << idx
     return n
 
