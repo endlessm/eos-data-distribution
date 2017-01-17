@@ -16,7 +16,7 @@ flamegraph () {
 cprofile ()  {
         n=$1
         shift 1
-        echo "python -m cProfile -o $n.cprof $n.py $@"
+        echo "python -m cProfile -o $(basename $n).cprof $n.py $@"
 }
 
 run () {
