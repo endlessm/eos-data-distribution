@@ -48,6 +48,27 @@ def get_chunkless_name(name):
 
 class Producer(base.Producer):
 
+    """
+    Produce chunks of content to send into the NDN network.
+
+    `Producer` is an abstract class which forms the base for all objects which
+    represent chunked content addressable through NDN. It derives from
+    `base.Producer`, which represents all addressable content (which is not
+    necessarily chunked).
+
+    Chunks may also be known as ‘segments’.
+
+    Content is split into one or more chunks of the same size, although the
+    final chunk may be smaller ([1, chunk size] bytes). Chunks are addressed
+    using the final component of the name a client has expressed an interest
+    in. If no chunk is addressed in the final component of the name, `Producer`
+    will return the first chunk of its content.
+
+    See the documentation for ``eos_data_distribution.ndn.base.Producer`` for
+    details on how interests are handled.
+    """
+
+    # FIXME: Should we rename ‘chunks’ to ‘segments’ for consistency?
     def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
         assert(chunk_size > 0)
         self.chunk_size = chunk_size
