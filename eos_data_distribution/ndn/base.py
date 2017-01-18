@@ -76,14 +76,6 @@ class GLibUnixFace(Face):
         self._commandKeyChain = None
         self._commandCertificateName = Name()
 
-    def callLater(self, delayMilliseconds, callback):
-        # Wrapper to ensure we remove the source.
-        def wrap():
-            callback()
-            return GLib.SOURCE_REMOVE
-
-        GLib.timeout_add(delayMilliseconds, wrap)
-
 
 def singleton(f):
     instance = [None]
@@ -118,11 +110,10 @@ class Base(GObject.GObject):
         GObject.GObject.__init__(self)
         self.name = Name(name)
 
-        if face is not None:
-            assert isinstance(face, GLibUnixFace)
-            self.face = face
-        else:
-            self.face = get_default_face()
+        # GLibUnixFace is the only Face implementation to do things in a GLib
+        # main loop, so we require it.
+        self.face = face or get_default_face()
+        assert isinstance(self.face, GLibUnixFace)
 
         self._callbackCount = 0
         self._responseCount = 0
@@ -169,7 +160,6 @@ class Base(GObject.GObject):
 
         interest = self._makeCommandInterest(
             cmd, prefix=prefix, *args, **kwargs)
-        node = self.face._node
         response = command._CommandResponse(prefix, face=self.face,
                                             onFailed=onFailed, onSuccess=onSuccess)
         return self._expressInterest(interest, prefix,
@@ -305,7 +295,7 @@ class Producer(Base):
 
     def onRegisterSuccess(self, prefix, registered):
         self.emit('register-success', prefix, registered)
-        logger.info("Register succeded for prefix: %s, %s", prefix, registered)
+        logger.info("Register succeeded for prefix: %s, %s", prefix, registered)
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)

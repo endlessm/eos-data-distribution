@@ -11,10 +11,12 @@ Build-Depends:
  python-all,
  python-avahi,
  python-dbus,
+ python-docutils,
  python-pyndn,
  python-pytest,
  python-setuptools,
  python-setuptools-git,
+ python-sphinx,
 Standards-Version: 3.9.7
 Testsuite: autopkgtest-pkg-python
 X-Python-Version: >= 2.7

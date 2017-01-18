@@ -89,6 +89,7 @@ class Fetcher(GObject.GObject):
 
         parallel_consumer = Batch(consumers, 'Consumers')
         parallel_consumer.connect('complete', self._on_shards_complete)
+        parallel_consumer.start()
 
     def _on_shards_complete(self, parallel_consumer):
         response = {

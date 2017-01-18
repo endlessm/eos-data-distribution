@@ -94,6 +94,7 @@ setup(
     zip_safe=True,
     setup_requires=[
         'setuptools_git >= 0.3',
+        'sphinx',
     ],
     install_requires=[
         'pyndn >= 2.4b1',
@@ -120,4 +121,11 @@ setup(
     license='LGPLv3+',
     url='https://github.com/endlessm/endless-ndn',
     cmdclass={'test': DiscoverTest},
+    command_options={
+        'build_sphinx': {
+            'project': ('setup.py', project_name),
+            'version': ('setup.py', __version__),
+            'release': ('setup.py', __version__),
+        },
+    },
 )

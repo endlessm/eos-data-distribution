@@ -22,7 +22,7 @@ class FileProducer(chunks.Producer):
         self._file_size = get_file_size(self.f)
 
     def _get_final_segment(self):
-        return self._file_size // self.chunk_size
+        return ((self._file_size + self.chunk_size - 1) // self.chunk_size) - 1
 
     def _get_chunk(self, n):
         pos = self.chunk_size * n
@@ -39,7 +39,7 @@ def mkdir_p(dirname):
         return
 
     try:
-        os.makedirs(dirname)
+        os.makedirs(dirname, 0o755)
     except OSError as exc:
         if exc.errno == errno.EEXIST and os.path.isdir(dirname):
             pass
@@ -96,6 +96,7 @@ def bitmap_to_num(bitmap):
     assert len(bitmap) == 8
     n = 0
     for idx, bit in enumerate(bitmap[::-1]):
+        assert bit in [0, 1]
         n |= bit << idx
     return n
 
@@ -108,9 +109,11 @@ class FileConsumer(chunks.Consumer):
 
         self._part_filename = '%s.part' % (self._filename, )
         self._part_fd = os.open(
-            self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK)
+            self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK,
+            0o600)
         self._sgt_filename = '%s.sgt' % (self._filename, )
-        self._sgt_fd = os.open(self._sgt_filename, os.O_CREAT | os.O_RDWR)
+        self._sgt_fd = os.open(self._sgt_filename, os.O_CREAT | os.O_RDWR,
+                               0o600)
 
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
@@ -267,6 +270,7 @@ class FileConsumer(chunks.Consumer):
         os.close(self._part_fd)
         os.close(self._sgt_fd)
         os.rename(self._part_filename, self._filename)
+        os.chmod(self._filename, 0o644)
         os.unlink(self._sgt_filename)
         super(FileConsumer, self)._on_complete()
 
