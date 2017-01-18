@@ -18,8 +18,9 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import errno
-import os
 import json
+import logging
+import os
 from shutil import copyfile
 from os import path
 
@@ -36,6 +37,8 @@ from pyndn import Name, Face, Interest
 
 from eos_data_distribution.ndn import Consumer
 from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
+
+logging.basicConfig(level=logging.INFO)
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
