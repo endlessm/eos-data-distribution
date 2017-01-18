@@ -307,7 +307,7 @@ class Producer(Base):
 class Consumer(Base):
     __gsignals__ = {
         'data': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
-        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
+        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, bool)),
     }
 
     def __init__(self, name=None, *args, **kwargs):
@@ -330,7 +330,7 @@ class Consumer(Base):
     def onTimeout(self, interest, forever=False):
         name = interest.getName()
         self._callbackCount += 1
-        self.emit('interest-timeout', interest)
+        self.emit('interest-timeout', interest, forever)
         logger.debug("Time out for interest: %s", name)
         if forever:
             logger.info("Re-requesting Interest: %s", name)
