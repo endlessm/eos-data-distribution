@@ -87,7 +87,7 @@ def singleton(f):
     return inner
 
 
-@singleton
+#@singleton
 def get_default_face():
     return GLibUnixFace()
 
