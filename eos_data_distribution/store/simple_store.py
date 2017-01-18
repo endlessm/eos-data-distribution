@@ -42,8 +42,7 @@ class Producer(object):
         self.dirs = dict()
         self.dirpubs = defaultdict(lambda: {})
 
-        if base:
-            self.publish_all_names(base)
+        self.publish_all_names(self.base)
 
     def _path_to_name(self, filename):
         assert filename.startswith(self.base)
