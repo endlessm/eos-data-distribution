@@ -76,6 +76,17 @@ class GLibUnixFace(Face):
         self._commandKeyChain = None
         self._commandCertificateName = Name()
 
+    @property
+    def usesGLibMainContext(self):
+        """
+        Indicator that this Face implementation uses a GLib main context.
+
+        This means it can be safely used in situations where the main context
+        is the poll implementation, and progress would not be made otherwise
+        without calling ``Face.processEvents()``.
+        """
+        return True
+
 
 def singleton(f):
     instance = [None]
@@ -113,7 +124,7 @@ class Base(GObject.GObject):
         # GLibUnixFace is the only Face implementation to do things in a GLib
         # main loop, so we require it.
         self.face = face or get_default_face()
-        assert isinstance(self.face, GLibUnixFace)
+        assert getattr(self.face, 'usesGLibMainContext', False)
 
         self._callbackCount = 0
         self._responseCount = 0
