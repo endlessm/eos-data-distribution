@@ -28,7 +28,8 @@ from ..ndn.file import FileProducer
 class Producer(object):
     def __init__(self, base=None, prefix='/',
                  exts=('.shard', '.json'), split=None, cost=None):
-        self.base = path.realpath(base)
+        base = path.realpath(base)
+        self.base = base
         self.exts = exts
         self.split = split or base
         self.prefix = prefix
