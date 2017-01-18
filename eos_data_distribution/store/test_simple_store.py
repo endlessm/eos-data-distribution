@@ -3,7 +3,7 @@ import time
 
 from os import path, utime
 
-from .. import simple_store
+from eos_data_distribution.store import simple_store
 
 
 def touch(fname, times=None):
