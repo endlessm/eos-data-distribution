@@ -135,11 +135,11 @@ def makeInterest(cmd, local=True, controlParameters={}, interestLifeTime=None,
     if local:  # the values of the timeouts come from the default PyNDN implementation
         commandInterest.setName(Name("/localhost%s" % cmd))
         # The interest is answered by the local host, so set a short timeout.
-        commandInterest.setInterestLifetimeMilliseconds(2000.0)
+        commandInterest.setInterestLifetimeMilliseconds(4000.0)
     else:
         commandInterest.setName(Name("/localhop%s" % cmd))
         # The host is remote, so set a longer timeout.
-        commandInterest.setInterestLifetimeMilliseconds(4000.0)
+        commandInterest.setInterestLifetimeMilliseconds(8000.0)
     if interestLifeTime:
         commandInterest.setInterestLifetimeMilliseconds(interestLifeTime)
     # NFD only accepts TlvWireFormat packets.
