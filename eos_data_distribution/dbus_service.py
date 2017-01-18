@@ -22,8 +22,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 import errno
-import os
 import json
+import logging
+import os
 from shutil import copyfile
 from os import path
 
@@ -40,6 +41,8 @@ from pyndn import Name, Face, Interest
 
 from eos_data_distribution.ndn import Consumer
 from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
+
+logging.basicConfig(level=logging.INFO)
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
