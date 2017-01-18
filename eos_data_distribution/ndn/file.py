@@ -275,8 +275,6 @@ class Consumer(chunks.Consumer):
 
 class FileConsumer(Consumer):
 
-    """Write to a File"""
-
     def __init__(self, name, filename, *args, **kwargs):
         self._create_files(filename)
 
@@ -284,8 +282,6 @@ class FileConsumer(Consumer):
 
 
 class DirConsumer(Consumer):
-
-    """Write to a Directory routing the name"""
 
     def __init__(self, name, dirname, *args, **kwargs):
         mkdir_p(dirname)
