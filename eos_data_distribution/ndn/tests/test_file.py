@@ -30,6 +30,10 @@ from eos_data_distribution.ndn import file, chunks
 from gi.repository import GObject
 import logging
 import os
+from pyndn.data import Data
+from pyndn.meta_info import MetaInfo
+from pyndn.name import Name
+from pyndn.util.blob import Blob
 import shutil
 import tempfile
 import unittest
@@ -42,6 +46,7 @@ class TestFileProducer(unittest.TestCase):
 
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
+        print('Test directory: %s' % self.test_dir)
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
@@ -135,6 +140,317 @@ class TestSegmentTable(unittest.TestCase):
             file.bitmap_to_num([0, 0, 0, 0, 0, 0, 0, 0, 0])
         with self.assertRaises(AssertionError) as e:
             file.bitmap_to_num([0, 0, 0, 0, 0, 0, 0, 2])
+
+
+class MockFace(object):
+
+    """
+    Mock Face implementation for the purposes of testing base classes.
+
+    This is a mock implementation of ``pyndn.face.Face`` which does no network
+    communications, but looks like a ``Face`` implementation through duck
+    typing.
+
+    It records the interests expressed to it, and allows the test harness to
+    reply to those interests with data (``callInterestDone()``) or a timeout
+    (``callInterestTimeout()``).
+
+    It exposes two sets of API: the public API for ``Face``, and the test
+    harness API.
+    """
+
+    def __init__(self):
+        # dict mapping name to (Interest, onData, onTimeout) tuple
+        self._interests = {}
+
+    # Public API to emulate Face.
+
+    def removePendingInterest(self, name):
+        raise NotImplementedError('Not implemented in MockFace yet')
+
+    @property
+    def usesGLibMainContext(self):
+        return True
+
+    def setCommandSigningInfo(self, key_chain, certificate_name):
+        raise NotImplementedError('Not implemented in MockFace yet')
+
+    def expressInterest(self, interest, on_data, on_timeout):
+        self._interests[str(interest.getName())] = \
+            (interest, on_data, on_timeout)
+        return interest
+
+    @property
+    def isLocal(self):
+        raise NotImplementedError('Not implemented in MockFace yet')
+        return True
+
+    # Test-facing API for mocking things.
+
+    def getInterest(self, name):
+        # Interests are stored as a tuple:
+        # (Interest object, onDone callback, onTimeout callback)
+        return self._interests[name]
+
+    def removeInterest(self, name):
+        del(self._interests[name])
+
+    def callInterestDone(self, name, data):
+        """Call the user’s onDone callback and remove the named segment."""
+        (interest, on_done, _) = self.getInterest(name)
+        self.removeInterest(name)
+        on_done(interest, data)
+
+    def callInterestTimeout(self, name):
+        """Call the user’s onTimeout callback and remove the named segment."""
+        (interest, _, on_timeout) = self.getInterest(name)
+        self.removeInterest(name)
+        on_timeout(interest)
+
+    def getInterestNames(self):
+        """Return names of current interests as strings."""
+        return set(self._interests.keys())
+
+
+class TestDirConsumer(unittest.TestCase):
+    """Test file downloading using the DirConsumer class."""
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        print('Test directory: %s' % self.test_dir)
+
+        # Set by _on_interest_timeout().
+        self._timed_out_interest = None
+        self._timed_out_try_again = False
+
+    def tearDown(self):
+        # FIXME: Ideally we would only remove the test_dir if the test was
+        # successful, but that’s very hard to figure out.
+        shutil.rmtree(self.test_dir)
+        pass
+
+    def assertFaceNamesEqual(self, face, names):
+        """Assert the face contains interests for exactly the given names."""
+        self.assertEqual(face.getInterestNames(), set(names))
+
+    def build_paths(self, filename):
+        """Build the filenames of the temporary files used by DirConsumer."""
+        path = os.path.join(self.test_dir, filename)
+        part_path = os.path.join(self.test_dir, filename + '.part')
+        segment_path = os.path.join(self.test_dir, filename+ '.sgt')
+
+        return (path, part_path, segment_path)
+
+    @staticmethod
+    def build_segment(name, segment_id, n_segments, segment_size=4096,
+                      raw_content=None):
+        """
+        Build a ``pyndn.data.Data`` instance for the given segment.
+
+        If `raw_content` is not provided, the segment will be filled with
+        `segment_size` copies of the first digit of `segment_id` as an ASCII
+        string.
+
+        The final block ID is always set on the returned ``Data``.
+        """
+        metainfo = MetaInfo()
+        metainfo.setFinalBlockId(
+            Name.Component.fromNumberWithMarker(n_segments - 1, 0))
+
+        data = Data()
+        data.setName(Name(name).appendSegment(segment_id))
+        if raw_content is None:
+            raw_content = str(segment_id)[:1] * segment_size
+        data.setContent(Blob(raw_content, False))
+        data.setMetaInfo(metainfo)
+
+        return data
+
+    def _on_interest_timeout(self, consumer, interest, try_again):
+        """Callback for Consumer.interest-timeout to capture its arguments."""
+        self.assertIsNone(self._timed_out_interest)
+        self._timed_out_interest = interest
+        self._timed_out_try_again = try_again
+
+    def assertInterestTimedOut(self, name):
+        """
+        Assert that we have received an interest-timeout signal.
+
+        Aborts if we have not. Returns the value of try_again otherwise.
+
+        To use this you must have connected ``_on_interest_timeout()`` to the
+        ``Consumer.interest-timeout`` signal using:
+
+            $ consumer.connect('interest-timeout', self._on_interest_timeout)
+        """
+        self.assertIsNotNone(self._timed_out_interest)
+        self.assertEqual(str(self._timed_out_interest.getName()), name)
+        try_again = self._timed_out_try_again
+
+        self._timed_out_interest = None
+        self._timed_out_try_again = False
+
+        return try_again
+
+    def assertFileExists(self, path):
+        self.assertTrue(os.path.exists(path),
+                        "File ‘%s’ does not exist when it should" % path)
+
+    def assertNotFileExists(self, path):
+        self.assertFalse(os.path.exists(path),
+                         "File ‘%s’ exists when it should not" % path)
+
+    def assertDownloadCompleted(self, filename):
+        """
+        Assert the download is complete for filename.
+
+        Check that the file exists (but don’t check its contents), and that
+        the part and segment files have been removed.
+        """
+        (path, part_path, segment_path) = self.build_paths(filename)
+
+        self.assertFileExists(path)
+        self.assertNotFileExists(part_path)
+        self.assertNotFileExists(segment_path)
+
+    def test_single_segment(self):
+        """Test chunking works for a single segment file."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create a new consumer requesting file-name.
+        face = MockFace()
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Return the file’s only segment to the consumer.
+        raw_content = 'some content'
+        data = TestDirConsumer.build_segment('/file-name', 0, 1,
+                                             raw_content=raw_content)
+
+        face.callInterestDone('/file-name', data)
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents.
+        with open(path, 'r') as f:
+            self.assertEqual(f.read(), raw_content)
+
+    def test_multiple_segments(self):
+        """Test chunking works for a multi-segment file."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create a new consumer requesting file-name.
+        # Set the pipeline to something massive so we don’t have to worry about
+        # hitting it here. We test the pipeline in other tests.
+        face = MockFace()
+        segment_size=4096  # bytes
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face,
+                                    pipeline=100, chunk_size=segment_size)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Build the segments in advance.
+        n_segments = 10
+        segments = [TestDirConsumer.build_segment('/file-name', i, n_segments,
+                                                  segment_size=segment_size)
+                    for i in range(0, n_segments)]
+
+        # Return the file’s first segment to the consumer; we expect it should
+        # now express an interest in the file’s other segments.
+        face.callInterestDone('/file-name', segments[0])
+
+        remaining_segments = [
+            '/file-name/%00%01',
+            '/file-name/%00%02',
+            '/file-name/%00%03',
+            '/file-name/%00%04',
+            '/file-name/%00%05',
+            '/file-name/%00%06',
+            '/file-name/%00%07',
+            '/file-name/%00%08',
+            '/file-name/%00%09',
+        ]
+        self.assertFaceNamesEqual(face, remaining_segments)
+
+        # The download should not have completed yet.
+        self.assertNotFileExists(path)
+
+        # Return the other segments in order. We don’t expect it should
+        # express any other interests.
+        for i in range(1, n_segments):
+            face.callInterestDone(remaining_segments[i - 1], segments[i])
+
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents. It should be a n_segments * 4096-byte
+        # file, with each 4096-byte chunk being its index repeated. i.e.
+        # 000…111…222…
+        with open(path, 'r') as f:
+            for i in range(0, n_segments):
+                self.assertEqual(f.read(segment_size),
+                                 str(i)[:1] * segment_size)
+            self.assertEqual(f.read(), '')  # EOF
+
+    def test_single_segment_timeout(self):
+        """Test chunking works for a single segment file which times out."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create a new consumer requesting file-name.
+        face = MockFace()
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face)
+        consumer.connect('interest-timeout', self._on_interest_timeout)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Time out the segment request a few times.
+        for i in range(0, 10):
+            face.callInterestTimeout('/file-name')
+            try_again = self.assertInterestTimedOut('/file-name')
+            self.assertTrue(try_again)
+            self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Now reply successfully to the request.
+        raw_content = 'some content'
+        data = TestDirConsumer.build_segment('/file-name', 0, 1,
+                                             raw_content=raw_content)
+
+        face.callInterestDone('/file-name', data)
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents.
+        with open(path, 'r') as f:
+            self.assertEqual(f.read(), raw_content)
+
+
+# TODO: More tests:
+#  - Requests timing out for a multi-request file
+#  - Requests arriving in different orders
+#  - Duplicated requests
+#  - Non-requested names turning up
+#  - Pipelining in chunks.Consumer
+#  - NACKs: before and after receiving
+#  - I/O errors: files already exist, part file exists but others don’t, etc.
+#  - Locking?
 
 
 if __name__ == '__main__':
