@@ -173,7 +173,7 @@ class Consumer(base.Consumer):
     def _request_segment(self, n):
         ndn_name = Name(self._qualified_name).appendSegment(n)
         logger.debug('is this an interest ? %s', ndn_name)
-        self.expressInterest(ndn_name, forever=True)
+        self.expressInterest(Interest(ndn_name), forever=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING
         self._num_outstanding_interests += 1

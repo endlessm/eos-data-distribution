@@ -130,22 +130,17 @@ class Base(GObject.GObject):
     def sign(self, data):
         return self._keyChain.sign(data, self._certificateName)
 
-    def expressInterest(self, interest=None, name=None, *args, **kwargs):
+    def expressInterest(self, interest=None, *args, **kwargs):
         if interest is None:
             interest = Interest(self.name)
-        if name is None:
-            name = self.name
-        return self._expressInterest(interest, name, *args, **kwargs)
+        return self._expressInterest(interest, *args, **kwargs)
 
-    def _expressInterest(self, interest, name=None,
-                         forever=False, onData=None, onTimeout=None):
-        if not name:
-            name = self.name
+    def _expressInterest(self, interest, forever=False,
+                         onData=None, onTimeout=None):
         if not onData:
             onData = self._onData
         if not onTimeout:
-            onTimeout = partial(self.onTimeout,
-                                forever=forever, name=name)
+            onTimeout = partial(self.onTimeout, forever=forever)
 
         logger.debug("Express Interest name: %s", interest)
         self.pit[interest] = self.face.expressInterest(
@@ -297,7 +292,8 @@ class Producer(Base):
 
     def onRegisterSuccess(self, prefix, registered):
         self.emit('register-success', prefix, registered)
-        logger.info("Register succeeded for prefix: %s, %s", prefix, registered)
+        logger.info(
+            "Register succeeded for prefix: %s, %s", prefix, registered)
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
@@ -337,10 +333,11 @@ class Consumer(Base):
         self.face.removePendingInterest(self.pit[name])
         del self.pit[name]
 
-    def onTimeout(self, interest, forever=False, name=None):
+    def onTimeout(self, interest, forever=False):
+        name = interest.getName()
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
-        logger.debug("Time out for interest: %s", interest.getName())
+        logger.debug("Time out for interest: %s", name)
         if forever:
             logger.info("Re-requesting Interest: %s", name)
-            self._expressInterest(interest, name=name, forever=forever)
+            self._expressInterest(interest, forever=forever)
