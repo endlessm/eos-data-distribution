@@ -115,9 +115,11 @@ class Getter(object):
 
 class Producer(chunks.Producer):
     def __init__(self, name, url, session=None, *args, **kwargs):
-        super(Producer, self).__init__(name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
         self._getter = Getter(url, session=session, chunk_size=self.chunk_size,
                               onData=lambda d: self.sendFinish(d))
+
+        super(Producer, self).__init__(name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
+
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size
