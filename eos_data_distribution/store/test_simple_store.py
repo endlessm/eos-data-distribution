@@ -20,6 +20,7 @@ class TestClass:
     def test_producer(self, tmpdir):
         d = tmpdir.mkdir("ndn")
         p = simple_store.Producer(base=d)
+        p.start()
         tmpdirpath = str(d.realpath())
         tmpfilepath = path.join(tmpdirpath, 'test.shard')
 
