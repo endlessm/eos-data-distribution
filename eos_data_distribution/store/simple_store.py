@@ -30,12 +30,11 @@ logger = logging.getLogger(__name__)
 
 class Producer(object):
 
-    def __init__(self, base=None, prefix='/',
-                 exts=('.shard', '.json'), split=None, cost=None):
-
+    def __init__(self, base, prefix='/',
+                 exts=('.shard', '.json'), cost=None):
+        assert base
         self.base = path.realpath(base)
         self.exts = exts
-        self.split = split or base
         self.prefix = prefix
         self.cost = cost
 
