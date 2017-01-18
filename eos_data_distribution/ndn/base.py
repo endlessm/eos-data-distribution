@@ -141,8 +141,7 @@ class Base(GObject.GObject):
                          forever=False, onData=None, onTimeout=None):
         if not name: name = self.name
         if not onData: onData = self._onData
-        if not onTimeout: onTimeout = partial(self.onTimeout,
-                            forever=forever, name=name)
+        if not onTimeout: onTimeout = partial(self.onTimeout, forever=forever)
 
         logger.debug("Express Interest name: %s", interest)
         self.pit[interest] = self.face.expressInterest(interest, onData, onTimeout)
@@ -317,10 +316,10 @@ class Consumer(Base):
         self.face.removePendingInterest(self.pit[name])
         del self.pit[name]
 
-    def onTimeout(self, interest, forever=False, name=None):
+    def onTimeout(self, interest, forever=False):
         self._callbackCount += 1
         self.emit('interest-timeout', interest)
         logger.debug("Time out for interest: %s", interest.getName())
         if forever:
-            logger.info("Re-requesting Interest: %s", name)
-            self._expressInterest(interest, name=name, forever=forever)
+            logger.info("Re-requesting Interest: %s", interest.getName())
+            self._expressInterest(interest, forever=forever)
