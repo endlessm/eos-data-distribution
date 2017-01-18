@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
 Name=Soy502 Updater
-Exec=dbus-send --session --type=method_call --dest=com.endlessm.EknSubscriptionsDownloader /com/endlessm/EknSubscriptionsDownloader com.endlessm.EknSubscriptionsDownloader.DownloadSubscription string:cb040a5004342a3e6fbbe38d4933b3517e8ca5e79b0f5efa3329d503490c506d
+Exec=gdbus call --session --dest=com.endlessm.EknSubscriptionsDownloader --object-path=/com/endlessm/EknSubscriptionsDownloader --method=com.endlessm.EknSubscriptionsDownloader.DownloadSubscription cb040a5004342a3e6fbbe38d4933b3517e8ca5e79b0f5efa3329d503490c506d
 Icon=software-update-available
 Terminal=false
