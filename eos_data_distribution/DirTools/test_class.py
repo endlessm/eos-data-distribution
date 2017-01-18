@@ -7,6 +7,7 @@ ITER_COUNT = 10
 
 
 class TestClass:
+
     @pytest.mark.timeout(timeout=3, method='thread')
     def test_0(self, tmpdir):
         loop = GLib.MainLoop()

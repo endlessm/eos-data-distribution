@@ -21,6 +21,7 @@
 import argparse
 import logging
 
+
 def process_args(parser):
     parser.add_argument("-v", action="count")
 
@@ -31,4 +32,3 @@ def process_args(parser):
         logging.basicConfig(level=logging.INFO)
 
     return args
-

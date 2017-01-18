@@ -26,6 +26,7 @@ from ..ndn.file import FileProducer
 
 
 class Producer(object):
+
     def __init__(self, base=None, prefix='/',
                  exts=('.shard', '.json'), split=None, cost=None):
         self.base = path.realpath(base)
@@ -38,7 +39,8 @@ class Producer(object):
         self.dirs = dict()
         self.dirpubs = defaultdict(lambda: {})
 
-        if base: self.publish_all_names(base)
+        if base:
+            self.publish_all_names(base)
 
     def _path_to_name(self, filename):
         assert filename.startswith(self.base)
@@ -80,7 +82,8 @@ class Producer(object):
     def publish_all_names(self, basedir):
         self.walk_dir(basedir)
         monitor = Monitor(basedir)
-        [monitor.connect(s, self._publish_name, basedir) for s in ['created', 'moved-in', 'renamed']]
-        [monitor.connect(s, self._unpublish_name, basedir) for s in ['moved-out', 'renamed']]
+        [monitor.connect(s, self._publish_name, basedir)
+         for s in ['created', 'moved-in', 'renamed']]
+        [monitor.connect(s, self._unpublish_name, basedir)
+         for s in ['moved-out', 'renamed']]
         self.dirs[basedir] = monitor
-

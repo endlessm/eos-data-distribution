@@ -24,6 +24,7 @@ from gi.repository import GObject
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class Batch(GObject.GObject):
     __gsignals__ = {
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),

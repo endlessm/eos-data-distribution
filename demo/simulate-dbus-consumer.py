@@ -35,7 +35,9 @@ from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_S
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class DbusConsumer(Consumer):
+
     def __init__(self, name, target, appids, *args, **kwargs):
         Consumer.__init__(self, name=name, *args, **kwargs)
 

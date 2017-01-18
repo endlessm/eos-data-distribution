@@ -1,11 +1,13 @@
 from gi.repository import Gio
 from gi.repository import GObject
 
-EventToSignal = {Gio.FileMonitorEvent.__dict__[i]: i.lower().replace('_', '-') for i in Gio.FileMonitorEvent.__dict__ if not i.startswith('__')}
+EventToSignal = {Gio.FileMonitorEvent.__dict__[i]: i.lower().replace('_', '-')
+                 for i in Gio.FileMonitorEvent.__dict__ if not i.startswith('__')}
 
 
 class Monitor(GObject.GObject):
-    __gsignals__ = {v: (GObject.SIGNAL_RUN_FIRST, None, (str, object, object, object, object, object)) for k, v in EventToSignal.items()}
+    __gsignals__ = {v: (GObject.SIGNAL_RUN_FIRST, None, (str, object, object, object, object, object))
+                    for k, v in EventToSignal.items()}
 
     def __init__(self, dir, flags=Gio.FileMonitorFlags.NONE, userdata=None):
         GObject.GObject.__init__(self)
@@ -14,11 +16,13 @@ class Monitor(GObject.GObject):
         self.monitors = dict()
         f = Gio.file_new_for_path(dir)
         if not self.isDir(f):
-            raise ValueError('Asked to monitor something that is not a dir: %s' % (dir, ))
+            raise ValueError(
+                'Asked to monitor something that is not a dir: %s' % (dir, ))
         self.monitorAll(f)
 
     def monitorAll(self, f):
-        if not self.monitor(f): return
+        if not self.monitor(f):
+            return
         for i in f.enumerate_children("", Gio.FileQueryInfoFlags.NONE, None):
             self.monitorAll(f.get_child(i.get_name()))
 
@@ -26,7 +30,8 @@ class Monitor(GObject.GObject):
         return f.query_file_type(Gio.FileQueryInfoFlags.NONE) == Gio.FileType.DIRECTORY
 
     def monitor(self, f):
-        if not self.isDir(f): return None
+        if not self.isDir(f):
+            return None
         try:
             return self.monitors[f.get_path()]
         except:
@@ -47,7 +52,8 @@ class Monitor(GObject.GObject):
         except:
             pass
 
-        if o: f = o
+        if o:
+            f = o
         return self.monitorAll(f)
 
 

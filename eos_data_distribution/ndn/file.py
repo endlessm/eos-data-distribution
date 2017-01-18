@@ -14,6 +14,7 @@ def get_file_size(f):
 
 
 class FileProducer(chunks.Producer):
+
     def __init__(self, name, file, *args, **kwargs):
         super(FileProducer, self).__init__(name, *args, **kwargs)
         self.name = name
@@ -82,11 +83,15 @@ def mkdir_p(dirname):
 SEGMENT_TABLE_MAGIC = 'EosSgtV1'
 
 # 7 => [0, 0, 0, 0, 0, 1, 1, 1]
+
+
 def num_to_bitmap(n):
     assert 0 <= n <= 255
     return [int(c) for c in list(bin(n)[2:].zfill(8))]
 
 # [0, 0, 0, 0, 0, 1, 1, 1] -> 7
+
+
 def bitmap_to_num(bitmap):
     assert len(bitmap) == 8
     n = 0
@@ -94,13 +99,16 @@ def bitmap_to_num(bitmap):
         n |= bit << idx
     return n
 
+
 class FileConsumer(chunks.Consumer):
+
     def __init__(self, name, filename, *args, **kwargs):
         self._filename = filename
         mkdir_p(os.path.dirname(self._filename))
 
         self._part_filename = '%s.part' % (self._filename, )
-        self._part_fd = os.open(self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK)
+        self._part_fd = os.open(
+            self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK)
         self._sgt_filename = '%s.sgt' % (self._filename, )
         self._sgt_fd = os.open(self._sgt_filename, os.O_CREAT | os.O_RDWR)
 
@@ -138,7 +146,7 @@ class FileConsumer(chunks.Consumer):
         # Reserve space for the full file...
         try:
             fallocate.fallocate(self._part_fd, 0, self._size)
-        except IOError as e: # if it fails, we might get surprises later, but it's ok.
+        except IOError as e:  # if it fails, we might get surprises later, but it's ok.
             pass
 
     def _read_segment_table(self):
@@ -154,7 +162,8 @@ class FileConsumer(chunks.Consumer):
         except OSError as e:
             raise ValueError()
 
-        # If there's no magic, then the file is busted, and we have no state to update.
+        # If there's no magic, then the file is busted, and we have no state to
+        # update.
         if magic != SEGMENT_TABLE_MAGIC:
             return
 
@@ -173,13 +182,15 @@ class FileConsumer(chunks.Consumer):
                 completed_segments += num_to_bitmap(byte)
 
             segments = completed_segments[:num_segments]
-            self._segments = [SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
+            self._segments = [
+                SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
 
         def read_mode1():
             num_segments = read8()
             num_complete_segments = read8()
             num_unsent_segments = num_segments - num_complete_segments
-            segments = ([SegmentState.COMPLETE] * num_complete_segments) + ([SegmentState.UNSENT] * num_unsent_segments)
+            segments = ([SegmentState.COMPLETE] * num_complete_segments) + (
+                [SegmentState.UNSENT] * num_unsent_segments)
 
             num_holes = read8()
             for i in range(num_holes):
@@ -216,8 +227,9 @@ class FileConsumer(chunks.Consumer):
             write8(len(self._segments))
 
             for i in range(0, len(self._segments), 8):
-                segments = self._segments[i:i+8]
-                bitmap = [1 if state == SegmentState.COMPLETE else 0 for state in segments]
+                segments = self._segments[i:i + 8]
+                bitmap = [
+                    1 if state == SegmentState.COMPLETE else 0 for state in segments]
                 bitmap = (bitmap + [0] * 8)[:8]
                 byte = bitmap_to_num(bitmap)
 
@@ -230,7 +242,8 @@ class FileConsumer(chunks.Consumer):
                 first_unsent_index = len(self._segments)
 
             unsent_segments = self._segments[first_unsent_index:]
-            # Make sure there are no complete and outgoing segments past the first unsent one...
+            # Make sure there are no complete and outgoing segments past the
+            # first unsent one...
             assert unsent_segments.count(SegmentState.COMPLETE) == 0
             assert unsent_segments.count(SegmentState.OUTGOING) == 0
 
@@ -239,7 +252,8 @@ class FileConsumer(chunks.Consumer):
             write8(num_complete_segments)
 
             complete_segments = self._segments[:num_complete_segments]
-            hole_indexes = [i for i, state in enumerate(complete_segments) if state == SegmentState.OUTGOING]
+            hole_indexes = [i for i, state in enumerate(
+                complete_segments) if state == SegmentState.OUTGOING]
             write8(len(hole_indexes))
             for hole_index in hole_indexes:
                 write8(hole_index)
@@ -266,4 +280,3 @@ if __name__ == '__main__':
 
     producer = Producer(name=name, file=args.filename)
     util.run_producer_test(producer, name, args)
-

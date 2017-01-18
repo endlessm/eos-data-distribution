@@ -25,7 +25,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 # all this because we can't call parse_args twice...
+
+
 class ArgParseWrapper(object):
+
     def __init__(self, *args, **kwargs):
         self.parser = argparse.ArgumentParser(*args, **kwargs)
 
@@ -40,12 +43,14 @@ class ArgParseWrapper(object):
             logging.basicConfig(level=logging.DEBUG)
         return args
 
+
 def process_args(description=None, *args, **kwargs):
     parser = ArgParseWrapper(description)
     parser.add_argument("-n", "--name")
     parser.add_argument("-v", action="count")
 
     return parser
+
 
 def run_producer_test(producer, name, args):
     loop = GLib.MainLoop()
@@ -56,4 +61,3 @@ def run_producer_test(producer, name, args):
         consumer = file.FileConsumer(name, filename=args.output, auto=True)
         consumer.connect('complete', lambda *a: loop.quit())
     loop.run()
-
