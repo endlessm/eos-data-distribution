@@ -234,6 +234,13 @@ class Producer(Base):
                         onInterest=None, onRegisterFailed=None,
                         onRegisterSuccess=None,
                         *args, **kwargs):
+        return self.face.registerPrefix(prefix, onInterest, onRegisterFailed, onRegisterSuccess)
+
+    def _registerPrefixCommand(self, prefix, cost=None, controlParameters=None,
+                        onInterest=None, onRegisterFailed=None,
+                        onRegisterSuccess=None,
+                        *args, **kwargs):
+
         node = self.face._node
         registeredPrefixId = node.getNextEntryId()
 
