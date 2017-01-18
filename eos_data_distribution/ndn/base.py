@@ -191,16 +191,13 @@ class Producer(Base):
         'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
     }
 
-    def __init__(self, name=None, cost=None, auto=False, *args, **kwargs):
+    def __init__(self, name=None, cost=None, *args, **kwargs):
         self.cost = cost
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
 
         self.generateKeys()
         self._prefixes = dict()
-
-        if auto:
-            self.start()
 
     def start(self):
         self.registerPrefix()
@@ -313,14 +310,11 @@ class Consumer(Base):
         'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
     }
 
-    def __init__(self, name=None, auto=False, *args, **kwargs):
+    def __init__(self, name=None, *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
         #        self.generateKeys()
         self._prefixes = dict()
-
-        if auto:
-            self.start()
 
     def start(self):
         self.expressInterest()

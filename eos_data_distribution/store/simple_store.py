@@ -72,7 +72,8 @@ class Producer(object):
 
         name = self._path_to_name(filename)
         file = open(filename, 'rb')
-        producer = FileProducer(name, file, cost=self.cost, auto=True)
+        producer = FileProducer(name, file, cost=self.cost)
+        producer.start()
         self.dirpubs[basedir].update({name: producer})
 
     def walk_dir(self, basedir):
