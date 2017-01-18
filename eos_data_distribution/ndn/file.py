@@ -82,17 +82,15 @@ def mkdir_p(dirname):
 
 SEGMENT_TABLE_MAGIC = 'EosSgtV1'
 
-# 7 => [0, 0, 0, 0, 0, 1, 1, 1]
-
 
 def num_to_bitmap(n):
+    """7 => [0, 0, 0, 0, 0, 1, 1, 1]"""
     assert 0 <= n <= 255
     return [int(c) for c in list(bin(n)[2:].zfill(8))]
 
-# [0, 0, 0, 0, 0, 1, 1, 1] -> 7
-
 
 def bitmap_to_num(bitmap):
+    """[0, 0, 0, 0, 0, 1, 1, 1] -> 7"""
     assert len(bitmap) == 8
     n = 0
     for idx, bit in enumerate(bitmap[::-1]):
