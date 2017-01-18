@@ -108,7 +108,7 @@ def main():
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, signal_cb)
     monitor = Gio.VolumeMonitor.get()
     store = simple_store.Producer(prefix=SUBSCRIPTIONS_SOMA,
-                                  split=defaults.ENDLESS_NDN_CACHE_PATH,
+                                  base=defaults.ENDLESS_NDN_CACHE_PATH,
                                   cost=defaults.RouteCost.USB)
 
     for mount in monitor.get_mounts():
