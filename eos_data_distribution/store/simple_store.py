@@ -42,6 +42,7 @@ class Producer(object):
         self.dirs = dict()
         self.dirpubs = defaultdict(lambda: {})
 
+    def start (self):
         self.publish_all_names(self.base)
 
     def _path_to_name(self, filename):

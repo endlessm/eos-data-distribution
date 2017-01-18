@@ -110,7 +110,7 @@ def main():
     store = simple_store.Producer(prefix=SUBSCRIPTIONS_SOMA,
                                   base=defaults.ENDLESS_NDN_CACHE_PATH,
                                   cost=defaults.RouteCost.USB)
-
+    store.start()
     for mount in monitor.get_mounts():
         mount_added_cb(monitor, mount, store)
     monitor.connect("mount-added", mount_added_cb, store)

@@ -46,6 +46,7 @@ def main():
 
     store = simple_store.Producer(
         base=args.store_dir, prefix=names.SUBSCRIPTIONS_SOMA)
+    store.start()
     GLib.MainLoop().run()
 
 
