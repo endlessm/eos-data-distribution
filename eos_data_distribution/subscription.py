@@ -66,8 +66,9 @@ class Fetcher(GObject.GObject):
         manifest_ndn_name = Name(
             '%s/%s' % (SUBSCRIPTIONS_SOMA, self._manifest_suffix))
         manifest_consumer = FileConsumer(
-            manifest_ndn_name, self._manifest_filename, auto=True)
+            manifest_ndn_name, self._manifest_filename)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
+        manifest_consumer.start()
 
     def _fetch_manifest_complete(self, consumer):
         with open(self._manifest_filename, 'r') as f:

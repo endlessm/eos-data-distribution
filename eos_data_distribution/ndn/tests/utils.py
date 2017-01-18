@@ -60,6 +60,7 @@ def run_producer_test(producer, name, args):
     producer.start()
     if args.output:
         from .. import file
-        consumer = file.FileConsumer(name, filename=args.output, auto=True)
+        consumer = file.FileConsumer(name, filename=args.output)
         consumer.connect('complete', lambda *a: loop.quit())
+        consumer.start()
     loop.run()

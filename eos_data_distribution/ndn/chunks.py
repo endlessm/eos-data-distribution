@@ -141,11 +141,14 @@ class Consumer(base.Consumer):
         logger.debug('init chunks.Consumer: %s', name)
 
     def start(self):
-        # Make an initial request for the barename. We should get a fully
-        # qualified request back for the first segment, with a timestamp and
-        # segment number. Future requests will request the fully qualified
-        # name.
-        self.expressInterest(self.interest, forever=True)
+        if not self._segments:
+            # Make an initial request for the barename. We should get a fully
+            # qualified request back for the first segment, with a timestamp and
+            # segment number. Future requests will request the fully qualified
+            # name.
+            self.expressInterest(self.interest, forever=True)
+        else:
+            self._schedule_interests()
 
     def _save_chunk(self, n, data):
         pass

@@ -104,9 +104,6 @@ class Consumer(chunks.Consumer):
     def __init__(self, *args, **kwargs):
         super(Consumer, self).__init__(*args, **kwargs)
 
-    # XXX: This is disgusting hackery. We need to remove auto=True.
-
-    def start(self):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
 
@@ -118,11 +115,6 @@ class Consumer(chunks.Consumer):
             # self._read_segment_table()
         except ValueError as e:
             pass
-
-        if self._segments is not None:
-            self._schedule_interests()
-        else:
-            super(Consumer, self).start()
 
     def _save_chunk(self, n, data):
         buf = data.getContent().toBytes()
