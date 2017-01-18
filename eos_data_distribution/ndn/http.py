@@ -119,6 +119,10 @@ class Producer(chunks.Producer):
         self._getter = Getter(url, session=session, chunk_size=self.chunk_size,
                               onData=lambda d: self.sendFinish(d))
 
+    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
+        logger.info("HTTP Producer got interest: %s", interest.getName())
+        super(Producer, self)._on_interest(self, o, prefix, interest, face, interestFilterId, filter)
+
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size
 

@@ -29,7 +29,7 @@ from eos_data_distribution.soma_subscription_fetcher import Fetcher
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     fetcher = Fetcher()
     loop = GLib.MainLoop()
     loop.run()

@@ -74,11 +74,13 @@ class Fetcher(object):
         component = route.get(0).getValue().toRawStr()
 
         if component == 'subscription':
+            logger.info("Routing interest to manifest producer: %s", name)
             subscription_id = route.get(1).getValue().toRawStr()
             filename = route.get(2).getValue().toRawStr()
             assert filename == 'manifest.json'
             self._subproducers[key] = manifest.Producer(chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face, auto=True)
         elif component == 'shard':
+            logger.info("Routing interest to shard producer: %s", name)
             shard_url = route.get(1).getValue().toRawStr()
             self._subproducers[key] = http.Producer(chunkless_name, shard_url, face=face, auto=True)
         else:
