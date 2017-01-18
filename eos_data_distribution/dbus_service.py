@@ -67,9 +67,10 @@ def apply_subscription_update(subscription_id, src_manifest_path, shards):
         manifest_obj = json.load(f)
 
     # Place the new shards into the zone...
-    for src_shard_path in shards:
-        shard_filename = path.basename(src_shard_path)
-        dst_shard_path = path.join(user_subscriptions_folder, shard_filename)
+    for src_shard_entry in shards:
+        src_shard_path = src_shard_entry['cache_path']
+        dst_shard_filename = src_shard_entry['manifest_path']
+        dst_shard_path = path.join(user_subscriptions_folder, dst_shard_filename)
         if path.exists(dst_shard_path):
             # Skip existing shards...
             continue

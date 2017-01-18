@@ -53,7 +53,7 @@ class Fetcher(GObject.GObject):
 
         self._manifest_suffix = 'subscription/%s/manifest.json' % (self.subscription_id)
         self._manifest_filename = path.join(self._store_dir, self._manifest_suffix)
-        self._shard_filenames = []
+        self._shard_entries = []
 
     def start(self):
         self._fetch_manifest()
@@ -73,7 +73,7 @@ class Fetcher(GObject.GObject):
             shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append('shard').append(shard['download_uri'])
             escaped_filename = urllib.quote(shard['download_uri'], safe='')
             shard_filename = path.realpath(path.join(self._store_dir, 'shard', escaped_filename))
-            self._shard_filenames.append(shard_filename)
+            self._shard_entries.append({'manifest_path': shard['path'], 'cache_path': shard_filename})
             consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face)
             consumers.append(consumer)
             logger.info("Starting consumer: %s", (consumer, ))
@@ -85,7 +85,7 @@ class Fetcher(GObject.GObject):
         response = {
             "subscription_id": self.subscription_id,
             "manifest_path": self._manifest_filename,
-            "shards": self._shard_filenames,
+            "shards": self._shard_entries,
         }
 
         self.emit('response', json.dumps(response))
