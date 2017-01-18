@@ -34,7 +34,8 @@ killall tmux;
 
 rm -rf ${TEMP_DIR}/*
 
-mkdir -p ${BASE_PATH}/{tmp,DL}
+mkdir -p ${BASE_PATH}/tmp
+mkdir -p ${BASE_PATH}/DL
 
 export PYTHONPATH=${BASE_PATH}
 
