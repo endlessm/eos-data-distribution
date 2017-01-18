@@ -255,6 +255,7 @@ class Consumer(chunks.Consumer):
         super(Consumer, self)._on_complete()
 
     def _create_files(self, filename):
+        # XXX this is racy
         self._filename = filename
         mkdir_p(os.path.dirname(filename))
         self._part_filename = '%s.part' % (filename, )
