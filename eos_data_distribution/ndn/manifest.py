@@ -32,18 +32,26 @@ logger = logging.getLogger(__name__)
 # the manifest producer is an http Producer that answers on a different name
 class Producer(chunks.Producer):
 
-    def __init__(self, name, url, session=None, *args, **kwargs):
+    def __init__(self, name, url, session=None, onHeaders=None, *args, **kwargs):
         self._getter = http.Getter(
-            url, onData=self._send_finish, session=session)
-        self._last_modified = http.get_last_modified(self._getter._headers)
-        if not self._last_modified:
-            raise ValueError("Could not get Last-Modified")
-
-        # XXX -- we mangle the name in the constructor, this is slow
-        self._qualified_name = Name(name).append(self._last_modified)
+            url, session=session,
+            onData=self._send_finish, onHeaders=self._start)
 
         super(Producer, self).__init__(
             name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
+
+    def start(self):
+        logger.info('Start inhibited')
+
+    def _start(self, headers):
+        self._last_modified = http.get_last_modified(headers)
+        if not self._last_modified:
+            raise ValueError("Could not determine Last-Modified")
+
+        self._qualified_name = Name(
+            self.name).append(self._last_modified)
+
+        super(Producer, self).start()
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size

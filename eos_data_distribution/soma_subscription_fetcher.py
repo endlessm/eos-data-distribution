@@ -86,11 +86,9 @@ class Fetcher(object):
             assert filename == 'manifest.json'
             self._subproducers[key] = manifest.Producer(
                 chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face)
-            self._subproducers[key].start()
         elif component == 'shard':
             shard_url = route.get(1).getValue().toRawStr()
             self._subproducers[key] = http.Producer(
                 chunkless_name, shard_url, face=face)
-            self._subproducers[key].start()
         else:
             logger.warning('ignoring request: %s', name)

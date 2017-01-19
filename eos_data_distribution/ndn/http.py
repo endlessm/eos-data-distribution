@@ -57,14 +57,13 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunk
     read_bytes_async()
 
 
-def fetch_http_headers(session, url):
+def fetch_http_headers(session, url, callback):
     # XXX: SOMA's subscriptions-frontend doesn't handle HEAD requests yet because S3
     # is a bit silly with signed requests. For now, request a bytes=0-0 range and
     # return the full response_headers.
     msg = Soup.Message.new("GET", url)
     msg.request_headers.append('Range', 'bytes=0-0')
-    session.send(msg, None)
-    return msg.response_headers
+    session.queue_message(msg, callback)
 
 
 def get_content_size(headers):
@@ -85,12 +84,13 @@ def get_last_modified(headers):
 
 class Getter(object):
 
-    def __init__(self, url, onData, session=None, chunk_size=chunks.CHUNK_SIZE):
+    def __init__(self, url, onData, session=None, chunk_size=chunks.CHUNK_SIZE, onHeaders=None):
         super(Getter, self).__init__()
 
         self.url = url
         self.onData = onData
         self.chunk_size = chunk_size
+        self.onHeaders = onHeaders
 
         self._session = session
         if self._session is None:
@@ -98,11 +98,20 @@ class Getter(object):
 
         # XXX -- this is a bit ugly that we're making an HTTP request
         # in the constructor here...
-        self._headers = fetch_http_headers(self._session, self.url)
+        self._headers = fetch_http_headers(
+            self._session, self.url, self.got_http_headers)
+        logger.debug('getter init: %s', url)
+
+    def got_http_headers(self, o, msg, data=None):
+        logger.debug('got HTTP HEADERS: %s', msg.response_headers)
+        self._headers = msg.response_headers
+
         self._size = get_content_size(self._headers)
         if self._size == -1:
             raise ValueError("Could not determine Content-Size for %s" % url)
-        logger.debug('getter init: %s', url)
+
+        if self.onHeaders:
+            self.onHeaders(self._headers)
 
     def soup_get(self, data, n, cancellable=None):
         msg = Soup.Message.new('GET', self.url)
@@ -128,9 +137,16 @@ class Producer(chunks.Producer):
 
     def __init__(self, name, url, session=None, *args, **kwargs):
         self._getter = Getter(url, session=session, chunk_size=self.chunk_size,
+                              onHeaders=lambda d: self._start(),
                               onData=lambda d: self.sendFinish(d))
         super(Producer, self).__init__(
             name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
+
+    def start(self):
+        logger.info('Start inhibited')
+
+    def _start(self):
+        super(Producer, self).start()
 
     def _get_final_segment(self):
         return self._getter._size // self.chunk_size
