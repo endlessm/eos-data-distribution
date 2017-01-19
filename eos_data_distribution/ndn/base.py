@@ -142,6 +142,7 @@ class Base(GObject.GObject):
         if not onTimeout:
             onTimeout = partial(self.onTimeout, forever=forever)
 
+        interest.setInterestLifetimeMilliseconds(20000)
         logger.debug("Express Interest name: %s", interest)
         self.pit[interest] = self.face.expressInterest(
             interest, onData, onTimeout)
