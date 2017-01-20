@@ -24,10 +24,12 @@ import argparse
 import logging
 logger = logging.getLogger(__name__)
 
-# all this because we can't call parse_args twice...
-
 
 class ArgParseWrapper(object):
+
+    """
+    all this because we can't call parse_args twice...
+    """
 
     def __init__(self, *args, **kwargs):
         self.parser = argparse.ArgumentParser(*args, **kwargs)
@@ -58,6 +60,7 @@ def run_producer_test(producer, name, args):
     producer.start()
     if args.output:
         from .. import file
-        consumer = file.FileConsumer(name, filename=args.output, auto=True)
+        consumer = file.FileConsumer(name, filename=args.output)
         consumer.connect('complete', lambda *a: loop.quit())
+        consumer.start()
     loop.run()

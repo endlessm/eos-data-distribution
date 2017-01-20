@@ -55,7 +55,7 @@ class Fetcher(GObject.GObject):
         self._manifest_suffix = 'subscription/%s/manifest.json' % (
             self.subscription_id)
         self._manifest_filename = path.join(
-             self._store_dir, self._manifest_suffix)
+            self._store_dir, self._manifest_suffix)
         self._shard_entries = []
 
     def start(self):
@@ -66,8 +66,9 @@ class Fetcher(GObject.GObject):
         manifest_ndn_name = Name(
             '%s/%s' % (SUBSCRIPTIONS_SOMA, self._manifest_suffix))
         manifest_consumer = FileConsumer(
-            manifest_ndn_name, self._manifest_filename, auto=True)
+            manifest_ndn_name, self._manifest_filename)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
+        manifest_consumer.start()
 
     def _fetch_manifest_complete(self, consumer):
         with open(self._manifest_filename, 'r') as f:
@@ -83,7 +84,8 @@ class Fetcher(GObject.GObject):
                 path.join(self._store_dir, 'shard', escaped_filename))
             self._shard_entries.append(
                 {'manifest_path': shard['path'], 'cache_path': shard_filename})
-            consumer = FileConsumer(shard_ndn_name, shard_filename, face=self._face)
+            consumer = FileConsumer(
+                shard_ndn_name, shard_filename, face=self._face)
             consumers.append(consumer)
             logger.info("Starting consumer: %s", (consumer, ))
 
@@ -101,12 +103,14 @@ class Fetcher(GObject.GObject):
         self.emit('response', json.dumps(response))
         self.emit('complete')
 
-# The Producer listens for intents to /endless/installed/foo,
-# downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
-# and then generates a "signalling response" for them.
-
 
 class Producer(object):
+
+    """
+    The Producer listens for intents to /endless/installed/foo,
+    downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
+    and then generates a "signalling response" for them.
+    """
 
     def __init__(self, store_dir):
         self._store_dir = store_dir

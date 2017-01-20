@@ -141,11 +141,14 @@ class Consumer(base.Consumer):
         logger.debug('init chunks.Consumer: %s', name)
 
     def start(self):
-        # Make an initial request for the barename. We should get a fully
-        # qualified request back for the first segment, with a timestamp and
-        # segment number. Future requests will request the fully qualified
-        # name.
-        self.expressInterest(self.interest, forever=True)
+        if not self._segments:
+            # Make an initial request for the barename. We should get a fully
+            # qualified request back for the first segment, with a timestamp and
+            # segment number. Future requests will request the fully qualified
+            # name.
+            self.expressInterest(self.interest, forever=True)
+        else:
+            self._schedule_interests()
 
     def _save_chunk(self, n, data):
         pass
@@ -173,7 +176,7 @@ class Consumer(base.Consumer):
     def _request_segment(self, n):
         ndn_name = Name(self._qualified_name).appendSegment(n)
         logger.debug('is this an interest ? %s', ndn_name)
-        self.expressInterest(ndn_name, forever=True)
+        self.expressInterest(Interest(ndn_name), forever=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING
         self._num_outstanding_interests += 1
@@ -207,7 +210,7 @@ class Consumer(base.Consumer):
         self._check_final_segment(meta_info.getFinalBlockId().toSegment())
 
         name = data.getName()
-        logger.info('got data: %s', name)
+        logger.debug('got data: %s', name)
 
         if self._qualified_name is None:
             # Strip off the chunk component for our final FQDN...

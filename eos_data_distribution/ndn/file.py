@@ -82,17 +82,15 @@ def mkdir_p(dirname):
 
 SEGMENT_TABLE_MAGIC = 'EosSgtV1'
 
-# 7 => [0, 0, 0, 0, 0, 1, 1, 1]
-
 
 def num_to_bitmap(n):
+    """7 => [0, 0, 0, 0, 0, 1, 1, 1]"""
     assert 0 <= n <= 255
     return [int(c) for c in list(bin(n)[2:].zfill(8))]
 
-# [0, 0, 0, 0, 0, 1, 1, 1] -> 7
-
 
 def bitmap_to_num(bitmap):
+    """[0, 0, 0, 0, 0, 1, 1, 1] -> 7"""
     assert len(bitmap) == 8
     n = 0
     for idx, bit in enumerate(bitmap[::-1]):
@@ -101,24 +99,11 @@ def bitmap_to_num(bitmap):
     return n
 
 
-class FileConsumer(chunks.Consumer):
+class Consumer(chunks.Consumer):
 
-    def __init__(self, name, filename, *args, **kwargs):
-        self._filename = filename
-        mkdir_p(os.path.dirname(self._filename))
+    def __init__(self, *args, **kwargs):
+        super(Consumer, self).__init__(*args, **kwargs)
 
-        self._part_filename = '%s.part' % (self._filename, )
-        self._part_fd = os.open(
-            self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK,
-            0o600)
-        self._sgt_filename = '%s.sgt' % (self._filename, )
-        self._sgt_fd = os.open(self._sgt_filename, os.O_CREAT | os.O_RDWR,
-                               0o600)
-
-        super(FileConsumer, self).__init__(name, *args, **kwargs)
-
-    # XXX: This is disgusting hackery. We need to remove auto=True.
-    def start(self):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
 
@@ -131,11 +116,6 @@ class FileConsumer(chunks.Consumer):
         except ValueError as e:
             pass
 
-        if self._segments is not None:
-            self._schedule_interests()
-        else:
-            super(FileConsumer, self).start()
-
     def _save_chunk(self, n, data):
         buf = data.getContent().toBytes()
         offs = self.chunk_size * n
@@ -144,7 +124,7 @@ class FileConsumer(chunks.Consumer):
         self._write_segment_table()
 
     def _set_final_segment(self, n):
-        super(FileConsumer, self)._set_final_segment(n)
+        super(Consumer, self)._set_final_segment(n)
 
         # Reserve space for the full file...
         try:
@@ -272,7 +252,42 @@ class FileConsumer(chunks.Consumer):
         os.rename(self._part_filename, self._filename)
         os.chmod(self._filename, 0o644)
         os.unlink(self._sgt_filename)
-        super(FileConsumer, self)._on_complete()
+        super(Consumer, self)._on_complete()
+
+    def _create_files(self, filename):
+        # XXX this is racy
+        self._filename = filename
+        mkdir_p(os.path.dirname(filename))
+        self._part_filename = '%s.part' % (filename, )
+        self._part_fd = os.open(
+            self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK, 0o600)
+        self._sgt_filename = '%s.sgt' % (filename, )
+        self._sgt_fd = os.open(
+            self._sgt_filename, os.O_CREAT | os.O_RDWR, 0o600)
+
+
+class FileConsumer(Consumer):
+
+    def __init__(self, name, filename, *args, **kwargs):
+        self._create_files(filename)
+
+        super(FileConsumer, self).__init__(name, *args, **kwargs)
+
+
+class DirConsumer(Consumer):
+
+    def __init__(self, name, dirname, *args, **kwargs):
+        mkdir_p(dirname)
+        self._dirname = dirname
+        super(DirConsumer, self).__init__(name, *args, **kwargs)
+
+    def _on_data(self, o, interest, data):
+        self._create_files(
+            os.path.join(self._dirname, chunks.get_chunkless_name(
+                interest.getName())))
+
+        super(DirConsumer, self)._on_data(o, interest, data)
+        self._on_data = super(DirConsumer, self)._on_data
 
 if __name__ == '__main__':
     from tests import util

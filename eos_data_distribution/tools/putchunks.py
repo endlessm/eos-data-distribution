@@ -36,7 +36,8 @@ def main():
     args = util.process_args(parser)
 
     f = open(args.filename, 'rb')
-    producer = FileProducer(args.name, f, auto=True)
+    producer = FileProducer(args.name, f)
+    producer.start()
     loop = GLib.MainLoop()
     loop.run()
 
