@@ -33,6 +33,8 @@ from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.MDNS import ServiceDiscovery
 
 
+MAX_PEERS = 5
+
 SERVICES = [
     # Disable TCP, we really only want UDP or ethernet
     # "_nfd._tcp",
@@ -70,6 +72,7 @@ class AvahiMonitor(object):
 
         self.ips = []
         self.gateways = []
+        self._peers = set()
         self._ndn_gateways = dict()
         self._registry = dict()
 
@@ -184,13 +187,22 @@ class AvahiMonitor(object):
             self.process_route_changes()
 
     def add_nexthop(self, faceUri):
+        if len(self._peers) > MAX_PEERS:
+            logger.debug(
+                "refusing to add %s as we'd go over %d peers", faceUri, MAX_PEERS)
+            return
+        self._peers.add(faceUri)
         return check_call(["nfdc", "add-nexthop",
                            "-c", str(defaults.RouteCost.LOCAL_NETWORK),
                            str(SUBSCRIPTIONS_SOMA), faceUri])
 
     def remove_nexthop(self, faceUri):
-        return check_call(["nfdc", "remove-nexthop",
-                           str(SUBSCRIPTIONS_SOMA), faceUri])
+        try:
+            self._peers.remove(faceUri)
+            check_call(["nfdc", "remove-nexthop",
+                        str(SUBSCRIPTIONS_SOMA), faceUri])
+        except KeyError:
+            pass
 
     def start_edge(self):
         return check_call(["systemctl", "start", "edd-soma-subscriptions-producer"])
