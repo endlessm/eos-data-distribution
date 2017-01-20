@@ -441,16 +441,179 @@ class TestDirConsumer(unittest.TestCase):
         with open(path, 'r') as f:
             self.assertEqual(f.read(), raw_content)
 
+    def test_multiple_segments_with_timeout(self):
+        """Test chunking works for a multi-segment file with a timeout."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create a new consumer requesting file-name.
+        # Set the pipeline to something massive so we don’t have to worry about
+        # hitting it here. We test the pipeline in other tests.
+        face = MockFace()
+        segment_size=4096  # bytes
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face,
+                                    pipeline=100, chunk_size=segment_size)
+        consumer.connect('interest-timeout', self._on_interest_timeout)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Build the segments in advance.
+        n_segments = 4
+        segments = [TestDirConsumer.build_segment('/file-name', i, n_segments,
+                                                  segment_size=segment_size)
+                    for i in range(0, n_segments)]
+
+        # Return the file’s first segment to the consumer; we expect it should
+        # now express an interest in the file’s other segments.
+        face.callInterestDone('/file-name', segments[0])
+
+        self.assertFaceNamesEqual(face, [
+            '/file-name/%00%01',
+            '/file-name/%00%02',
+            '/file-name/%00%03',
+        ])
+
+        # The download should not have completed yet.
+        self.assertNotFileExists(path)
+
+        # Return one of the segments, then time out on one.
+        face.callInterestDone('/file-name/%00%01', segments[1])
+        face.callInterestTimeout('/file-name/%00%02')
+
+        try_again = self.assertInterestTimedOut('/file-name/%00%02')
+        self.assertTrue(try_again)
+        self.assertFaceNamesEqual(face, [
+            '/file-name/%00%02',
+            '/file-name/%00%03',
+        ])
+
+        face.callInterestDone('/file-name/%00%03', segments[3])
+        self.assertFaceNamesEqual(face, ['/file-name/%00%02'])
+
+        # Time it out again, then return the data.
+        face.callInterestTimeout('/file-name/%00%02')
+        try_again = self.assertInterestTimedOut('/file-name/%00%02')
+        self.assertTrue(try_again)
+        self.assertFaceNamesEqual(face, ['/file-name/%00%02'])
+
+        face.callInterestDone('/file-name/%00%02', segments[2])
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents. It should be a n_segments * 4096-byte
+        # file, with each 4096-byte chunk being its index repeated. i.e.
+        # 000…111…222…
+        with open(path, 'r') as f:
+            for i in range(0, n_segments):
+                self.assertEqual(f.read(segment_size),
+                                 str(i)[:1] * segment_size)
+            self.assertEqual(f.read(), '')  # EOF
+
+    def test_duplicate_segments(self):
+        """Test chunking correctly ignores duplicate segments for a file."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create a new consumer requesting file-name.
+        # Set the pipeline to something massive so we don’t have to worry about
+        # hitting it here. We test the pipeline in other tests.
+        face = MockFace()
+        segment_size=4096  # bytes
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face,
+                                    pipeline=100, chunk_size=segment_size)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Build the segments in advance.
+        n_segments = 10
+        segments = [TestDirConsumer.build_segment('/file-name', i, n_segments,
+                                                  segment_size=segment_size)
+                    for i in range(0, n_segments)]
+
+        # Return the file’s first segment to the consumer, then return the
+        # other segments in order, as pairs of duplicates (i.e.
+        # segment 1, segment 1, segment 2, segment 2, …).
+        face.callInterestDone('/file-name', segments[0])
+        for i in range(1, n_segments):
+            interest_name = '/file-name/%00%0' + str(i)
+            (interest, on_done, _) = face.getInterest(interest_name)
+            face.removeInterest(interest_name)
+            on_done(interest, segments[i])
+            on_done(interest, segments[i])
+
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents. It should be a n_segments * 4096-byte
+        # file, with each 4096-byte chunk being its index repeated. i.e.
+        # 000…111…222…
+        with open(path, 'r') as f:
+            for i in range(0, n_segments):
+                self.assertEqual(f.read(segment_size),
+                                 str(i)[:1] * segment_size)
+            self.assertEqual(f.read(), '')  # EOF
+
+    def test_multiple_segments_out_of_order(self):
+        """Test chunking works for a multi-segment file out of order."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create a new consumer requesting file-name.
+        # Set the pipeline to something massive so we don’t have to worry about
+        # hitting it here. We test the pipeline in other tests.
+        face = MockFace()
+        segment_size=4096  # bytes
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face,
+                                    pipeline=100, chunk_size=segment_size)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Build the segments in advance.
+        n_segments = 10
+        segments = [TestDirConsumer.build_segment('/file-name', i, n_segments,
+                                                  segment_size=segment_size)
+                    for i in range(0, n_segments)]
+
+        # Return the file’s first segment to the consumer, then return the
+        # other segments in reverse order (the pathological case).
+        face.callInterestDone('/file-name', segments[0])
+        for i in range(1, n_segments):
+            # The download should not have completed yet.
+            self.assertNotFileExists(path)
+
+            face.callInterestDone('/file-name/%00%0' + str(i), segments[i])
+
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents. It should be a n_segments * 4096-byte
+        # file, with each 4096-byte chunk being its index repeated. i.e.
+        # 000…111…222…
+        with open(path, 'r') as f:
+            for i in range(0, n_segments):
+                self.assertEqual(f.read(segment_size),
+                                 str(i)[:1] * segment_size)
+            self.assertEqual(f.read(), '')  # EOF
 
 # TODO: More tests:
-#  - Requests timing out for a multi-request file
-#  - Requests arriving in different orders
-#  - Duplicated requests
 #  - Non-requested names turning up
 #  - Pipelining in chunks.Consumer
 #  - NACKs: before and after receiving
 #  - I/O errors: files already exist, part file exists but others don’t, etc.
 #  - Locking?
+#  - Corrupt segment files
 
 
 if __name__ == '__main__':
