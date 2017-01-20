@@ -77,7 +77,7 @@ class Producer(base.Producer):
         self.connect('interest', self._on_interest)
 
     def _get_final_block_id(self):
-        pass
+        raise NotImplementedError()
 
     def _send_chunk(self, data, n):
         content = self._get_chunk(n)
@@ -151,7 +151,7 @@ class Consumer(base.Consumer):
             self._schedule_interests()
 
     def _save_chunk(self, n, data):
-        pass
+        raise NotImplementedError()
 
     def _on_complete(self):
         self.emit('complete')
