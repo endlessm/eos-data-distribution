@@ -274,6 +274,13 @@ class FileConsumer(Consumer):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
 
+def is_subdir(sub_dir, parent_dir):
+    sub_dir = os.path.realpath(sub_dir)
+    parent_dir = os.path.realpath(parent_dir)
+    diff = os.path.relpath(sub_dir, parent_dir)
+    return not (diff == os.pardir or diff.startswith(os.pardir + os.sep))
+
+
 class DirConsumer(Consumer):
 
     def __init__(self, name, dirname, *args, **kwargs):
@@ -282,9 +289,15 @@ class DirConsumer(Consumer):
         super(DirConsumer, self).__init__(name, *args, **kwargs)
 
     def _on_data(self, o, interest, data):
-        self._create_files(
-            os.path.join(self._dirname, chunks.get_chunkless_name(
-                interest.getName())))
+        # os.path.join() discards preceding components if any component starts
+        # with a slash.
+        chunkless_name = str(chunks.get_chunkless_name(interest.getName()))
+        chunkless_name = chunkless_name.strip('/')
+
+        filename = os.path.join(self._dirname, chunkless_name)
+        assert is_subdir(filename, self._dirname)
+
+        self._create_files(filename)
 
         super(DirConsumer, self)._on_data(o, interest, data)
         self._on_data = super(DirConsumer, self)._on_data
