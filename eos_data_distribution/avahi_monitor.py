@@ -112,6 +112,8 @@ class AvahiMonitor(object):
                 self._registry.values().map(self.remove_nexthop)
                 # ..and only add one to the routers
                 self._ndn_gateways.keys().map(self.add_nexthop)
+                # ..and stop edge
+                self.stop_edge()
             else:
                 # no change: i am routed, i was routed before: no links
                 pass
@@ -122,6 +124,8 @@ class AvahiMonitor(object):
                 # need to add back old links...
                 # this is limited to MAX_PEERS in add_nexthop
                 self._registry.values().map(self.add_nexthop)
+                # ..and start edge
+                self.start_edge()
             else:
                 # nochange: wasn't routed, not routed now
                 pass
@@ -187,6 +191,12 @@ class AvahiMonitor(object):
     def remove_nexthop(self, faceUri):
         return check_call(["nfdc", "remove-nexthop",
                            str(SUBSCRIPTIONS_SOMA), faceUri])
+
+    def start_edge(self):
+        return check_call(["systemctl", "start", "edd-soma-subscriptions-producer"])
+
+    def stop_edge(self):
+        return check_call(["systemctl", "stop", "edd-soma-subscriptions-producer"])
 
     def get_gateways(self):
         gateways = netifaces.gateways()
