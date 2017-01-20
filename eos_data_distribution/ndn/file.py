@@ -104,6 +104,12 @@ class Consumer(chunks.Consumer):
     def __init__(self, *args, **kwargs):
         super(Consumer, self).__init__(*args, **kwargs)
 
+        self._filename = None
+        self._part_filename = None
+        self._part_fd = -1
+        self._sgt_filename = None
+        self._sgt_fd = -1
+
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
 
@@ -248,7 +254,9 @@ class Consumer(chunks.Consumer):
 
     def _on_complete(self):
         os.close(self._part_fd)
+        self._part_fd = -1
         os.close(self._sgt_fd)
+        self._sgt_fd = -1
         os.rename(self._part_filename, self._filename)
         os.chmod(self._filename, 0o644)
         os.unlink(self._sgt_filename)
