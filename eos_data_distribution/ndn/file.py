@@ -122,7 +122,14 @@ class Consumer(chunks.Consumer):
         except ValueError as e:
             pass
 
+    def _open_files(self):
+        raise NotImplementedError()
+
     def _save_chunk(self, n, data):
+        if self._part_fd < 0:
+            self._open_files()
+
+        assert self._part_fd >= 0
         buf = data.getContent().toBytes()
         offs = self.chunk_size * n
         os.lseek(self._part_fd, offs, os.SEEK_SET)
@@ -264,7 +271,7 @@ class Consumer(chunks.Consumer):
 
     def _create_files(self, filename):
         # XXX this is racy
-        self._filename = filename
+        assert filename
         mkdir_p(os.path.dirname(filename))
         self._part_filename = '%s.part' % (filename, )
         self._part_fd = os.open(
@@ -277,10 +284,11 @@ class Consumer(chunks.Consumer):
 class FileConsumer(Consumer):
 
     def __init__(self, name, filename, *args, **kwargs):
-        self._create_files(filename)
-
+        self._filename = filename
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
+    def _open_files(self):
+        self._create_files(self._filename)
 
 def is_subdir(sub_dir, parent_dir):
     sub_dir = os.path.realpath(sub_dir)
@@ -292,23 +300,22 @@ def is_subdir(sub_dir, parent_dir):
 class DirConsumer(Consumer):
 
     def __init__(self, name, dirname, *args, **kwargs):
-        mkdir_p(dirname)
         self._dirname = dirname
         super(DirConsumer, self).__init__(name, *args, **kwargs)
 
-    def _on_data(self, o, interest, data):
+    def _open_files(self):
         # os.path.join() discards preceding components if any component starts
         # with a slash.
-        chunkless_name = str(chunks.get_chunkless_name(interest.getName()))
+        assert self._qualified_name
+        chunkless_name = str(self._qualified_name)
         chunkless_name = chunkless_name.strip('/')
 
-        filename = os.path.join(self._dirname, chunkless_name)
-        assert is_subdir(filename, self._dirname)
+        mkdir_p(self._dirname)
+        self._filename = os.path.join(self._dirname, chunkless_name)
+        assert is_subdir(self._filename, self._dirname)
 
-        self._create_files(filename)
+        self._create_files(self._filename)
 
-        super(DirConsumer, self)._on_data(o, interest, data)
-        self._on_data = super(DirConsumer, self)._on_data
 
 if __name__ == '__main__':
     from tests import util
