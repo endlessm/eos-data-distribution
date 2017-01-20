@@ -294,9 +294,9 @@ class DirConsumer(Consumer):
         self._dirname = dirname
         super(DirConsumer, self).__init__(name, *args, **kwargs)
 
-    def _on_data(o, interest, data):
+    def _on_data(self, o, interest, data):
         self._create_files(
-            path.join(self._dirname, chunks.get_chunkless_name(
+            os.path.join(self._dirname, chunks.get_chunkless_name(
                 interest.getName())))
 
         super(DirConsumer, self)._on_data(o, interest, data)
