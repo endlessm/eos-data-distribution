@@ -132,6 +132,7 @@ class Consumer(base.Consumer):
         self._segments = None
         self._num_outstanding_interests = 0
         self._qualified_name = None
+        self._emitted_complete = False
 
         self.interest = Interest(Name(name))
         self.interest.setMustBeFresh(True)
@@ -159,7 +160,11 @@ class Consumer(base.Consumer):
 
     def _check_for_complete(self):
         if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
-            self._on_complete()
+            if not self._emitted_complete:
+                self._emitted_complete = True
+                self._on_complete()
+            else:
+                logger.debug('Prevented emitting repeated complete signal')
 
     def _schedule_interests(self):
         while self._num_outstanding_interests < self._total_interest_requests:
