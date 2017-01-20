@@ -219,6 +219,14 @@ class Consumer(base.Consumer):
             self._qualified_name = name.getPrefix(-1)
 
         seg = get_chunk_component(name).toSegment()
+
+        # Have we somehow already got this segment?
+        if self._segments[seg] == SegmentState.COMPLETE:
+            logger.debug('Ignoring data ‘%s’ as it’s already been received',
+                         name)
+            self._check_for_complete()
+            return
+
         self._save_chunk(seg, data)
         self._segments[seg] = SegmentState.COMPLETE
 
