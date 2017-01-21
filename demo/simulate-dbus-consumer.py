@@ -45,7 +45,7 @@ class DbusConsumer(Consumer):
         self.connect('data', self.notifyEKN)
 
         appname = lambda i: Interest(Name(SUBSCRIPTIONS_INSTALLED).append(i))
-        [self.expressInterest(appname(i), forever=True) for i in appids]
+        [self.expressInterest(appname(i), try_again=True) for i in appids]
 
     def notifyEKN(self, consumer, interest, data):
         logger.info("GOT NAMES, all the names, the best names")

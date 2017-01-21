@@ -147,7 +147,7 @@ class Consumer(base.Consumer):
             # qualified request back for the first segment, with a timestamp and
             # segment number. Future requests will request the fully qualified
             # name.
-            self.expressInterest(self.interest, forever=True)
+            self.expressInterest(self.interest, try_again=True)
         else:
             self._schedule_interests()
 
@@ -181,7 +181,7 @@ class Consumer(base.Consumer):
     def _request_segment(self, n):
         ndn_name = Name(self._qualified_name).appendSegment(n)
         logger.debug('is this an interest ? %s', ndn_name)
-        self.expressInterest(Interest(ndn_name), forever=True)
+        self.expressInterest(Interest(ndn_name), try_again=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING
         self._num_outstanding_interests += 1
