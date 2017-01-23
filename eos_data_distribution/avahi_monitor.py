@@ -187,10 +187,11 @@ class AvahiMonitor(object):
             logger.debug(
                 "refusing to add %s as we'd go over %d peers", faceUri, MAX_PEERS)
             return
-        self._peers.add(faceUri)
-        return self.check_call(["nfdc", "add-nexthop",
-                                "-c", str(defaults.RouteCost.LOCAL_NETWORK),
-                                str(SUBSCRIPTIONS_SOMA), faceUri])
+
+        if self.check_call(["nfdc", "add-nexthop",
+                            "-c", str(defaults.RouteCost.LOCAL_NETWORK),
+                            str(SUBSCRIPTIONS_SOMA), faceUri]):
+            self._peers.add(faceUri)
 
     def remove_nexthop(self, faceUri):
         try:
@@ -218,9 +219,11 @@ class AvahiMonitor(object):
 
     def check_call(self, a):
         try:
-            return check_call(a)
+            check_call(a)
+            return True
         except CalledProcessError as e:
             logger.warning("Error calling: %s : %s", a, e)
+            return False
 
 
 def main():
