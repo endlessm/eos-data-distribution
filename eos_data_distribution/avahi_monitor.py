@@ -123,6 +123,16 @@ class AvahiMonitor(object):
             self._ndn_gateways.values()).intersection(self.gateways)
 
     def process_route_changes(self, prev_routed):
+        """ adds/removes hops for route state changes:
+        - !routed -> routed  : remove all peers but gateways
+        - routed  -> !routed : add MAX_PEERS peers, remove gateways
+        - !routed -> !routed : check we still have enough peers (MIN_PEERS)
+        - routed  -> routed  : do nothing (handled in the rest of the code)
+
+        :param prev_routed: previous routed state
+        :returns: None
+        :rtype: NoneType
+        """
         if self._routed:
             logger.info(
                 "Being routed by an NDN node, NOT acting as an edge router")
