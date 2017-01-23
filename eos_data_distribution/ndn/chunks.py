@@ -232,7 +232,10 @@ class Consumer(base.Consumer):
             self._check_for_complete()
             return
 
-        self._save_chunk(seg, data)
+        # If saving the chunk fails, it might be because the chunk was invalid,
+        # or is being deferred.
+        if not self._save_chunk(seg, data):
+            return
         self._segments[seg] = SegmentState.COMPLETE
 
         num_complete_segments = self._segments.count(SegmentState.COMPLETE)
