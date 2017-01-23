@@ -1,0 +1,2 @@
+deb http://obs-master.endlessm-sf.com:82/shared/eos master endless core
+deb-src http://obs-master.endlessm-sf.com:82/shared/eos master endless core
