@@ -179,12 +179,8 @@ class AvahiMonitor(object):
         prev_routed = self._routed
         self.update_routed_status()
 
-        if not self._routed and not prev_routed:
-            # not routed, wasn't routed, just remove this link
-            self.remove_nexthop(faceUri)
-        else:
-            # all the rest handled by generic code
-            self.process_route_changes()
+        self.remove_nexthop(faceUri)
+        self.process_route_changes()
 
     def add_nexthop(self, faceUri):
         if len(self._peers) > MAX_PEERS:
