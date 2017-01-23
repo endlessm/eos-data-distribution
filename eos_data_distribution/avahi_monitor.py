@@ -34,6 +34,7 @@ from eos_data_distribution.MDNS import ServiceDiscovery
 
 
 MAX_PEERS = 5  # wild guess
+MIN_PEERS = 2  # minimum redundancy
 
 SERVICES = [
     # Disable TCP, we really only want UDP or ethernet
@@ -130,8 +131,10 @@ class AvahiMonitor(object):
                 # ..and start edge
                 self.start_edge()
             else:
-                # nochange: wasn't routed, not routed now
-                pass
+                # need to check if i still have enough peers
+                if self._peers < MIN_PEERS and len(self._registry) >= MIN_PEERS:
+                    set(self._peers).intersection(
+                        self._registry.values()).map(self.add_nexthop)
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
         logger.debug(
