@@ -136,15 +136,6 @@ class Consumer(chunks.Consumer):
         os.write(self._part_fd, buf)
         self._write_segment_table()
 
-    def _set_final_segment(self, n):
-        super(Consumer, self)._set_final_segment(n)
-
-        # Reserve space for the full file...
-        try:
-            fallocate.fallocate(self._part_fd, 0, self._size)
-        except IOError as e:  # if it fails, we might get surprises later, but it's ok.
-            pass
-
     def _read_segment_table(self):
         def read8():
             try:
@@ -279,6 +270,12 @@ class Consumer(chunks.Consumer):
         self._sgt_filename = '%s.sgt' % (filename, )
         self._sgt_fd = os.open(
             self._sgt_filename, os.O_CREAT | os.O_RDWR, 0o600)
+
+        # Reserve space for the full file...
+        try:
+            fallocate.fallocate(self._part_fd, 0, self._size)
+        except IOError as e:  # if it fails, we might get surprises later, but it's ok.
+            pass
 
 
 class FileConsumer(Consumer):
