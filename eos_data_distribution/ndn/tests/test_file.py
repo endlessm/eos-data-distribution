@@ -225,6 +225,9 @@ class TestDirConsumer(unittest.TestCase):
         self._timed_out_interest = None
         self._timed_out_try_again = False
 
+        # Set by _on_complete().
+        self._complete = False
+
     def tearDown(self):
         # FIXME: Ideally we would only remove the test_dir if the test was
         # successful, but that’s very hard to figure out.
@@ -294,6 +297,11 @@ class TestDirConsumer(unittest.TestCase):
 
         return try_again
 
+    def _on_complete(self, consumer):
+        """Callback for Consumer.complete to capture the state change."""
+        self.assertFalse(self._complete)
+        self._complete = True
+
     def assertFileExists(self, path):
         self.assertTrue(os.path.exists(path),
                         "File ‘%s’ does not exist when it should" % path)
@@ -315,6 +323,40 @@ class TestDirConsumer(unittest.TestCase):
         self.assertNotFileExists(part_path)
         self.assertNotFileExists(segment_path)
 
+        # Check we received the Consumer.complete signal.
+        self.assertTrue(self._complete)
+        self._complete = False
+
+    def assertDownloadNotCompleted(self, filename):
+        """Opposite of assertDownloadCompleted."""
+        (path, _, _) = self.build_paths(filename)
+
+        # The final filename must not exist; but the .part and .sgt files
+        # do not have to exist.
+        self.assertNotFileExists(path)
+
+        # Check we have not received the Consumer.complete signal.
+        self.assertFalse(self._complete)
+
+    def assertDownloadFailed(self, filename):
+        """
+        Assert the download failed for filename.
+
+        At the moment this will fail the test, as ``Consumer`` does not have
+        an error reporting path. When it gains that path, this helper should
+        be updated to check that the path was followed.
+        """
+        (path, part_path, segment_path) = self.build_paths(filename)
+
+        self.assertNotFileExists(path)
+        self.assertNotFileExists(part_path)
+        self.assertNotFileExists(segment_path)
+
+        # Check we received the Consumer.complete signal.
+        self.assertTrue(self._complete)
+        self._complete = False
+        self.fail('No way to report errors to the caller')
+
     def test_single_segment(self):
         """Test chunking works for a single segment file."""
         (path, _, _) = self.build_paths('file-name')
@@ -322,6 +364,7 @@ class TestDirConsumer(unittest.TestCase):
         # Create a new consumer requesting file-name.
         face = MockFace()
         consumer = file.DirConsumer('file-name', self.test_dir, face=face)
+        consumer.connect('complete', self._on_complete)
 
         # Check it expresses an interest in the file.
         self.assertFaceNamesEqual(face, [])
@@ -354,6 +397,7 @@ class TestDirConsumer(unittest.TestCase):
         segment_size=4096  # bytes
         consumer = file.DirConsumer('file-name', self.test_dir, face=face,
                                     pipeline=100, chunk_size=segment_size)
+        consumer.connect('complete', self._on_complete)
 
         # Check it expresses an interest in the file.
         self.assertFaceNamesEqual(face, [])
@@ -384,7 +428,7 @@ class TestDirConsumer(unittest.TestCase):
         self.assertFaceNamesEqual(face, remaining_segments)
 
         # The download should not have completed yet.
-        self.assertNotFileExists(path)
+        self.assertDownloadNotCompleted('file-name')
 
         # Return the other segments in order. We don’t expect it should
         # express any other interests.
@@ -413,6 +457,7 @@ class TestDirConsumer(unittest.TestCase):
         face = MockFace()
         consumer = file.DirConsumer('file-name', self.test_dir, face=face)
         consumer.connect('interest-timeout', self._on_interest_timeout)
+        consumer.connect('complete', self._on_complete)
 
         # Check it expresses an interest in the file.
         self.assertFaceNamesEqual(face, [])
@@ -453,6 +498,7 @@ class TestDirConsumer(unittest.TestCase):
         consumer = file.DirConsumer('file-name', self.test_dir, face=face,
                                     pipeline=100, chunk_size=segment_size)
         consumer.connect('interest-timeout', self._on_interest_timeout)
+        consumer.connect('complete', self._on_complete)
 
         # Check it expresses an interest in the file.
         self.assertFaceNamesEqual(face, [])
@@ -476,7 +522,7 @@ class TestDirConsumer(unittest.TestCase):
         ])
 
         # The download should not have completed yet.
-        self.assertNotFileExists(path)
+        self.assertDownloadNotCompleted('file-name')
 
         # Return one of the segments, then time out on one.
         face.callInterestDone('/file-name/%00%01', segments[1])
@@ -524,6 +570,7 @@ class TestDirConsumer(unittest.TestCase):
         segment_size=4096  # bytes
         consumer = file.DirConsumer('file-name', self.test_dir, face=face,
                                     pipeline=100, chunk_size=segment_size)
+        consumer.connect('complete', self._on_complete)
 
         # Check it expresses an interest in the file.
         self.assertFaceNamesEqual(face, [])
@@ -572,6 +619,7 @@ class TestDirConsumer(unittest.TestCase):
         segment_size=4096  # bytes
         consumer = file.DirConsumer('file-name', self.test_dir, face=face,
                                     pipeline=100, chunk_size=segment_size)
+        consumer.connect('complete', self._on_complete)
 
         # Check it expresses an interest in the file.
         self.assertFaceNamesEqual(face, [])
@@ -589,7 +637,7 @@ class TestDirConsumer(unittest.TestCase):
         face.callInterestDone('/file-name', segments[0])
         for i in range(1, n_segments):
             # The download should not have completed yet.
-            self.assertNotFileExists(path)
+            self.assertDownloadNotCompleted('file-name')
 
             face.callInterestDone('/file-name/%00%0' + str(i), segments[i])
 
