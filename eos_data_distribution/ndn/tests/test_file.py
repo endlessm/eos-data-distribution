@@ -27,7 +27,7 @@ Unit tests for ndn.file
 
 
 from eos_data_distribution.ndn import file, chunks
-from gi.repository import GObject
+from gi.repository import GLib, GObject
 import logging
 import os
 from pyndn.data import Data
@@ -357,6 +357,36 @@ class TestDirConsumer(unittest.TestCase):
         self._complete = False
         self.fail('No way to report errors to the caller')
 
+    def assertEntireDownload(self, filename, raw_content):
+        """
+        Download a file and assert that it was successful.
+
+        This is designed for testing that downloading works in a variety of
+        environments, rather than for investigating the correctness of
+        different parts of the download process, as the rest of the tests do.
+        """
+        (path, _, _) = self.build_paths(filename)
+
+        # Create a new consumer requesting file-name.
+        face = MockFace()
+        consumer = file.DirConsumer(filename, self.test_dir, face=face)
+        consumer.connect('complete', self._on_complete)
+        consumer.start()
+
+        # Return the file’s only segment to the consumer.
+        data = TestDirConsumer.build_segment('/' + filename, 0, 1,
+                                             raw_content=raw_content)
+
+        face.callInterestDone('/' + filename, data)
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted(filename)
+
+        # Check the file’s contents.
+        with open(path, 'r') as f:
+            self.assertEqual(f.read(), raw_content)
+
     def test_single_segment(self):
         """Test chunking works for a single segment file."""
         (path, _, _) = self.build_paths('file-name')
@@ -655,13 +685,409 @@ class TestDirConsumer(unittest.TestCase):
                                  str(i)[:1] * segment_size)
             self.assertEqual(f.read(), '')  # EOF
 
+    def test_single_segment_different_name(self):
+        """Test chunking works for a single segment file with another name."""
+        (path, _, _) = self.build_paths('file-name')
+        (redirected_path, _, _) = self.build_paths('redirected-file-name')
+
+        # Create a new consumer requesting file-name.
+        face = MockFace()
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face)
+        consumer.connect('complete', self._on_complete)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Return a segment with a different name to the consumer.
+        raw_content = 'some content'
+        data = TestDirConsumer.build_segment('/redirected-file-name', 0, 1,
+                                             raw_content=raw_content)
+
+        face.callInterestDone('/file-name', data)
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed, but with the returned qualified
+        # name, not the one we requested.
+        self.assertDownloadCompleted('redirected-file-name')
+        self.assertNotFileExists(path)
+
+        # Check the file’s contents.
+        with open(redirected_path, 'r') as f:
+            self.assertEqual(f.read(), raw_content)
+
+    def test_single_segment_different_invalid_name(self):
+        """Test chunking works for a file with an invalid redirected name."""
+        (path, _, _) = self.build_paths('file-name')
+        (redirected_path, _, _) = \
+            self.build_paths('redirected-file-name/hi/there')
+        (dangerous_redirected_path, _, _) = \
+            self.build_paths('redirected-file-name/../../hi/there')
+
+        # Create a new consumer requesting file-name.
+        face = MockFace()
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face)
+        consumer.connect('complete', self._on_complete)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Return a segment with a different name to the consumer.
+        raw_content = 'some content'
+        data = TestDirConsumer.build_segment(
+            '/redirected-file-name/../../hi/there', 0, 1,
+            raw_content=raw_content)
+
+        face.callInterestDone('/file-name', data)
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed, but with a sanitised version of
+        # the returned qualified name, not the one we requested.
+        self.assertDownloadCompleted('redirected-file-name/hi/there')
+        self.assertNotFileExists(path)
+        self.assertNotFileExists(dangerous_redirected_path)
+
+        # Check the file’s contents.
+        with open(redirected_path, 'r') as f:
+            self.assertEqual(f.read(), raw_content)
+
+    @unittest.expectedFailure
+    def test_single_segment_different_symlinked_name(self):
+        """
+        Test chunking works for a file with a symlinked redirected name.
+
+        FIXME: This currently fails because there is no error reporting path
+        for download failure; and this is one failure which we can’t really
+        recover from.
+        """
+        (path, _, _) = self.build_paths('file-name')
+        (symlink_path, _, _) = self.build_paths('redirected-file-name')
+        (redirected_path, _, _) = \
+            self.build_paths('redirected-file-name/passwd')
+        dangerous_redirected_path = os.path.join('/', 'tmp', 'passwd')
+
+        # As if we were an attacker (who somehow managed to get this symlink
+        # here), create a symlink within the download directory to somewhere
+        # nasty.
+        os.symlink('/tmp', symlink_path)
+
+        # Create a new consumer requesting file-name.
+        face = MockFace()
+        consumer = file.DirConsumer('file-name', self.test_dir, face=face)
+        consumer.connect('complete', self._on_complete)
+
+        # Check it expresses an interest in the file.
+        self.assertFaceNamesEqual(face, [])
+        consumer.start()
+        self.assertFaceNamesEqual(face, ['/file-name'])
+
+        # Return a segment with a different name to the consumer.
+        raw_content = 'some content'
+        data = TestDirConsumer.build_segment('/redirected-file-name/passwd',
+                                             0, 1, raw_content=raw_content)
+
+        face.callInterestDone('/file-name', data)
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have completed, but with a sanitised version of
+        # the returned qualified name, not the one we requested.
+        self.assertDownloadNotCompleted('redirected-file-name/passwd')
+        self.assertNotFileExists(path)
+        self.assertNotFileExists(dangerous_redirected_path)
+
+    @unittest.expectedFailure
+    def test_multiple_segments_resuming(self):
+        """
+        Test resuming a multi-segment file download.
+
+        FIXME: This is expected to fail until the _read_segment_table() code
+        path is hooked up in file.py.
+        """
+        (path, _, _) = self.build_paths('file-name')
+
+        # Build the segments in advance.
+        segment_size=4096  # bytes
+        n_segments = 10
+        segments = [TestDirConsumer.build_segment('/file-name', i, n_segments,
+                                                  segment_size=segment_size)
+                    for i in range(0, n_segments)]
+
+        # Create a new consumer requesting file-name.
+        # Set the pipeline to something massive so we don’t have to worry about
+        # hitting it here. We test the pipeline in other tests.
+        face1 = MockFace()
+        consumer1 = file.DirConsumer('file-name', self.test_dir, face=face1,
+                                     pipeline=100, chunk_size=segment_size)
+        consumer1.connect('interest-timeout', self._on_interest_timeout)
+        consumer1.connect('complete', self._on_complete)
+
+        consumer1.start()
+
+        # Return all the even segments to the consumer (including its first
+        # segment first), then time out.
+        face1.callInterestDone('/file-name', segments[0])
+        face1.callInterestDone('/file-name/%00%02', segments[2])
+        face1.callInterestDone('/file-name/%00%04', segments[4])
+        face1.callInterestDone('/file-name/%00%06', segments[6])
+        face1.callInterestDone('/file-name/%00%08', segments[8])
+
+        face1.callInterestTimeout('/file-name/%00%01')
+
+        try_again = self.assertInterestTimedOut('/file-name/%00%01')
+        self.assertTrue(try_again)
+        self.assertFaceNamesEqual(face1, [
+            '/file-name/%00%01',
+            '/file-name/%00%03',
+            '/file-name/%00%05',
+            '/file-name/%00%07',
+            '/file-name/%00%09',
+        ])
+
+        # The download should not have completed yet.
+        self.assertDownloadNotCompleted('file-name')
+
+        # Let’s assume the consumer goes away (e.g. the application is closed)
+        # and it tries to resume the download next time it’s launched, by
+        # requesting the first chunk again (to get the qualified name) and then
+        # the remaining chunks.
+        face2 = MockFace()
+        consumer2 = file.DirConsumer('file-name', self.test_dir, face=face2,
+                                     pipeline=100, chunk_size=segment_size)
+        consumer2.connect('interest-timeout', self._on_interest_timeout)
+        consumer2.connect('complete', self._on_complete)
+
+        consumer2.start()
+
+        self.assertFaceNamesEqual(face2, ['/file-name'])
+        face2.callInterestDone('/file-name', segments[0])
+
+        self.assertFaceNamesEqual(face2, [
+            '/file-name/%00%01',
+            '/file-name/%00%03',
+            '/file-name/%00%05',
+            '/file-name/%00%07',
+            '/file-name/%00%09',
+        ])
+
+        face2.callInterestDone('/file-name/%00%01', segments[1])
+        face2.callInterestDone('/file-name/%00%03', segments[3])
+        face2.callInterestDone('/file-name/%00%05', segments[5])
+        face2.callInterestDone('/file-name/%00%07', segments[7])
+        face2.callInterestDone('/file-name/%00%09', segments[9])
+
+        self.assertFaceNamesEqual(face2, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents. It should be a n_segments * 4096-byte
+        # file, with each 4096-byte chunk being its index repeated. i.e.
+        # 000…111…222…
+        with open(path, 'r') as f:
+            for i in range(0, n_segments):
+                self.assertEqual(f.read(segment_size),
+                                 str(i)[:1] * segment_size)
+            self.assertEqual(f.read(), '')  # EOF
+
+    def test_file_already_exists(self):
+        """Test the download overwrites pre-existing files."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create the file with some arbitrary content.
+        with open(path, 'w') as f:
+            f.write('hello world, this is test content')
+
+        # Do the download.
+        self.assertEntireDownload('file-name', 'new and interesting content')
+
+    @unittest.expectedFailure
+    def test_file_already_exists_as_directory(self):
+        """Test the download fails if the destination exists as a directory.
+
+        FIXME: Not implemented yet."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create the file as a directory.
+        os.mkdir(path)
+
+        # Do the download.
+        self.assertEntireDownload('file-name', 'new and interesting content')
+
+    def test_segment_file_already_exists(self):
+        """Test the download overwrites pre-existing segment files."""
+        (_, _, segment_path) = self.build_paths('file-name')
+
+        # Create a segment file (but no .part file) with arbitrary content.
+        with open(segment_path, 'w') as f:
+            f.write('this is definitely not a valid segment file')
+
+        # Do the download.
+        self.assertEntireDownload('file-name', 'some content')
+
+    def test_part_file_already_exists(self):
+        """Test the download overwrites pre-existing part files."""
+        (_, part_path, _) = self.build_paths('file-name')
+
+        # Create a part file (but no .sgt file) with arbitrary content.
+        # Note the old content is longer than the new stuff, to test
+        # truncation.
+        with open(part_path, 'w') as f:
+            f.write('this is definitely not part of the file already')
+
+        # Do the download.
+        self.assertEntireDownload('file-name', 'some content')
+
+    @unittest.expectedFailure
+    def test_directory_not_writeable(self):
+        """
+        Test we fail gracefully when the overall directory is unwriteable.
+
+        FIXME: This will fail until we have an error reporting path from the
+        consumer.
+        """
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create a directory to download into which we can’t write to.
+        # This simulates a bad configuration; we don’t want to try and correct
+        # the problem, but we do want to fail gracefully.
+        # We use permissions here, but in reality it’s more likely that the
+        # directory would be owned by another user (say, root), or something.
+        test_dir = os.path.join(self.test_dir, 'unwriteable')
+        os.mkdir(test_dir, 0o444)
+
+        # Create a new consumer requesting file-name.
+        face = MockFace()
+        consumer = file.DirConsumer('file-name', test_dir, face=face)
+        consumer.connect('complete', self._on_complete)
+        consumer.start()
+
+        # Return the file’s only segment to the consumer.
+        data = TestDirConsumer.build_segment('/file-name', 0, 1,
+                                             raw_content='some content')
+
+        face.callInterestDone('/file-name', data)
+        self.assertFaceNamesEqual(face, [])
+
+        # The download should have failed.
+        self.assertDownloadFailed('file-name')
+
+    def test_parallel_downloads_single_segment(self):
+        """Test two consumers downloading a single segment file in parallel."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Create two new consumers requesting file-name.
+        face1 = MockFace()
+        consumer1 = file.DirConsumer('file-name', self.test_dir, face=face1)
+        consumer1.connect('complete', self._on_complete)
+
+        face2 = MockFace()
+        consumer2 = file.DirConsumer('file-name', self.test_dir, face=face2)
+        consumer2.connect('complete', self._on_complete)
+
+        consumer1.start()
+        consumer2.start()
+
+        # Return the file’s only segment to the consumers.
+        raw_content = 'some content'
+        data = TestDirConsumer.build_segment('/file-name', 0, 1,
+                                             raw_content=raw_content)
+
+        face1.callInterestDone('/file-name', data)
+        face2.callInterestDone('/file-name', data)
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents.
+        with open(path, 'r') as f:
+            self.assertEqual(f.read(), raw_content)
+
+    def test_parallel_downloads_multiple_segments(self):
+        """Test two consumers downloading a multi-segment file in parallel."""
+        (path, _, _) = self.build_paths('file-name')
+
+        # Build the segments in advance.
+        segment_size=4096  # bytes
+        n_segments = 3
+        segments = [TestDirConsumer.build_segment('/file-name', i, n_segments,
+                                                  segment_size=segment_size)
+                    for i in range(0, n_segments)]
+
+        # Create two new consumers requesting file-name.
+        # Set the pipeline to something massive so we don’t have to worry about
+        # hitting it here. We test the pipeline in other tests.
+        face1 = MockFace()
+        consumer1 = file.DirConsumer('file-name', self.test_dir, face=face1,
+                                    pipeline=100, chunk_size=segment_size)
+        consumer1.connect('complete', self._on_complete)
+
+        face2 = MockFace()
+        consumer2 = file.DirConsumer('file-name', self.test_dir, face=face2,
+                                    pipeline=100, chunk_size=segment_size)
+        consumer2.connect('complete', self._on_complete)
+
+        consumer1.start()
+        consumer2.start()
+
+        # Return the file’s first segment to the consumers. We expect consumer1
+        # should now express an interest in the file’s other segments.
+        # consumer2 should not, as it should have hit the locking from
+        # consumer1.
+        face1.callInterestDone('/file-name', segments[0])
+        self.assertFaceNamesEqual(face1, [
+            '/file-name/%00%01',
+            '/file-name/%00%02',
+        ])
+
+        face2.callInterestDone('/file-name', segments[0])
+        self.assertFaceNamesEqual(face2, [])
+
+        # The download should not have completed yet.
+        self.assertDownloadNotCompleted('file-name')
+
+        # Return the other segments in order.
+        face1.callInterestDone('/file-name/%00%01', segments[1])
+        face1.callInterestDone('/file-name/%00%02', segments[2])
+
+        self.assertFaceNamesEqual(face1, [])
+        self.assertFaceNamesEqual(face2, [])
+
+        # The download should have completed.
+        self.assertDownloadCompleted('file-name')
+
+        # We need to run the main context so the file monitor for consumer2
+        # can notice what has happened.
+        context = GLib.MainContext.default()
+        while not face2.getInterestNames():
+            context.iteration()
+
+        # FIXME: For the moment, when consumer2 restarts its download, it has
+        # no way to check that the existing (just downloaded) file-name file
+        # contains all the right bits. So it downloads it again. In future,
+        # we should check a checksum or its size, or something, to avoid
+        # downloading a second time.
+        face2.callInterestDone('/file-name/%00%00', segments[0])
+        face2.callInterestDone('/file-name/%00%01', segments[1])
+        face2.callInterestDone('/file-name/%00%02', segments[2])
+
+        self.assertDownloadCompleted('file-name')
+
+        # Check the file’s contents. It should be a n_segments * 4096-byte
+        # file, with each 4096-byte chunk being its index repeated. i.e.
+        # 000…111…222…
+        with open(path, 'r') as f:
+            for i in range(0, n_segments):
+                self.assertEqual(f.read(segment_size),
+                                 str(i)[:1] * segment_size)
+            self.assertEqual(f.read(), '')  # EOF
+
+
 # TODO: More tests:
-#  - Non-requested names turning up
 #  - Pipelining in chunks.Consumer
 #  - NACKs: before and after receiving
-#  - I/O errors: files already exist, part file exists but others don’t, etc.
-#  - Locking?
-#  - Corrupt segment files
 
 
 if __name__ == '__main__':
