@@ -138,8 +138,8 @@ class AvahiMonitor(object):
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
         logger.debug(
-            "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:",
-                     name, h_type, type, domain, ifname, protocol)
+            "Found Service data for service '%s' of type '%s' (%s) in domain '%s'",
+                     name, h_type, type, domain)
 
         self.refresh_network()
 
@@ -165,8 +165,8 @@ class AvahiMonitor(object):
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
         logger.debug(
-            "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i.",
-            name, type, domain, ifname, protocol)
+            "Disappeared Service '%s' of type '%s' in domain '%s'",
+            name, type, domain)
 
         self.refresh_network()
 
