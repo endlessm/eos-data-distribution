@@ -96,7 +96,7 @@ class AvahiMonitor(object):
         """
 
         # XXX: Use the above native code for this.
-        check_call(
+        self.check_call(
             ["nfdc", "set-strategy", str(SUBSCRIPTIONS_SOMA), 'ndn:/localhost/nfd/strategy/multicast'])
 
         self.update_routed_status()
@@ -192,23 +192,23 @@ class AvahiMonitor(object):
                 "refusing to add %s as we'd go over %d peers", faceUri, MAX_PEERS)
             return
         self._peers.add(faceUri)
-        return check_call(["nfdc", "add-nexthop",
-                           "-c", str(defaults.RouteCost.LOCAL_NETWORK),
-                           str(SUBSCRIPTIONS_SOMA), faceUri])
+        return self.check_call(["nfdc", "add-nexthop",
+                                "-c", str(defaults.RouteCost.LOCAL_NETWORK),
+                                str(SUBSCRIPTIONS_SOMA), faceUri])
 
     def remove_nexthop(self, faceUri):
         try:
             self._peers.remove(faceUri)
-            check_call(["nfdc", "remove-nexthop",
-                        str(SUBSCRIPTIONS_SOMA), faceUri])
+            self.check_call(["nfdc", "remove-nexthop",
+                             str(SUBSCRIPTIONS_SOMA), faceUri])
         except KeyError:
             pass
 
     def start_edge(self):
-        return check_call(["systemctl", "start", "edd-soma-subscriptions-producer"])
+        return self.check_call(["systemctl", "start", "edd-soma-subscriptions-producer"])
 
     def stop_edge(self):
-        return check_call(["systemctl", "stop", "edd-soma-subscriptions-producer"])
+        return self.check_call(["systemctl", "stop", "edd-soma-subscriptions-producer"])
 
     def get_gateways(self):
         gateways = netifaces.gateways()
@@ -219,6 +219,12 @@ class AvahiMonitor(object):
         self.gateways = self.get_gateways()
         self.ips = flatten(
             map(lambda a: [x['addr'] for x in a], [flatten(netifaces.ifaddresses(i).values()) for i in netifaces.interfaces()]))
+
+    def check_call(self, a):
+        try:
+            return check_call(a)
+        except CalledProcessError as e:
+            logger.warning("Error calling: %s : %s", a, e)
 
 
 def main():
