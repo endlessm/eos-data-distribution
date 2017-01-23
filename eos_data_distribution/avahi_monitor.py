@@ -33,7 +33,7 @@ from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.MDNS import ServiceDiscovery
 
 
-MAX_PEERS = 5
+MAX_PEERS = 5  # wild guess
 
 SERVICES = [
     # Disable TCP, we really only want UDP or ethernet
