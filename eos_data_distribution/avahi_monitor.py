@@ -115,12 +115,14 @@ class AvahiMonitor(object):
         self.check_call(
             ["nfdc", "set-strategy", str(SUBSCRIPTIONS_SOMA), 'ndn:/localhost/nfd/strategy/multicast'])
 
-        self.update_routed_status()
-        self.process_route_changes(False)
+        self._routed = False
+        self.update_routes()
 
-    def update_routed_status(self):
+    def update_routes(self):
+        prev_routed = self._routed
         self._routed = set(
             self._ndn_gateways.values()).intersection(self.gateways)
+        self.process_route_changes(prev_routed)
 
     def process_route_changes(self, prev_routed):
         """ adds/removes hops for route state changes:
@@ -133,33 +135,26 @@ class AvahiMonitor(object):
         :returns: None
         :rtype: NoneType
         """
-        if self._routed:
-            logger.info(
-                "Being routed by an NDN node, NOT acting as an edge router")
-            if not prev_routed:
-                # need to remove old links...
-                self._registry.values().map(self.remove_nexthop)
-                # ..and only add one to the routers
-                self._ndn_gateways.keys().map(self.add_nexthop)
-                # ..and stop edge
-                self.stop_edge()
-            else:
-                # no change: i am routed, i was routed before: no links
-                pass
-        else:
-            logger.info(
-                "Not Being routed by an NDN node, acting as an edge router")
+        if not self._routed:
             if prev_routed:
-                # need to add back old links...
-                # this is limited to MAX_PEERS in add_nexthop
-                self._registry.values().map(self.add_nexthop)
-                # ..and start edge
-                self.start_edge()
-            else:
-                # need to check if i still have enough peers
-                if self._peers < MIN_PEERS and len(self._registry) >= MIN_PEERS:
-                    set(self._peers).intersection(
-                        self._registry.values()).map(self.add_nexthop)
+                logger.info(
+                    "NOT Being routed by an NDN node, disabling NDN connnections")
+                self._ndn_gateways.keys().map(self.remove_nexthop)
+            # we are not routed, we need to wait until we are to do anything
+            return
+
+        logger.info(
+            "Being routed by an NDN node, NOT acting as an edge router")
+        if not prev_routed:
+            # need to remove old links...
+            self._registry.values().map(self.remove_nexthop)
+            # ..and only add one to the routers
+            self._ndn_gateways.keys().map(self.add_nexthop)
+            # ..and stop edge
+            self.stop_edge()
+        else:
+            # no change: i am routed, i was routed before: no links
+            pass
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
         logger.debug(
@@ -178,15 +173,7 @@ class AvahiMonitor(object):
         if address in self.gateways:
             self._ndn_gateways[key] = address
 
-        prev_routed = self._routed
-        self.update_routed_status()
-
-        if not self._routed and not prev_routed:
-            # not routed, wasn't routed, just add this new link
-            self.add_nexthop(faceUri)
-        else:
-            # all the rest handled by generic code
-            self.process_route_changes(prev_routed)
+        self.update_routes()
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
         logger.debug(
@@ -202,13 +189,11 @@ class AvahiMonitor(object):
             pass
 
         faceUri = self._registry[key]
+        if self.remove_nexthop(faceUri)
         del self._registry[key]
 
         prev_routed = self._routed
-        self.update_routed_status()
-
-        self.remove_nexthop(faceUri)
-        self.process_route_changes()
+        self.update_routes()
 
     def add_nexthop(self, faceUri):
         if len(self._peers) > MAX_PEERS:
