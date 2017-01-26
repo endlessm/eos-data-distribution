@@ -17,9 +17,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 import errno
-import os
 import json
+import logging
+import os
 from shutil import copyfile
 from os import path
 
@@ -36,6 +41,8 @@ from pyndn import Name, Face, Interest
 
 from eos_data_distribution.ndn import Consumer
 from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
+
+logging.basicConfig(level=logging.INFO)
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
@@ -59,7 +66,8 @@ def mkdir_p(dirname):
 
 
 def apply_subscription_update(subscription_id, src_manifest_path, shards):
-    user_subscriptions_folder = path.expanduser('~/.local/share/com.endlessm.subscriptions/%s/' % (subscription_id, ))
+    user_subscriptions_folder = path.expanduser(
+        '~/.local/share/com.endlessm.subscriptions/%s/' % (subscription_id, ))
     mkdir_p(user_subscriptions_folder)
 
     # now look at this manifest, that i just found
@@ -77,19 +85,24 @@ def apply_subscription_update(subscription_id, src_manifest_path, shards):
         copyfile(src_shard_path, dst_shard_path)
 
     # Place the new manifest into the zone...
-    new_manifest_path = path.join(user_subscriptions_folder, 'manifest.json.new')
+    new_manifest_path = path.join(
+        user_subscriptions_folder, 'manifest.json.new')
     copyfile(src_manifest_path, new_manifest_path)
 
     # Let ekn's downloader apply updates itself.
 
 
 class DBusService(object):
+
     def __init__(self):
         self.con = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
-        Gio.bus_own_name_on_connection(self.con, 'com.endlessm.EknSubscriptionsDownloader', Gio.BusNameOwnerFlags.NONE, None, None)
+        Gio.bus_own_name_on_connection(
+            self.con, 'com.endlessm.EknSubscriptionsDownloader', Gio.BusNameOwnerFlags.NONE, None, None)
 
-        self.con.register_object(object_path='/com/endlessm/EknSubscriptionsDownloader', interface_info=IFACE_INFO, method_call_closure=self._on_method_call)
+        self.con.register_object(
+            object_path='/com/endlessm/EknSubscriptionsDownloader',
+                                 interface_info=IFACE_INFO, method_call_closure=self._on_method_call)
 
         # We have to fill in a name here even though we never use it...
         self._consumer = Consumer(name='dummy')
@@ -105,9 +118,11 @@ class DBusService(object):
     def _on_data(self, consumer, interest, response):
         response_text = response.getContent().toBytes()
         subscription_reply = json.loads(response_text)
-        apply_subscription_update(subscription_reply['subscription_id'], subscription_reply['manifest_path'], subscription_reply['shards'])
+        apply_subscription_update(subscription_reply['subscription_id'], subscription_reply[
+                                  'manifest_path'], subscription_reply['shards'])
 
-        self._notification.update("La actualización ha finalizado la descarga.", "")
+        self._notification.update(
+            "La actualización ha finalizado la descarga.", "")
         self._notification.show()
 
     def impl_DownloadSubscription(self, invocation, parameters):
@@ -115,10 +130,11 @@ class DBusService(object):
         name = Name(SUBSCRIPTIONS_INSTALLED).append(subscription_id)
         interest = Interest(name)
         interest.setMustBeFresh(True)
-        self._consumer.expressInterest(interest, forever=True)
+        self._consumer.expressInterest(interest, try_again=True)
         invocation.return_value(None)
 
-        self._notification.update("La actualización ha iniciado la descarga.", "")
+        self._notification.update(
+            "La actualización ha iniciado la descarga.", "")
         self._notification.show()
 
 

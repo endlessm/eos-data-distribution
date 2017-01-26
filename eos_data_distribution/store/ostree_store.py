@@ -24,9 +24,8 @@ import gi
 from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_data_distribution import SimpleStore
-from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
-from eos_data_distribution.subscription import Producer as SubscriptionProducer
+from eos_data_distribution import names, subscription
+from eos_data_distribution.store import simple_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,10 +41,12 @@ def main():
 
     args = parser.parse_args()
 
-    subscription_producer = SubscriptionProducer(args.store_dir)
+    subscription_producer = subscription.Producer(args.store_dir)
     subscription_producer.start()
 
-    store = SimpleStore.Producer(base=args.store_dir, prefix=SUBSCRIPTIONS_SOMA)
+    store = simple_store.Producer(
+        base=args.store_dir, prefix=names.SUBSCRIPTIONS_SOMA)
+    store.start()
     GLib.MainLoop().run()
 
 

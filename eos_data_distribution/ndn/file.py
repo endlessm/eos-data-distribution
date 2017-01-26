@@ -1,11 +1,20 @@
+# -*- coding: utf-8 -*-
 
 import errno
 import fcntl
+import gi
+import logging
 import os
 import struct
 
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio
+
 from . import fallocate, chunks
 from .chunks import SegmentState
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_file_size(f):
@@ -14,6 +23,7 @@ def get_file_size(f):
 
 
 class FileProducer(chunks.Producer):
+
     def __init__(self, name, file, *args, **kwargs):
         super(FileProducer, self).__init__(name, *args, **kwargs)
         self.name = name
@@ -21,7 +31,7 @@ class FileProducer(chunks.Producer):
         self._file_size = get_file_size(self.f)
 
     def _get_final_segment(self):
-        return self._file_size // self.chunk_size
+        return ((self._file_size + self.chunk_size - 1) // self.chunk_size) - 1
 
     def _get_chunk(self, n):
         pos = self.chunk_size * n
@@ -38,7 +48,7 @@ def mkdir_p(dirname):
         return
 
     try:
-        os.makedirs(dirname)
+        os.makedirs(dirname, 0o755)
     except OSError as exc:
         if exc.errno == errno.EEXIST and os.path.isdir(dirname):
             pass
@@ -81,33 +91,41 @@ def mkdir_p(dirname):
 
 SEGMENT_TABLE_MAGIC = 'EosSgtV1'
 
-# 7 => [0, 0, 0, 0, 0, 1, 1, 1]
+
 def num_to_bitmap(n):
+    """7 => [0, 0, 0, 0, 0, 1, 1, 1]"""
     assert 0 <= n <= 255
     return [int(c) for c in list(bin(n)[2:].zfill(8))]
 
-# [0, 0, 0, 0, 0, 1, 1, 1] -> 7
+
 def bitmap_to_num(bitmap):
+    """[0, 0, 0, 0, 0, 1, 1, 1] -> 7"""
     assert len(bitmap) == 8
     n = 0
     for idx, bit in enumerate(bitmap[::-1]):
+        assert bit in [0, 1]
         n |= bit << idx
     return n
 
-class FileConsumer(chunks.Consumer):
-    def __init__(self, name, filename, *args, **kwargs):
-        self._filename = filename
-        mkdir_p(os.path.dirname(self._filename))
 
-        self._part_filename = '%s.part' % (self._filename, )
-        self._part_fd = os.open(self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK)
-        self._sgt_filename = '%s.sgt' % (self._filename, )
-        self._sgt_fd = os.open(self._sgt_filename, os.O_CREAT | os.O_RDWR)
+class Consumer(chunks.Consumer):
 
-        super(FileConsumer, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Consumer, self).__init__(*args, **kwargs)
 
-    # XXX: This is disgusting hackery. We need to remove auto=True.
-    def start(self):
+        self._filename = None
+        self._part_filename = None
+        self._part_fd = -1
+        self._sgt_filename = None
+        self._sgt_fd = -1
+
+        # If we attempt to start downloading a file in parallel with another
+        # Consumer, stop downloading and monitor the other consumer's progress
+        # instead.
+        self._completion_monitor_file = None
+        self._completion_monitor = None
+        self._completion_monitor_id = -1
+
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
 
@@ -120,26 +138,22 @@ class FileConsumer(chunks.Consumer):
         except ValueError as e:
             pass
 
-        if self._segments is not None:
-            self._schedule_interests()
-        else:
-            super(FileConsumer, self).start()
+    def _open_files(self):
+        raise NotImplementedError()
 
     def _save_chunk(self, n, data):
+        if self._part_fd < 0:
+            if not self._open_files():
+                return False
+
+        assert self._part_fd >= 0
         buf = data.getContent().toBytes()
         offs = self.chunk_size * n
         os.lseek(self._part_fd, offs, os.SEEK_SET)
         os.write(self._part_fd, buf)
         self._write_segment_table()
 
-    def _set_final_segment(self, n):
-        super(FileConsumer, self)._set_final_segment(n)
-
-        # Reserve space for the full file...
-        try:
-            fallocate.fallocate(self._part_fd, 0, self._size)
-        except IOError as e: # if it fails, we might get surprises later, but it's ok.
-            pass
+        return True
 
     def _read_segment_table(self):
         def read8():
@@ -154,7 +168,8 @@ class FileConsumer(chunks.Consumer):
         except OSError as e:
             raise ValueError()
 
-        # If there's no magic, then the file is busted, and we have no state to update.
+        # If there's no magic, then the file is busted, and we have no state to
+        # update.
         if magic != SEGMENT_TABLE_MAGIC:
             return
 
@@ -173,13 +188,15 @@ class FileConsumer(chunks.Consumer):
                 completed_segments += num_to_bitmap(byte)
 
             segments = completed_segments[:num_segments]
-            self._segments = [SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
+            self._segments = [
+                SegmentState.COMPLETE if bit else SegmentState.UNSENT for bit in segments]
 
         def read_mode1():
             num_segments = read8()
             num_complete_segments = read8()
             num_unsent_segments = num_segments - num_complete_segments
-            segments = ([SegmentState.COMPLETE] * num_complete_segments) + ([SegmentState.UNSENT] * num_unsent_segments)
+            segments = ([SegmentState.COMPLETE] * num_complete_segments) + (
+                [SegmentState.UNSENT] * num_unsent_segments)
 
             num_holes = read8()
             for i in range(num_holes):
@@ -216,8 +233,9 @@ class FileConsumer(chunks.Consumer):
             write8(len(self._segments))
 
             for i in range(0, len(self._segments), 8):
-                segments = self._segments[i:i+8]
-                bitmap = [1 if state == SegmentState.COMPLETE else 0 for state in segments]
+                segments = self._segments[i:i + 8]
+                bitmap = [
+                    1 if state == SegmentState.COMPLETE else 0 for state in segments]
                 bitmap = (bitmap + [0] * 8)[:8]
                 byte = bitmap_to_num(bitmap)
 
@@ -230,7 +248,8 @@ class FileConsumer(chunks.Consumer):
                 first_unsent_index = len(self._segments)
 
             unsent_segments = self._segments[first_unsent_index:]
-            # Make sure there are no complete and outgoing segments past the first unsent one...
+            # Make sure there are no complete and outgoing segments past the
+            # first unsent one...
             assert unsent_segments.count(SegmentState.COMPLETE) == 0
             assert unsent_segments.count(SegmentState.OUTGOING) == 0
 
@@ -239,7 +258,8 @@ class FileConsumer(chunks.Consumer):
             write8(num_complete_segments)
 
             complete_segments = self._segments[:num_complete_segments]
-            hole_indexes = [i for i, state in enumerate(complete_segments) if state == SegmentState.OUTGOING]
+            hole_indexes = [i for i, state in enumerate(
+                complete_segments) if state == SegmentState.OUTGOING]
             write8(len(hole_indexes))
             for hole_index in hole_indexes:
                 write8(hole_index)
@@ -251,10 +271,154 @@ class FileConsumer(chunks.Consumer):
 
     def _on_complete(self):
         os.close(self._part_fd)
-        os.close(self._sgt_fd)
+        self._part_fd = -1
+
         os.rename(self._part_filename, self._filename)
+        os.chmod(self._filename, 0o644)
+
+        try:
+            fcntl.flock(self._sgt_fd, fcntl.LOCK_UN)
+        except IOError as e:
+            pass
+
+        os.close(self._sgt_fd)
+        self._sgt_fd = -1
+
         os.unlink(self._sgt_filename)
-        super(FileConsumer, self)._on_complete()
+
+        super(Consumer, self)._on_complete()
+
+    def _create_files(self, filename):
+        # XXX this is racy
+        assert filename
+        logger.debug('Opening files for ‘%s’', filename)
+
+        mkdir_p(os.path.dirname(filename))
+        self._part_filename = '%s.part' % (filename, )
+        self._part_fd = os.open(
+            self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK, 0o600)
+        self._sgt_filename = '%s.sgt' % (filename, )
+        self._sgt_fd = os.open(
+            self._sgt_filename, os.O_CREAT | os.O_RDWR, 0o600)
+
+        # Before doing any I/O on the files, check we can get a lock on the
+        # segment file.
+        try:
+            fcntl.flock(self._sgt_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError as e:
+            # Clean up.
+            sgt_filename = self._sgt_filename
+
+            os.close(self._sgt_fd)
+            self._sgt_fd = -1
+            self._sgt_filename = None
+            os.close(self._part_fd)
+            self._part_fd = -1
+            self._part_filename = None
+
+            if e.errno == errno.EAGAIN:
+                # Cannot acquire lock: some other process (or part of this
+                # process) is already downloading it. Clean up and watch that
+                # file for completion.
+                logger.debug('File ‘%s’ is locked: waiting on completion.',
+                             sgt_filename)
+                self._watch_for_completion(filename)
+                return False
+            else:
+                raise
+
+        # Reserve space for the full file and truncate any existing content to
+        # the start of the final chunk (because it might be smaller than the
+        # chunk size).
+        try:
+            fallocate.fallocate(self._part_fd, 0, self._size)
+        except IOError as e:  # if it fails, we might get surprises later, but it's ok.
+            logger.debug('Error calling fallocate(%u, 0, %u): %s' %
+                         (self._part_fd, self._size, e.message))
+        try:
+            size = self.chunk_size * (self._num_segments - 1)
+            os.ftruncate(self._part_fd, size)
+        except IOError as e:
+            logger.debug('Error calling ftruncate(%u, %u): %s' %
+                         (self._part_fd, size, e.message))
+
+        return True
+
+    def _watch_for_completion(self, filename):
+        assert filename
+        segment_filename = '%s.sgt' % (filename, )
+        logger.debug('Logging ‘%s’ for completion', segment_filename)
+        monitor_file = Gio.File.new_for_path(segment_filename)
+        try:
+            monitor = monitor_file.monitor_file(Gio.FileMonitorFlags.NONE)
+        except Exception as e:
+            # TODO
+            logger.info('Failed to monitor file ‘%s’: %s', segment_filename,
+                        e.message)
+            raise
+
+        signal_id = monitor.connect('changed', self._on_file_monitor_changed)
+
+        self._completion_monitor_file = monitor_file
+        self._completion_monitor = monitor
+        self._completion_monitor_id = signal_id
+
+    def _on_file_monitor_changed(self, monitor, file, other_file, event_type):
+        logger.debug('File monitor event: %s, %s, %u', file.get_path(),
+                     other_file.get_path() if other_file else '(none)',
+                     event_type)
+
+        if (event_type == Gio.FileMonitorEvent.DELETED and
+            file.equal(self._completion_monitor_file)):
+            # Looks like the segment file has been deleted; try downloading
+            # the file again.
+            logger.info('File ‘%s’ deleted: restarting download',
+                        file.get_path())
+
+            self._completion_monitor_file = None
+            self._completion_monitor.disconnect(self._completion_monitor_id)
+            self._completion_monitor = None
+            self._completion_monitor_id = -1
+
+            self.start()
+
+
+
+class FileConsumer(Consumer):
+
+    def __init__(self, name, filename, *args, **kwargs):
+        self._filename = filename
+        super(FileConsumer, self).__init__(name, *args, **kwargs)
+
+    def _open_files(self):
+        return self._create_files(self._filename)
+
+def is_subdir(sub_dir, parent_dir):
+    sub_dir = os.path.realpath(sub_dir)
+    parent_dir = os.path.realpath(parent_dir)
+    diff = os.path.relpath(sub_dir, parent_dir)
+    return not (diff == os.pardir or diff.startswith(os.pardir + os.sep))
+
+
+class DirConsumer(Consumer):
+
+    def __init__(self, name, dirname, *args, **kwargs):
+        self._dirname = dirname
+        super(DirConsumer, self).__init__(name, *args, **kwargs)
+
+    def _open_files(self):
+        # os.path.join() discards preceding components if any component starts
+        # with a slash.
+        assert self._qualified_name
+        chunkless_name = str(self._qualified_name)
+        chunkless_name = chunkless_name.strip('/')
+
+        mkdir_p(self._dirname)
+        self._filename = os.path.join(self._dirname, chunkless_name)
+        assert is_subdir(self._filename, self._dirname)
+
+        return self._create_files(self._filename)
+
 
 if __name__ == '__main__':
     from tests import util
@@ -266,4 +430,3 @@ if __name__ == '__main__':
 
     producer = Producer(name=name, file=args.filename)
     util.run_producer_test(producer, name, args)
-

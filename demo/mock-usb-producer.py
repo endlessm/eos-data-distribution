@@ -24,7 +24,7 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GLib
 
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
-from eos_data_distribution.SimpleStore import Producer as SimpleStoreProducer
+from eos_data_distribution.store import simple_store
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -37,8 +37,9 @@ if __name__ == '__main__':
     parser.add_argument("dir")
     args = parser.parse_args()
 
-    store = SimpleStoreProducer(prefix=SUBSCRIPTIONS_SOMA, split=path.realpath(args.dir))
+    store = simple_store.Producer(
+        prefix=SUBSCRIPTIONS_SOMA, base=path.realpath(args.dir))
     logger.info('creating store: %s', args.__dict__)
-    store.publish_all_names(path.realpath(args.dir))
+    store.start()
 
     GLib.MainLoop().run()

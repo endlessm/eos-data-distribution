@@ -27,7 +27,7 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-from pyndn import Name, Face
+from pyndn import Name, Face, Interest
 
 from eos_data_distribution.ndn import Consumer
 from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
@@ -35,15 +35,17 @@ from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_S
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class DbusConsumer(Consumer):
+
     def __init__(self, name, target, appids, *args, **kwargs):
         Consumer.__init__(self, name=name, *args, **kwargs)
 
         self.target = target
         self.connect('data', self.notifyEKN)
 
-        appname = lambda i: Name(SUBSCRIPTIONS_INSTALLED).append(i)
-        [self.expressInterest(name=appname(i), forever=True) for i in appids]
+        appname = lambda i: Interest(Name(SUBSCRIPTIONS_INSTALLED).append(i))
+        [self.expressInterest(appname(i), try_again=True) for i in appids]
 
     def notifyEKN(self, consumer, interest, data):
         logger.info("GOT NAMES, all the names, the best names")

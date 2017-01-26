@@ -37,8 +37,10 @@ logger = logging.getLogger(__name__)
 def getSubIdName(name, basename):
     return name.getSubName(basename.size()).get(0)
 
+
 def get_cluster_type():
     return os.environ.get('SOMA_CLUSTER_TYPE', 'prod')
+
 
 def get_soma_server():
     server = os.getenv('EKN_SUBSCRIPTIONS_FRONTEND')
@@ -49,6 +51,7 @@ def get_soma_server():
 
 
 class Fetcher(object):
+
     def __init__(self):
         self._producer = Producer(SUBSCRIPTIONS_SOMA)
         self._producer.connect('interest', self._on_interest)
@@ -70,6 +73,10 @@ class Fetcher(object):
         if key in self._subproducers:
             return
 
+        # we can't have a component, we're getting bootstrapping interests
+        if chunkless_name.size() <= SUBSCRIPTIONS_SOMA.size():
+            return
+
         route = chunkless_name.getSubName(SUBSCRIPTIONS_SOMA.size())
         component = route.get(0).getValue().toRawStr()
 
@@ -77,9 +84,13 @@ class Fetcher(object):
             subscription_id = route.get(1).getValue().toRawStr()
             filename = route.get(2).getValue().toRawStr()
             assert filename == 'manifest.json'
-            self._subproducers[key] = manifest.Producer(chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face, auto=True)
+            self._subproducers[key] = manifest.Producer(
+                chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face)
+            self._subproducers[key].start()
         elif component == 'shard':
             shard_url = route.get(1).getValue().toRawStr()
-            self._subproducers[key] = http.Producer(chunkless_name, shard_url, face=face, auto=True)
+            self._subproducers[key] = http.Producer(
+                chunkless_name, shard_url, face=face)
+            self._subproducers[key].start()
         else:
             logger.warning('ignoring request: %s', name)

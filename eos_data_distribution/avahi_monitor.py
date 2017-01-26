@@ -76,7 +76,8 @@ class AvahiMonitor(object):
         """
 
         # XXX: Use the above native code for this.
-        check_call(["nfdc", "set-strategy", str(SUBSCRIPTIONS_SOMA), 'ndn:/localhost/nfd/strategy/multicast'])
+        check_call(
+            ["nfdc", "set-strategy", str(SUBSCRIPTIONS_SOMA), 'ndn:/localhost/nfd/strategy/multicast'])
 
         self._registry = dict()
 

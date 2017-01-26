@@ -3,7 +3,8 @@ import time
 
 from os import path, utime
 
-from .. import SimpleStore
+from eos_data_distribution.store import simple_store
+
 
 def touch(fname, times=None):
     with open(fname, 'a'):
@@ -11,13 +12,15 @@ def touch(fname, times=None):
 
 
 class TestClass:
+
     @pytest.fixture
     def callback(self):
         return 0
 
     def test_producer(self, tmpdir):
         d = tmpdir.mkdir("ndn")
-        p = SimpleStore.Producer()
+        p = simple_store.Producer(base=d)
+        p.start()
         tmpdirpath = str(d.realpath())
         tmpfilepath = path.join(tmpdirpath, 'test.shard')
 

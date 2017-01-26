@@ -30,9 +30,11 @@ logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = 4096
 
+
 def get_chunk_component(name):
     # The chunk component of a name is the last part...
     return name.get(-1)
+
 
 def get_chunkless_name(name):
     # XXX: Use more sophisticated parsing algorithm to strip non-chunk parts.
@@ -45,6 +47,28 @@ def get_chunkless_name(name):
 
 
 class Producer(base.Producer):
+
+    """
+    Produce chunks of content to send into the NDN network.
+
+    `Producer` is an abstract class which forms the base for all objects which
+    represent chunked content addressable through NDN. It derives from
+    `base.Producer`, which represents all addressable content (which is not
+    necessarily chunked).
+
+    Chunks may also be known as ‘segments’.
+
+    Content is split into one or more chunks of the same size, although the
+    final chunk may be smaller ([1, chunk size] bytes). Chunks are addressed
+    using the final component of the name a client has expressed an interest
+    in. If no chunk is addressed in the final component of the name, `Producer`
+    will return the first chunk of its content.
+
+    See the documentation for ``eos_data_distribution.ndn.base.Producer`` for
+    details on how interests are handled.
+    """
+
+    # FIXME: Should we rename ‘chunks’ to ‘segments’ for consistency?
     def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
         assert(chunk_size > 0)
         self.chunk_size = chunk_size
@@ -53,7 +77,7 @@ class Producer(base.Producer):
         self.connect('interest', self._on_interest)
 
     def _get_final_block_id(self):
-        pass
+        raise NotImplementedError()
 
     def _send_chunk(self, data, n):
         content = self._get_chunk(n)
@@ -108,6 +132,7 @@ class Consumer(base.Consumer):
         self._segments = None
         self._num_outstanding_interests = 0
         self._qualified_name = None
+        self._emitted_complete = False
 
         self.interest = Interest(Name(name))
         self.interest.setMustBeFresh(True)
@@ -117,14 +142,17 @@ class Consumer(base.Consumer):
         logger.debug('init chunks.Consumer: %s', name)
 
     def start(self):
-        # Make an initial request for the barename. We should get a fully
-        # qualified request back for the first segment, with a timestamp and
-        # segment number. Future requests will request the fully qualified
-        # name.
-        self.expressInterest(self.interest, forever=True)
+        if not self._segments:
+            # Make an initial request for the barename. We should get a fully
+            # qualified request back for the first segment, with a timestamp and
+            # segment number. Future requests will request the fully qualified
+            # name.
+            self.expressInterest(self.interest, try_again=True)
+        else:
+            self._schedule_interests()
 
     def _save_chunk(self, n, data):
-        pass
+        raise NotImplementedError()
 
     def _on_complete(self):
         self.emit('complete')
@@ -132,14 +160,19 @@ class Consumer(base.Consumer):
 
     def _check_for_complete(self):
         if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
-            self._on_complete()
+            if not self._emitted_complete:
+                self._emitted_complete = True
+                self._on_complete()
+            else:
+                logger.debug('Prevented emitting repeated complete signal')
 
     def _schedule_interests(self):
         while self._num_outstanding_interests < self._total_interest_requests:
             try:
                 next_segment = self._segments.index(SegmentState.UNSENT)
             except ValueError as e:
-                # If we have no unsent segments left, then check for completion.
+                # If we have no unsent segments left, then check for
+                # completion.
                 self._check_for_complete()
                 return
 
@@ -148,7 +181,7 @@ class Consumer(base.Consumer):
     def _request_segment(self, n):
         ndn_name = Name(self._qualified_name).appendSegment(n)
         logger.debug('is this an interest ? %s', ndn_name)
-        self.expressInterest(ndn_name, forever=True)
+        self.expressInterest(Interest(ndn_name), try_again=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING
         self._num_outstanding_interests += 1
@@ -182,7 +215,7 @@ class Consumer(base.Consumer):
         self._check_final_segment(meta_info.getFinalBlockId().toSegment())
 
         name = data.getName()
-        logger.info('got data: %s', name)
+        logger.debug('got data: %s', name)
 
         if self._qualified_name is None:
             # Strip off the chunk component for our final FQDN...
@@ -191,10 +224,22 @@ class Consumer(base.Consumer):
             self._qualified_name = name.getPrefix(-1)
 
         seg = get_chunk_component(name).toSegment()
-        self._save_chunk(seg, data)
+
+        # Have we somehow already got this segment?
+        if self._segments[seg] == SegmentState.COMPLETE:
+            logger.debug('Ignoring data ‘%s’ as it’s already been received',
+                         name)
+            self._check_for_complete()
+            return
+
+        # If saving the chunk fails, it might be because the chunk was invalid,
+        # or is being deferred.
+        if not self._save_chunk(seg, data):
+            return
         self._segments[seg] = SegmentState.COMPLETE
 
         num_complete_segments = self._segments.count(SegmentState.COMPLETE)
-        self.emit('progress', (float(num_complete_segments) / len(self._segments)) * 100)
+        self.emit(
+            'progress', (float(num_complete_segments) / len(self._segments)) * 100)
 
         self._schedule_interests()

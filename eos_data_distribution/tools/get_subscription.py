@@ -36,16 +36,19 @@ from eos_data_distribution.subscription import Fetcher
 from eos_data_distribution.parallel import Batch
 from eos_data_distribution.tools import util
 
+
 def get_subscription_ids_for_arg(arg):
     # Check if it's an app ID.
     for data_dir in GLib.get_system_data_dirs():
-        subscriptions_path = os.path.join(data_dir, 'ekn', arg, 'subscriptions.json')
+        subscriptions_path = os.path.join(
+            data_dir, 'ekn', arg, 'subscriptions.json')
         if os.path.exists(subscriptions_path):
             subscriptions_json = json.load(open(subscriptions_path, 'r'))
             return [subscription_entry['id'] for subscription_entry in subscription_json['subscriptions']]
 
     # Otherwise, assume it's a subscription ID.
     return [arg]
+
 
 def mount_get_root(mount):
     drive = mount.get_drive()
@@ -56,30 +59,38 @@ def mount_get_root(mount):
     print "found drive", drive.get_name()
     return os.path.join(root.get_path(), ENDLESS_NDN_CACHE_PATH)
 
+
 def get_default_store_dir():
     monitor = Gio.VolumeMonitor.get()
-    usb_stores = [m for m in [mount_get_root(mount) for mount in monitor.get_mounts()] if m]
+    usb_stores = [m for m in [mount_get_root(mount)
+                              for mount in monitor.get_mounts()] if m]
     if usb_stores:
         return usb_stores[0]
     else:
         return "./eos_subscription_data"
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Download content for a number of subscription IDs or app IDs")
-    parser.add_argument("-t", "--store-dir", default=get_default_store_dir(), help="where to store the downloaded files")
+    parser = argparse.ArgumentParser(
+        description="Download content for a number of subscription IDs or app IDs")
+    parser.add_argument(
+        "-t", "--store-dir", default=get_default_store_dir(), help="where to store the downloaded files")
     parser.add_argument("ids", nargs='+')
 
     args = util.process_args(parser)
 
-    subscription_ids = list(itertools.chain.from_iterable((get_subscription_ids_for_arg(arg) for arg in args.ids)))
+    subscription_ids = list(itertools.chain.from_iterable(
+        (get_subscription_ids_for_arg(arg) for arg in args.ids)))
     assert len(subscription_ids)
 
     loop = GLib.MainLoop()
 
-    fetchers = [Fetcher(args.store_dir, subscription_id) for subscription_id in subscription_ids]
+    fetchers = [Fetcher(args.store_dir, subscription_id)
+                for subscription_id in subscription_ids]
 
     batch = Batch(fetchers, "Subscriptions")
     batch.connect('complete', lambda *a: loop.quit())
+    batch.start()
 
     loop.run()
 

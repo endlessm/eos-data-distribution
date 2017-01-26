@@ -69,6 +69,17 @@ Here are the words you need to know:
 
  * **EDD** - Acronym for ‘EOS Data Distribution’, the name of the project.
 
+## Coding style and NDN API references
+
+This package follows [PEP 8](https://www.python.org/dev/peps/pep-0008/).
+
+There are various references for the NDN API. This project follows the
+[Common Client Libraries API](http://named-data.net/doc/ndn-ccl-api/) where
+possible. It also follows the
+[PyNDN API](http://named-data.net/doc/0.4.0/PyNDN2/pyndn.html); and the
+[NDN naming conventions](http://named-data.net/doc/tech-memos/naming-conventions.pdf)
+where possible.
+
 ## License
 
 This package is licensed under the LGPLv3+.

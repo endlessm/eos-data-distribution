@@ -19,18 +19,22 @@
 
 from collections import defaultdict
 from os import path, walk
+import logging
 
 from pyndn import Name
 from ..DirTools import Monitor
 from ..ndn.file import FileProducer
 
+logger = logging.getLogger(__name__)
+
 
 class Producer(object):
-    def __init__(self, base=None, prefix='/',
-                 exts=('.shard', '.json'), split=None, cost=None):
+
+    def __init__(self, base, prefix='/',
+                 exts=('.shard', '.json'), cost=None):
+        assert base
         self.base = path.realpath(base)
         self.exts = exts
-        self.split = split or base
         self.prefix = prefix
         self.cost = cost
 
@@ -38,7 +42,8 @@ class Producer(object):
         self.dirs = dict()
         self.dirpubs = defaultdict(lambda: {})
 
-        if base: self.publish_all_names(base)
+    def start (self):
+        self.publish_all_names(self.base)
 
     def _path_to_name(self, filename):
         assert filename.startswith(self.base)
@@ -67,7 +72,8 @@ class Producer(object):
 
         name = self._path_to_name(filename)
         file = open(filename, 'rb')
-        producer = FileProducer(name, file, cost=self.cost, auto=True)
+        producer = FileProducer(name, file, cost=self.cost)
+        producer.start()
         self.dirpubs[basedir].update({name: producer})
 
     def walk_dir(self, basedir):
@@ -80,7 +86,8 @@ class Producer(object):
     def publish_all_names(self, basedir):
         self.walk_dir(basedir)
         monitor = Monitor(basedir)
-        [monitor.connect(s, self._publish_name, basedir) for s in ['created', 'moved-in', 'renamed']]
-        [monitor.connect(s, self._unpublish_name, basedir) for s in ['moved-out', 'renamed']]
+        [monitor.connect(s, self._publish_name, basedir)
+         for s in monitor.filterSignals(['created', 'moved-in', 'renamed'])]
+        [monitor.connect(s, self._unpublish_name, basedir)
+         for s in monitor.filterSignals(['moved-out', 'renamed'])]
         self.dirs[basedir] = monitor
-

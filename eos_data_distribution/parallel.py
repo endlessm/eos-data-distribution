@@ -24,6 +24,7 @@ from gi.repository import GObject
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class Batch(GObject.GObject):
     __gsignals__ = {
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
@@ -35,6 +36,13 @@ class Batch(GObject.GObject):
         self._incomplete_workers = set(workers)
         for worker in self._incomplete_workers:
             worker.connect('complete', self._on_batch_complete)
+
+    def start(self):
+        if not self._incomplete_workers:
+            logger.info('%s complete: no workers', self._type)
+            self.emit('complete')
+
+        for worker in self._incomplete_workers:
             worker.start()
 
     def _on_batch_complete(self, worker):

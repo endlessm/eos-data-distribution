@@ -40,11 +40,13 @@ class GLibUnixTransport(UnixTransport):
     _watch_id = 0
 
     def connect(self, connectionInfo, elementListener, onConnected):
-        super(GLibUnixTransport, self).connect(connectionInfo, elementListener, onConnected)
+        super(GLibUnixTransport, self).connect(
+            connectionInfo, elementListener, onConnected)
 
         fd = self._socket.fileno()
         io_channel = GLib.IOChannel.unix_new(fd)
-        self._watch_id = GLib.io_add_watch(io_channel, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self._socket_ready)
+        self._watch_id = GLib.io_add_watch(
+            io_channel, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self._socket_ready)
 
     def _socket_ready(self, channel, cond):
         nBytesRead = self._socket.recv_into(self._buffer)
@@ -64,6 +66,7 @@ class GLibUnixTransport(UnixTransport):
 
 
 class GLibUnixFace(Face):
+
     def __init__(self):
         transport = GLibUnixTransport()
         file_path = self._getUnixSocketFilePathForLocalhost()
@@ -73,17 +76,21 @@ class GLibUnixFace(Face):
         self._commandKeyChain = None
         self._commandCertificateName = Name()
 
-    def callLater(self, delayMilliseconds, callback):
-        # Wrapper to ensure we remove the source.
-        def wrap():
-            callback()
-            return GLib.SOURCE_REMOVE
+    @property
+    def usesGLibMainContext(self):
+        """
+        Indicator that this Face implementation uses a GLib main context.
 
-        GLib.timeout_add(delayMilliseconds, wrap)
+        This means it can be safely used in situations where the main context
+        is the poll implementation, and progress would not be made otherwise
+        without calling ``Face.processEvents()``.
+        """
+        return True
 
 
 def singleton(f):
     instance = [None]
+
     def inner():
         if instance[0] is None:
             instance[0] = f()
@@ -102,21 +109,22 @@ def generate_keys(name):
     try:
         certificateName = keyChain.getDefaultCertificateName()
     except:
-        logger.warning("Could not get default certificate name, creating a new one from %s", name)
+        logger.warning(
+            "Could not get default certificate name, creating a new one from %s", name)
         certificateName = keyChain.createIdentityAndCertificate(name)
     return (keyChain, certificateName)
 
 
 class Base(GObject.GObject):
+
     def __init__(self, name, face=None):
         GObject.GObject.__init__(self)
         self.name = Name(name)
 
-        if face is not None:
-            assert isinstance(face, GLibUnixFace)
-            self.face = face
-        else:
-            self.face = get_default_face()
+        # GLibUnixFace is the only Face implementation to do things in a GLib
+        # main loop, so we require it.
+        self.face = face or get_default_face()
+        assert getattr(self.face, 'usesGLibMainContext', False)
 
         self._callbackCount = 0
         self._responseCount = 0
@@ -125,7 +133,8 @@ class Base(GObject.GObject):
         self.pit = dict()
 
     def generateKeys(self, name=None):
-        if not name: name = self.name
+        if not name:
+            name = self.name
         (self._keyChain, self._certificateName) = generate_keys(name)
         self.face.setCommandSigningInfo(self._keyChain, self._certificateName)
 
@@ -135,42 +144,48 @@ class Base(GObject.GObject):
     def expressInterest(self, interest=None, *args, **kwargs):
         if interest is None:
             interest = Interest(self.name)
-        return self._expressInterest(interest, self.name, *args, **kwargs)
+        return self._expressInterest(interest, *args, **kwargs)
 
-    def _expressInterest(self, interest, name=None,
-                         forever=False, onData=None, onTimeout=None):
-        if not name: name = self.name
-        if not onData: onData = self._onData
-        if not onTimeout: onTimeout = partial(self.onTimeout,
-                            forever=forever, name=name)
+    def _expressInterest(self, interest, try_again=False,
+                         onData=None, onTimeout=None):
+        if not onData:
+            onData = self._onData
+        if not onTimeout:
+            onTimeout = partial(self.onTimeout, try_again=try_again)
 
         logger.debug("Express Interest name: %s", interest)
-        self.pit[interest] = self.face.expressInterest(interest, onData, onTimeout)
+        self.pit[interest] = self.face.expressInterest(
+            interest, onData, onTimeout)
         return interest
 
     def expressCommandInterest(self, cmd, prefix=None,
                                onFailed=None, onTimeout=None, onSuccess=None,
                                *args, **kwargs):
-        if not prefix and self.name: prefix = self.name
-        if prefix: assert type(prefix) is Name
+        if not prefix and self.name:
+            prefix = self.name
+        if prefix:
+            assert type(prefix) is Name
 
-        interest = self._makeCommandInterest(cmd, prefix=prefix, *args, **kwargs)
-        node = self.face._node
+        interest = self._makeCommandInterest(
+            cmd, prefix=prefix, *args, **kwargs)
         response = command._CommandResponse(prefix, face=self.face,
-            onFailed=onFailed, onSuccess=onSuccess)
+                                            onFailed=onFailed, onSuccess=onSuccess)
         return self._expressInterest(interest, prefix,
-                                    onData=response.onData, onTimeout=response.onTimeout)
+                                     onData=response.onData, onTimeout=response.onTimeout)
 
     def _makeCommandInterest(self, cmd, prefix=None, controlParameters=None,
-                            keyChain=None, certificateName=None,
-                            *args, **kwargs):
+                             keyChain=None, certificateName=None,
+                             *args, **kwargs):
 
-        if not controlParameters: controlParameters = ControlParameters()
+        if not controlParameters:
+            controlParameters = ControlParameters()
         if not self._keyChain or not self._certificateName:
             self.generateKeys()
 
-        if not keyChain: keyChain = self._keyChain
-        if not certificateName: certificateName = self._certificateName
+        if not keyChain:
+            keyChain = self._keyChain
+        if not certificateName:
+            certificateName = self._certificateName
 
         controlParameters.setName(prefix)
         return command.makeInterest(cmd, controlParameters=controlParameters,
@@ -187,15 +202,13 @@ class Producer(Base):
         'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
     }
 
-    def __init__(self, name=None, cost=None, auto=False, *args, **kwargs):
+    def __init__(self, name=None, cost=None, *args, **kwargs):
         self.cost = cost
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
 
         self.generateKeys()
         self._prefixes = dict()
-
-        if auto: self.start()
 
     def start(self):
         self.registerPrefix()
@@ -223,23 +236,30 @@ class Producer(Base):
             prefix = self.name
 
         logger.info("Register prefix: %s", prefix)
-        self._prefixes[prefix] = self._registerPrefix(prefix, flags, *args, **kwargs)
+        self._prefixes[prefix] = self._registerPrefix(
+            prefix, flags, *args, **kwargs)
         return prefix
 
     def _registerPrefix(self, prefix, cost=None, controlParameters=None,
-                           onInterest=None, onRegisterFailed=None,
-                           onRegisterSuccess=None,
-                           *args, **kwargs):
+                        onInterest=None, onRegisterFailed=None,
+                        onRegisterSuccess=None,
+                        *args, **kwargs):
         node = self.face._node
         registeredPrefixId = node.getNextEntryId()
 
-        if not cost: cost = self.cost
-        if not onInterest: onInterest = self._onInterest
-        if not onRegisterFailed: onRegisterFailed = self.onRegisterFailed
-        if not onRegisterSuccess: onRegisterSuccess = self.onRegisterSuccess
+        if not cost:
+            cost = self.cost
+        if not onInterest:
+            onInterest = self._onInterest
+        if not onRegisterFailed:
+            onRegisterFailed = self.onRegisterFailed
+        if not onRegisterSuccess:
+            onRegisterSuccess = self.onRegisterSuccess
 
-        if not controlParameters: controlParameters = ControlParameters()
-        if cost: controlParameters.setCost(int(cost))
+        if not controlParameters:
+            controlParameters = ControlParameters()
+        if cost:
+            controlParameters.setCost(int(cost))
 
         def _addToRegisteredPrefixTable(prefix):
             # Success, so we can add to the registered prefix table.
@@ -251,11 +271,11 @@ class Producer(Base):
                     # InterestFilterEntry.
                     interestFilterId = node.getNextEntryId()
                     node.setInterestFilter(
-                      interestFilterId, InterestFilter(prefix),
+                        interestFilterId, InterestFilter(prefix),
                       onInterest, self.face)
 
                 if not node._registeredPrefixTable.add(
-                      registeredPrefixId, prefix, interestFilterId):
+                        registeredPrefixId, prefix, interestFilterId):
                     # removeRegisteredPrefix was already called with the
                     # registeredPrefixId.
                     if interestFilterId > 0:
@@ -264,7 +284,8 @@ class Producer(Base):
 
                     return
 
-            if onRegisterSuccess: onRegisterSuccess(prefix, registeredPrefixId)
+            if onRegisterSuccess:
+                onRegisterSuccess(prefix, registeredPrefixId)
 
         self.expressCommandInterest('/nfd/rib/register', prefix,
                                     controlParameters=controlParameters,
@@ -279,7 +300,8 @@ class Producer(Base):
 
     def onRegisterSuccess(self, prefix, registered):
         self.emit('register-success', prefix, registered)
-        logger.info("Register succeded for prefix: %s, %s", prefix, registered)
+        logger.info(
+            "Register succeeded for prefix: %s, %s", prefix, registered)
 
     def removeRegisteredPrefix(self, prefix):
         name = Name(prefix)
@@ -288,23 +310,22 @@ class Producer(Base):
             self.face.removeRegisteredPrefix(self._prefixes[name])
             del(self._prefixes[name])
         except:
-            logger.warning("tried to unregister a prefix that never was registered: %s", prefix)
+            logger.warning(
+                "tried to unregister a prefix that never was registered: %s", prefix)
             pass
 
 
 class Consumer(Base):
     __gsignals__ = {
         'data': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
-        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
+        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, bool)),
     }
 
-    def __init__(self, name=None, auto=False, *args, **kwargs):
+    def __init__(self, name=None, *args, **kwargs):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
         #        self.generateKeys()
         self._prefixes = dict()
-
-        if auto: self.start()
 
     def start(self):
         self.expressInterest()
@@ -317,10 +338,11 @@ class Consumer(Base):
         self.face.removePendingInterest(self.pit[name])
         del self.pit[name]
 
-    def onTimeout(self, interest, forever=False, name=None):
+    def onTimeout(self, interest, try_again=False):
+        name = interest.getName()
         self._callbackCount += 1
-        self.emit('interest-timeout', interest)
-        logger.debug("Time out for interest: %s", interest.getName())
-        if forever:
+        self.emit('interest-timeout', interest, try_again)
+        logger.debug("Time out for interest: %s", name)
+        if try_again:
             logger.info("Re-requesting Interest: %s", name)
-            self._expressInterest(interest, name=name, forever=forever)
+            self._expressInterest(interest, try_again=try_again)
