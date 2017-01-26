@@ -77,7 +77,7 @@ class Producer(base.Producer):
         self.connect('interest', self._on_interest)
 
     def _get_final_block_id(self):
-        pass
+        raise NotImplementedError()
 
     def _send_chunk(self, data, n):
         content = self._get_chunk(n)
@@ -132,6 +132,7 @@ class Consumer(base.Consumer):
         self._segments = None
         self._num_outstanding_interests = 0
         self._qualified_name = None
+        self._emitted_complete = False
 
         self.interest = Interest(Name(name))
         self.interest.setMustBeFresh(True)
@@ -146,12 +147,12 @@ class Consumer(base.Consumer):
             # qualified request back for the first segment, with a timestamp and
             # segment number. Future requests will request the fully qualified
             # name.
-            self.expressInterest(self.interest, forever=True)
+            self.expressInterest(self.interest, try_again=True)
         else:
             self._schedule_interests()
 
     def _save_chunk(self, n, data):
-        pass
+        raise NotImplementedError()
 
     def _on_complete(self):
         self.emit('complete')
@@ -159,7 +160,11 @@ class Consumer(base.Consumer):
 
     def _check_for_complete(self):
         if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
-            self._on_complete()
+            if not self._emitted_complete:
+                self._emitted_complete = True
+                self._on_complete()
+            else:
+                logger.debug('Prevented emitting repeated complete signal')
 
     def _schedule_interests(self):
         while self._num_outstanding_interests < self._total_interest_requests:
@@ -176,7 +181,7 @@ class Consumer(base.Consumer):
     def _request_segment(self, n):
         ndn_name = Name(self._qualified_name).appendSegment(n)
         logger.debug('is this an interest ? %s', ndn_name)
-        self.expressInterest(Interest(ndn_name), forever=True)
+        self.expressInterest(Interest(ndn_name), try_again=True)
         if self._segments is not None:
             self._segments[n] = SegmentState.OUTGOING
         self._num_outstanding_interests += 1
@@ -219,7 +224,18 @@ class Consumer(base.Consumer):
             self._qualified_name = name.getPrefix(-1)
 
         seg = get_chunk_component(name).toSegment()
-        self._save_chunk(seg, data)
+
+        # Have we somehow already got this segment?
+        if self._segments[seg] == SegmentState.COMPLETE:
+            logger.debug('Ignoring data ‘%s’ as it’s already been received',
+                         name)
+            self._check_for_complete()
+            return
+
+        # If saving the chunk fails, it might be because the chunk was invalid,
+        # or is being deferred.
+        if not self._save_chunk(seg, data):
+            return
         self._segments[seg] = SegmentState.COMPLETE
 
         num_complete_segments = self._segments.count(SegmentState.COMPLETE)

@@ -76,6 +76,17 @@ class GLibUnixFace(Face):
         self._commandKeyChain = None
         self._commandCertificateName = Name()
 
+    @property
+    def usesGLibMainContext(self):
+        """
+        Indicator that this Face implementation uses a GLib main context.
+
+        This means it can be safely used in situations where the main context
+        is the poll implementation, and progress would not be made otherwise
+        without calling ``Face.processEvents()``.
+        """
+        return True
+
 
 def singleton(f):
     instance = [None]
@@ -113,7 +124,7 @@ class Base(GObject.GObject):
         # GLibUnixFace is the only Face implementation to do things in a GLib
         # main loop, so we require it.
         self.face = face or get_default_face()
-        assert isinstance(self.face, GLibUnixFace)
+        assert getattr(self.face, 'usesGLibMainContext', False)
 
         self._callbackCount = 0
         self._responseCount = 0
@@ -135,12 +146,12 @@ class Base(GObject.GObject):
             interest = Interest(self.name)
         return self._expressInterest(interest, *args, **kwargs)
 
-    def _expressInterest(self, interest, forever=False,
+    def _expressInterest(self, interest, try_again=False,
                          onData=None, onTimeout=None):
         if not onData:
             onData = self._onData
         if not onTimeout:
-            onTimeout = partial(self.onTimeout, forever=forever)
+            onTimeout = partial(self.onTimeout, try_again=try_again)
 
         logger.debug("Express Interest name: %s", interest)
         self.pit[interest] = self.face.expressInterest(
@@ -307,7 +318,7 @@ class Producer(Base):
 class Consumer(Base):
     __gsignals__ = {
         'data': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
-        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
+        'interest-timeout': (GObject.SIGNAL_RUN_FIRST, None, (object, bool)),
     }
 
     def __init__(self, name=None, *args, **kwargs):
@@ -327,11 +338,11 @@ class Consumer(Base):
         self.face.removePendingInterest(self.pit[name])
         del self.pit[name]
 
-    def onTimeout(self, interest, forever=False):
+    def onTimeout(self, interest, try_again=False):
         name = interest.getName()
         self._callbackCount += 1
-        self.emit('interest-timeout', interest)
+        self.emit('interest-timeout', interest, try_again)
         logger.debug("Time out for interest: %s", name)
-        if forever:
+        if try_again:
             logger.info("Re-requesting Interest: %s", name)
-            self._expressInterest(interest, forever=forever)
+            self._expressInterest(interest, try_again=try_again)

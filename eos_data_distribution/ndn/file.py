@@ -1,11 +1,20 @@
+# -*- coding: utf-8 -*-
 
 import errno
 import fcntl
+import gi
+import logging
 import os
 import struct
 
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio
+
 from . import fallocate, chunks
 from .chunks import SegmentState
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_file_size(f):
@@ -104,6 +113,19 @@ class Consumer(chunks.Consumer):
     def __init__(self, *args, **kwargs):
         super(Consumer, self).__init__(*args, **kwargs)
 
+        self._filename = None
+        self._part_filename = None
+        self._part_fd = -1
+        self._sgt_filename = None
+        self._sgt_fd = -1
+
+        # If we attempt to start downloading a file in parallel with another
+        # Consumer, stop downloading and monitor the other consumer's progress
+        # instead.
+        self._completion_monitor_file = None
+        self._completion_monitor = None
+        self._completion_monitor_id = -1
+
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
 
@@ -116,21 +138,22 @@ class Consumer(chunks.Consumer):
         except ValueError as e:
             pass
 
+    def _open_files(self):
+        raise NotImplementedError()
+
     def _save_chunk(self, n, data):
+        if self._part_fd < 0:
+            if not self._open_files():
+                return False
+
+        assert self._part_fd >= 0
         buf = data.getContent().toBytes()
         offs = self.chunk_size * n
         os.lseek(self._part_fd, offs, os.SEEK_SET)
         os.write(self._part_fd, buf)
         self._write_segment_table()
 
-    def _set_final_segment(self, n):
-        super(Consumer, self)._set_final_segment(n)
-
-        # Reserve space for the full file...
-        try:
-            fallocate.fallocate(self._part_fd, 0, self._size)
-        except IOError as e:  # if it fails, we might get surprises later, but it's ok.
-            pass
+        return True
 
     def _read_segment_table(self):
         def read8():
@@ -248,15 +271,28 @@ class Consumer(chunks.Consumer):
 
     def _on_complete(self):
         os.close(self._part_fd)
-        os.close(self._sgt_fd)
+        self._part_fd = -1
+
         os.rename(self._part_filename, self._filename)
         os.chmod(self._filename, 0o644)
+
+        try:
+            fcntl.flock(self._sgt_fd, fcntl.LOCK_UN)
+        except IOError as e:
+            pass
+
+        os.close(self._sgt_fd)
+        self._sgt_fd = -1
+
         os.unlink(self._sgt_filename)
+
         super(Consumer, self)._on_complete()
 
     def _create_files(self, filename):
         # XXX this is racy
-        self._filename = filename
+        assert filename
+        logger.debug('Opening files for ‘%s’', filename)
+
         mkdir_p(os.path.dirname(filename))
         self._part_filename = '%s.part' % (filename, )
         self._part_fd = os.open(
@@ -265,29 +301,124 @@ class Consumer(chunks.Consumer):
         self._sgt_fd = os.open(
             self._sgt_filename, os.O_CREAT | os.O_RDWR, 0o600)
 
+        # Before doing any I/O on the files, check we can get a lock on the
+        # segment file.
+        try:
+            fcntl.flock(self._sgt_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError as e:
+            # Clean up.
+            sgt_filename = self._sgt_filename
+
+            os.close(self._sgt_fd)
+            self._sgt_fd = -1
+            self._sgt_filename = None
+            os.close(self._part_fd)
+            self._part_fd = -1
+            self._part_filename = None
+
+            if e.errno == errno.EAGAIN:
+                # Cannot acquire lock: some other process (or part of this
+                # process) is already downloading it. Clean up and watch that
+                # file for completion.
+                logger.debug('File ‘%s’ is locked: waiting on completion.',
+                             sgt_filename)
+                self._watch_for_completion(filename)
+                return False
+            else:
+                raise
+
+        # Reserve space for the full file and truncate any existing content to
+        # the start of the final chunk (because it might be smaller than the
+        # chunk size).
+        try:
+            fallocate.fallocate(self._part_fd, 0, self._size)
+        except IOError as e:  # if it fails, we might get surprises later, but it's ok.
+            logger.debug('Error calling fallocate(%u, 0, %u): %s' %
+                         (self._part_fd, self._size, e.message))
+        try:
+            size = self.chunk_size * (self._num_segments - 1)
+            os.ftruncate(self._part_fd, size)
+        except IOError as e:
+            logger.debug('Error calling ftruncate(%u, %u): %s' %
+                         (self._part_fd, size, e.message))
+
+        return True
+
+    def _watch_for_completion(self, filename):
+        assert filename
+        segment_filename = '%s.sgt' % (filename, )
+        logger.debug('Logging ‘%s’ for completion', segment_filename)
+        monitor_file = Gio.File.new_for_path(segment_filename)
+        try:
+            monitor = monitor_file.monitor_file(Gio.FileMonitorFlags.NONE)
+        except Exception as e:
+            # TODO
+            logger.info('Failed to monitor file ‘%s’: %s', segment_filename,
+                        e.message)
+            raise
+
+        signal_id = monitor.connect('changed', self._on_file_monitor_changed)
+
+        self._completion_monitor_file = monitor_file
+        self._completion_monitor = monitor
+        self._completion_monitor_id = signal_id
+
+    def _on_file_monitor_changed(self, monitor, file, other_file, event_type):
+        logger.debug('File monitor event: %s, %s, %u', file.get_path(),
+                     other_file.get_path() if other_file else '(none)',
+                     event_type)
+
+        if (event_type == Gio.FileMonitorEvent.DELETED and
+            file.equal(self._completion_monitor_file)):
+            # Looks like the segment file has been deleted; try downloading
+            # the file again.
+            logger.info('File ‘%s’ deleted: restarting download',
+                        file.get_path())
+
+            self._completion_monitor_file = None
+            self._completion_monitor.disconnect(self._completion_monitor_id)
+            self._completion_monitor = None
+            self._completion_monitor_id = -1
+
+            self.start()
+
+
 
 class FileConsumer(Consumer):
 
     def __init__(self, name, filename, *args, **kwargs):
-        self._create_files(filename)
-
+        self._filename = filename
         super(FileConsumer, self).__init__(name, *args, **kwargs)
+
+    def _open_files(self):
+        return self._create_files(self._filename)
+
+def is_subdir(sub_dir, parent_dir):
+    sub_dir = os.path.realpath(sub_dir)
+    parent_dir = os.path.realpath(parent_dir)
+    diff = os.path.relpath(sub_dir, parent_dir)
+    return not (diff == os.pardir or diff.startswith(os.pardir + os.sep))
 
 
 class DirConsumer(Consumer):
 
     def __init__(self, name, dirname, *args, **kwargs):
-        mkdir_p(dirname)
         self._dirname = dirname
         super(DirConsumer, self).__init__(name, *args, **kwargs)
 
-    def _on_data(self, o, interest, data):
-        self._create_files(
-            os.path.join(self._dirname, chunks.get_chunkless_name(
-                interest.getName())))
+    def _open_files(self):
+        # os.path.join() discards preceding components if any component starts
+        # with a slash.
+        assert self._qualified_name
+        chunkless_name = str(self._qualified_name)
+        chunkless_name = chunkless_name.strip('/')
 
-        super(DirConsumer, self)._on_data(o, interest, data)
-        self._on_data = super(DirConsumer, self)._on_data
+        mkdir_p(self._dirname)
+        self._filename = os.path.join(self._dirname, chunkless_name)
+        assert is_subdir(self._filename, self._dirname)
+
+        return self._create_files(self._filename)
+
 
 if __name__ == '__main__':
     from tests import util

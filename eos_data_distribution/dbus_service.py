@@ -130,7 +130,7 @@ class DBusService(object):
         name = Name(SUBSCRIPTIONS_INSTALLED).append(subscription_id)
         interest = Interest(name)
         interest.setMustBeFresh(True)
-        self._consumer.expressInterest(interest, forever=True)
+        self._consumer.expressInterest(interest, try_again=True)
         invocation.return_value(None)
 
         self._notification.update(
