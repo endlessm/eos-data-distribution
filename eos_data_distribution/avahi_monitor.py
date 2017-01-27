@@ -71,9 +71,13 @@ class AvahiMonitor(object):
     def __init__(self):
         """
         Attributes:
-            gateways (dict): Dictionary containing the network gateways
-                for this machine, as a mapping from address family to a
-                list of ``(address, interface, is_default)`` tuples.
+            gateways (list): List of IP addresses for the network gateways
+                for this machine.
+            ips (list): List of IP addresses for this machine.
+            _peers (set): faceUris of the other NDN nodes we are actually
+                connected to.
+                note that this is mostly from old code and should always be
+                0 or 1 in the current implementation
             _ndn_gateways (dict): Dictionary containing the addresses for
                 network gateways which advertise as NDN nodes, as a mapping
                 from key (see ``build_registry_key()``) to IP address.
