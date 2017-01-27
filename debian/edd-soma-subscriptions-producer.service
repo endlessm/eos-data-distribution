@@ -34,6 +34,3 @@ ProtectSystem=full
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes
-
-[Install]
-WantedBy=multi-user.target

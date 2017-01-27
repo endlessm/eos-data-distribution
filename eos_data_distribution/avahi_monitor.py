@@ -19,6 +19,7 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import logging
+import netifaces
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,10 +32,21 @@ from eos_data_distribution.ndn import base
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.MDNS import ServiceDiscovery
 
+
+MAX_PEERS = 5  # wild guess
+MIN_PEERS = 2  # minimum redundancy
+
 SERVICES = [
     # Disable TCP, we really only want UDP or ethernet
     # "_nfd._tcp",
     "_nfd._udp"]
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def flatten(l):
+    list(itertools.chain.from_iterable(l))
 
 
 def face_uri_from_triplet(type, host, port):
@@ -57,7 +69,34 @@ class AvahiMonitor(object):
     """
 
     def __init__(self):
+        """
+        Attributes:
+            gateways (list): List of IP addresses for the network gateways
+                for this machine.
+            ips (list): List of IP addresses for this machine.
+            _peers (set): faceUris of the other NDN nodes we are actually
+                connected to.
+                note that this is mostly from old code and should always be
+                0 or 1 in the current implementation
+            _ndn_gateways (dict): Dictionary containing the addresses for
+                network gateways which advertise as NDN nodes, as a mapping
+                from key (see ``build_registry_key()``) to IP address.
+            _registry (dict): Dictionary containing all known NDN nodes
+                advertised over Avahi, as a mapping from key
+                (see ``build_registry_key()``) to face URI
+                (see ``face_uri_from_triplet()``).
+            _routed (bool): `True` if one of the gateways for this machine
+                is an NDN node; `False` otherwise.
+        """
         super(AvahiMonitor, self).__init__()
+
+        self.ips = []
+        self.gateways = []
+        self._peers = set()
+        self._ndn_gateways = dict()
+        self._registry = dict()
+
+        self._routed = False
 
         sda = ServiceDiscovery(SERVICES)
 
@@ -66,6 +105,7 @@ class AvahiMonitor(object):
 
         sda.start()
         self.sda = sda
+
         """
         self.ndn = base.Base(name=SUBSCRIPTIONS_SOMA)
         cp = ControlParameters()
@@ -76,26 +116,133 @@ class AvahiMonitor(object):
         """
 
         # XXX: Use the above native code for this.
-        check_call(
+        self.check_call(
             ["nfdc", "set-strategy", str(SUBSCRIPTIONS_SOMA), 'ndn:/localhost/nfd/strategy/multicast'])
 
-        self._registry = dict()
+        self._routed = False
+        self.update_routes()
+
+    def update_routes(self):
+        prev_routed = self._routed
+        self._routed = set(
+            self._ndn_gateways.values()).intersection(self.gateways)
+        self.process_route_changes(prev_routed)
+
+    def process_route_changes(self, prev_routed):
+        """ adds/removes hops for route state changes:
+        - !routed -> routed  : remove all peers but gateways
+        - routed  -> !routed : add MAX_PEERS peers, remove gateways
+        - !routed -> !routed : check we still have enough peers (MIN_PEERS)
+        - routed  -> routed  : do nothing (handled in the rest of the code)
+
+        :param prev_routed: previous routed state
+        :returns: None
+        :rtype: NoneType
+        """
+        if not self._routed:
+            if prev_routed:
+                logger.info(
+                    "NOT Being routed by an NDN node, disabling NDN connnections")
+                self._ndn_gateways.keys().map(self.remove_nexthop)
+            # we are not routed, we need to wait until we are to do anything
+            return
+
+        logger.info(
+            "Being routed by an NDN node, NOT acting as an edge router")
+        if not prev_routed:
+            # need to remove old links...
+            self._registry.values().map(self.remove_nexthop)
+            # ..and only add one to the routers
+            self._ndn_gateways.keys().map(self.add_nexthop)
+            # ..and stop edge
+            self.stop_edge()
+        else:
+            # no change: i am routed, i was routed before: no links
+            pass
 
     def service_added_cb(self, sda, interface, protocol, name, type, h_type, domain, host, aprotocol, address, port, txt, flags):
-        ifname = sda.siocgifname(interface)
-        print "Found Service data for service '%s' of type '%s' (%s) in domain '%s' on %s.%i:" % (name, h_type, type, domain, ifname, protocol)
+        logger.debug(
+            "Found Service data for service '%s' of type '%s' (%s) in domain '%s'",
+                     name, h_type, type, domain)
+
+        self.refresh_network()
+
+        if address in self.ips:
+            return
+
         faceUri = face_uri_from_triplet(type, host, port)
-        check_call(["nfdc", "add-nexthop",
-                    "-c", str(defaults.RouteCost.LOCAL_NETWORK),
-                    str(SUBSCRIPTIONS_SOMA), faceUri])
-        self._registry[build_registry_key(name, type, domain)] = faceUri
+        key = build_registry_key(name, type, domain)
+        self._registry[key] = faceUri
+
+        if address in self.gateways:
+            self._ndn_gateways[key] = address
+
+        self.update_routes()
 
     def service_removed_cb(self, sda, interface, protocol, name, type, domain, flags):
-        ifname = sda.siocgifname(interface)
-        print "Disappeared Service '%s' of type '%s' in domain '%s' on %s.%i." % (name, type, domain, ifname, protocol)
-        faceUri = self._registry[build_registry_key(name, type, domain)]
-        check_call(
-            ["nfdc", "remove-nexthop", str(SUBSCRIPTIONS_SOMA), faceUri])
+        logger.debug(
+            "Disappeared Service '%s' of type '%s' in domain '%s'",
+            name, type, domain)
+
+        self.refresh_network()
+
+        key = build_registry_key(name, type, domain)
+        try:
+            del self._ndn_gateways[key]
+        except KeyError:
+            pass
+
+        faceUri = self._registry[key]
+        if self.remove_nexthop(faceUri)
+        del self._registry[key]
+
+        prev_routed = self._routed
+        self.update_routes()
+
+    def add_nexthop(self, faceUri):
+        if len(self._peers) > MAX_PEERS:
+            logger.debug(
+                "refusing to add %s as we'd go over %d peers", faceUri, MAX_PEERS)
+            return
+
+        if self.check_call(["nfdc", "add-nexthop",
+                            "-c", str(defaults.RouteCost.LOCAL_NETWORK),
+                            str(SUBSCRIPTIONS_SOMA), faceUri]):
+            self._peers.add(faceUri)
+
+    def remove_nexthop(self, faceUri):
+        try:
+            self._peers.remove(faceUri)
+            self.check_call(["nfdc", "remove-nexthop",
+                             str(SUBSCRIPTIONS_SOMA), faceUri])
+        except KeyError:
+            pass
+
+    def start_edge(self):
+        return self.check_call(["systemctl", "start", "edd-soma-subscriptions-producer"])
+
+    def stop_edge(self):
+        return self.check_call(["systemctl", "stop", "edd-soma-subscriptions-producer"])
+
+    def get_gateways(self):
+        gateways = netifaces.gateways()
+        del gateways['default']
+        return [g[0] for g in flatten(gateways.values())]
+
+    def refresh_network(self, *args, **kwargs):
+        self.gateways = self.get_gateways()
+        flat_ifaces = [flatten(netifaces.ifaddresses(i).values())
+                       for i in netifaces.interfaces()]
+        self.ips = flatten(
+            map(lambda a: [x['addr'] for x in a], flat_ifaces))
+
+    def check_call(self, a):
+        try:
+            check_call(a)
+            return True
+        except CalledProcessError as e:
+            logger.warning("Error calling: %s : %s", a, e)
+            return False
 
 
 def main():
