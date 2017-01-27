@@ -231,8 +231,10 @@ class AvahiMonitor(object):
 
     def refresh_network(self, *args, **kwargs):
         self.gateways = self.get_gateways()
+        flat_ifaces = [flatten(netifaces.ifaddresses(i).values())
+                       for i in netifaces.interfaces()]
         self.ips = flatten(
-            map(lambda a: [x['addr'] for x in a], [flatten(netifaces.ifaddresses(i).values()) for i in netifaces.interfaces()]))
+            map(lambda a: [x['addr'] for x in a], flat_ifaces))
 
     def check_call(self, a):
         try:
