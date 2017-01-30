@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 def flatten(l):
-    list(itertools.chain.from_iterable(l))
+    return list(itertools.chain.from_iterable(l))
 
 
 def face_uri_from_triplet(type, host, port):
