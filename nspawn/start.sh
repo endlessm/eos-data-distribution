@@ -18,5 +18,5 @@ mkdir -p ${srcdir}/checkout/etc
 mount -t overlay overlay -olowerdir=${srcdir}/checkout,upperdir=${basedir}/up,workdir=${basedir}/work ${basedir}/checkout
 mount -o bind ${basedir}/checkout/usr/etc ${basedir}/checkout/etc
 echo ${name} > ${basedir}/checkout/etc/hostname
-systemd-nspawn -D ${basedir}/checkout --network-zone=ndn -n --machine=${name} --bind ${srcdir}/system:/etc/systemd/system $@
+systemd-nspawn -D ${basedir}/checkout --network-zone=ndn -n --machine=${name} --bind ${srcdir}/system:/etc/systemd/system --private-users $@
 
