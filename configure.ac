@@ -22,16 +22,17 @@ AC_SUBST(AS_MICRO_VERSION)
 AC_SUBST(AS_VERSION)
 
 # enable nice build output on automake1.11
-m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([no])])
+m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 AX_BOOST_BASE([1.48],, [AC_MSG_ERROR([eos-data-distribution needs Boost, but it was not found on your system])])
 AX_BOOST_SYSTEM
 AX_BOOST_FILESYSTEM
 
 AC_PROG_CXX
+LT_INIT
 
 PKG_CHECK_MODULES(NDN, libndn-cxx >= 0.5.0)
 
 AM_INIT_AUTOMAKE
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/chunks/Makefile])
 AC_OUTPUT

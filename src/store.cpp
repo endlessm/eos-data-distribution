@@ -23,6 +23,7 @@
 
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
+#include "chunks/consumer/consumer.hpp"
 
 using namespace ndn;
 namespace store {
@@ -33,20 +34,25 @@ public:
   ConsumerWithTimer()
     : m_face(m_ioService) // Create face with io_service object
     , m_scheduler(m_ioService)
+    , m_name("/example/testApp/randomData")
   {
   }
 
   void
   run()
   {
-    Interest interest(Name("/example/testApp/randomData"));
+    Interest interest(m_name);
     interest.setInterestLifetime(time::seconds(1));
     interest.setMustBeFresh(true);
 
-    m_face.expressInterest(interest,
-                           bind(&ConsumerWithTimer::onData, this, _1, _2),
-                           bind(&ConsumerWithTimer::onNack, this, _1, _2),
-                           bind(&ConsumerWithTimer::onTimeout, this, _1));
+    ValidatorNull validator;
+    Consumer consumer(validator, options.isVerbose);
+
+    BOOST_ASSERT(discover != nullptr);
+    BOOST_ASSERT(pipeline != nullptr);
+    consumer.run(std::move(discover), std::move(pipeline));
+
+    ConsumerWithTimer::expressInterest(interest);
 
     std::cout << "Sending " << interest << std::endl;
 
@@ -64,6 +70,15 @@ public:
 
 private:
   void
+  expressInterest (const Interest& interest)
+  {
+    m_face.expressInterest(interest,
+                           bind(&ConsumerWithTimer::onData, this, _1, _2),
+                           bind(&ConsumerWithTimer::onNack, this, _1, _2),
+                           bind(&ConsumerWithTimer::onTimeout, this, _1));
+  }
+
+  void
   onData(const Interest& interest, const Data& data)
   {
     std::cout << data << std::endl;
@@ -80,6 +95,8 @@ private:
   onTimeout(const Interest& interest)
   {
     std::cout << "Timeout " << interest << std::endl;
+    std::cout << "Re-sending " << interest << std::endl;
+    ConsumerWithTimer::expressInterest(interest);
   }
 
   void
@@ -87,14 +104,11 @@ private:
   {
     std::cout << "One more Interest, delayed by the scheduler" << std::endl;
 
-    Interest interest(Name("/example/testApp/randomData"));
+    Interest interest(m_name);
     interest.setInterestLifetime(time::milliseconds(1000));
     interest.setMustBeFresh(true);
 
-    m_face.expressInterest(interest,
-                           bind(&ConsumerWithTimer::onData, this, _1, _2),
-                           bind(&ConsumerWithTimer::onNack, this, _1, _2),
-                           bind(&ConsumerWithTimer::onTimeout, this, _1));
+    ConsumerWithTimer::expressInterest(interest);
 
     std::cout << "Sending " << interest << std::endl;
   }
@@ -103,6 +117,7 @@ private:
   // Explicitly create io_service object, which can be shared between Face and Scheduler
   boost::asio::io_service m_ioService;
   Face m_face;
+  Name m_name;
   Scheduler m_scheduler;
 };
 }
