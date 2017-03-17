@@ -4,3 +4,12 @@ debian/edd-soma-subscriptions-producer.service lib/systemd/system
 debian/eos-data-distribution.conf usr/lib/tmpfiles.d
 debian/soy502-updater.desktop usr/share/applications
 debian/prensa-libre-updater.desktop usr/share/applications
+
+usr/bin/edd-dbus-service
+usr/bin/edd-getchunks
+usr/bin/edd-get-subscription
+usr/bin/edd-ostree-store
+usr/bin/edd-putchunks
+usr/bin/edd-soma-subscriptions-producer
+
+usr/lib/*

@@ -1,17 +1,13 @@
 #! /usr/bin/make -f
 
 export PYBUILD_DISABLE=test
-export PYBUILD_NAME=eos-data-distribution
+
 #export DH_VERBOSE = 1
 %:
 	dh $@ --with python2,sphinxdoc,systemd --buildsystem=pybuild
 
 override_dh_install:
 	dh_install --fail-missing
-	mkdir -p debian/edd-avahi-monitor/usr/bin
-	mv debian/python-eos-data-distribution/usr/bin/edd-avahi-monitor debian/edd-avahi-monitor/usr/bin
-	mkdir -p debian/edd-usb-producer/usr/bin
-	mv debian/python-eos-data-distribution/usr/bin/edd-usb-producer debian/edd-usb-producer/usr/bin
 
 # Build Sphinx documentation
 override_dh_sphinxdoc:
