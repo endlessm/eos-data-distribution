@@ -26,22 +26,18 @@ import subprocess
 
 version_re = re.compile('^Version: (.+)$', re.M)
 
+def get_version_from_git():
+    # Get the version using "git describe".
+    cmd = 'git describe --tags --match [0-9]*'.split()
+    try:
+        version = subprocess.check_output(cmd).decode().strip()
+    except subprocess.CalledProcessError:
+        print('Unable to get version number from git tags')
+        return None
 
-def get_version():
-    d = dirname(__file__)
-
-    if isdir(join(d, '.git')):
-        # Get the version using "git describe".
-        cmd = 'git describe --tags --match [0-9]*'.split()
-        try:
-            version = subprocess.check_output(cmd).decode().strip()
-        except subprocess.CalledProcessError:
-            print('Unable to get version number from git tags')
-            exit(1)
-
-        # PEP 386 compatibility
-        if '-' in version:
-            version = '.post'.join(version.split('-')[:2])
+    # PEP 386 compatibility
+    if '-' in version:
+        version = '.post'.join(version.split('-')[:2])
 
         # Don't declare a version "dirty" merely because a time stamp has
         # changed. If it is dirty, append a ".dev1" suffix to indicate a
@@ -55,12 +51,18 @@ def get_version():
             dirty = subprocess.check_output(cmd).decode().strip()
         except subprocess.CalledProcessError:
             print('Unable to get git index status')
-            exit(1)
+            return None
 
         if dirty != '':
             version += '.dev1'
 
-    else:
+    return version
+
+def get_version():
+    d = dirname(__file__)
+
+    version = get_version_from_git()
+    if not version:
         # Extract the version from the PKG-INFO file.
         with open(join(d, 'PKG-INFO')) as f:
             version = version_re.search(f.read()).group(1)

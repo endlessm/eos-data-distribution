@@ -1,3 +1,9 @@
+eos-data-distribution (0.1.1) UNRELEASED; urgency=medium
+
+  * Split edd-avahi-monitor and edd-usb-producer to their own packages
+
+ -- Niv Sardi <xaiki@endlessm.com>  Mon, 13 Mar 2017 11:26:48 -0300
+
 eos-data-distribution (0.1.0) UNRELEASED; urgency=medium
 
   * Initial Debian directory and packaging

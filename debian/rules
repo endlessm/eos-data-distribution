@@ -1,7 +1,7 @@
 #! /usr/bin/make -f
 
 export PYBUILD_DISABLE=test
-export PYBUILD_NAME=eos-data-distribution
+
 #export DH_VERBOSE = 1
 %:
 	dh $@ --with python2,sphinxdoc,systemd --buildsystem=pybuild

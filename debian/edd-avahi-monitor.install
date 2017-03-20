@@ -1,0 +1,2 @@
+debian/edd-avahi-monitor.service lib/systemd/system
+usr/bin/edd-avahi-monitor
