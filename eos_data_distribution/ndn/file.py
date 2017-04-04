@@ -147,10 +147,9 @@ class Consumer(chunks.Consumer):
                 return False
 
         assert self._part_fd >= 0
-        buf = data.getContent().toBytes()
         offs = self.chunk_size * n
         os.lseek(self._part_fd, offs, os.SEEK_SET)
-        os.write(self._part_fd, buf)
+        os.write(self._part_fd, data)
         self._write_segment_table()
 
         return True

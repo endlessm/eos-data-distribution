@@ -26,7 +26,7 @@ gi.require_version('Soup', '2.4')
 from gi.repository import Soup
 from gi.repository import GObject
 
-from . import chunks
+from . import dbus_chunks as chunks
 from .. import defaults
 
 logger = logging.getLogger(__name__)
@@ -127,7 +127,7 @@ class Getter(object):
 class Producer(chunks.Producer):
 
     def __init__(self, name, url, session=None, *args, **kwargs):
-        self._getter = Getter(url, session=session, chunk_size=self.chunk_size,
+        self._getter = Getter(url, session=session, chunk_size=chunks.CHUNK_SIZE,
                               onData=lambda d: self.sendFinish(d))
         super(Producer, self).__init__(
             name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
@@ -140,9 +140,9 @@ class Producer(chunks.Producer):
 
 if __name__ == '__main__':
     import re
-    from . import test
+    from tests import utils
 
-    parser = test.process_args()
+    parser = utils.process_args()
     parser.add_argument("-c", "--cost", default=10)
     parser.add_argument("-o", "--output")
     parser.add_argument("url")
@@ -154,4 +154,4 @@ if __name__ == '__main__':
         name = re.sub('https?://', '', args.url)
 
     producer = Producer(name=name, url=args.url)
-    test.run_producer_test(producer, name, args)
+    utils.run_producer_test(producer, name, args)

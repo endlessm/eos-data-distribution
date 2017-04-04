@@ -1,6 +1,6 @@
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Mobile, Inc.
+# Copyright (C) 2017 Endless Mobile Inc.
 # Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,128 +18,101 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import logging
+
+logging.basicConfig(level=logging.INFO)
+
+import errno
+import json
+import logging
 import os
+from shutil import copyfile
+from os import path
+
+import gi
+gi.require_version('GLib', '2.0')
 
 from gi.repository import GObject
+from gi.repository import GLib
+from gi.repository import Gio
+from gi.repository import Notify
 
-from pyndn import Name, Interest, Data, MetaInfo, ContentType
-
-from . import base
 from .. import defaults
+
+from .base import singleton
 
 logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = defaults.CHUNK_SIZE
 
-def get_chunk_component(name):
-    # The chunk component of a name is the last part...
-    return name.get(-1)
+BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge'
+BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
+DBUS_NAME_TEMPLATE = '%s.%s'
+DBUS_PATH_TEMPLATE = '%s/%s'
 
-def get_chunkless_name(name):
-    # XXX: Use more sophisticated parsing algorithm to strip non-chunk parts.
-    chunk_component = get_chunk_component(name)
-    if chunk_component.isSegment():
-        chunkless_name = name.getPrefix(-1)
-    else:
-        chunkless_name = name
-    return chunkless_name
+IFACE_TEMPLATE = '''<node>
+<interface name='%s.%s'>
+<method name='RequestInterest'>
+    <arg type='s' direction='in' name='name' />
+    <arg type='h' direction='in' name='fd' />
+</method>
+</interface>
+</node>'''
 
+@singleton
+def get_name_registry():
+    return dict()
 
-class Producer(base.Producer):
+class Base(GObject.GObject):
+    """Base class
+
+    All this is a lie, we put here all the boilerplate code we need to have
+    our clases behave like the real chunks
 
     """
-    Produce chunks of content to send into the NDN network.
+    def __init__(self, name,
+                 chunk_size=CHUNK_SIZE,
+                 cost=defaults.RouteCost.DEFAULT):
 
-    `Producer` is an abstract class which forms the base for all objects which
-    represent chunked content addressable through NDN. It derives from
-    `base.Producer`, which represents all addressable content (which is not
-    necessarily chunked).
-
-    Chunks may also be known as ‘segments’.
-
-    Content is split into one or more chunks of the same size, although the
-    final chunk may be smaller ([1, chunk size] bytes). Chunks are addressed
-    using the final component of the name a client has expressed an interest
-    in. If no chunk is addressed in the final component of the name, `Producer`
-    will return the first chunk of its content.
-
-    See the documentation for ``eos_data_distribution.ndn.base.Producer`` for
-    details on how interests are handled.
-    """
-
-    # FIXME: Should we rename ‘chunks’ to ‘segments’ for consistency?
-    def __init__(self, name, chunk_size=CHUNK_SIZE, *args, **kwargs):
-        assert(chunk_size > 0)
         self.chunk_size = chunk_size
+        self.cost = cost
+        self.name = name
+        self.con = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
-        super(Producer, self).__init__(name=name, *args, **kwargs)
-        self.connect('interest', self._on_interest)
+class Data(object):
+    """Data:
 
-    def _get_final_block_id(self):
-        raise NotImplementedError()
+    This mimics the NDN Data object, it should implement as little API as we
+    need, we pass an fd that comes from the Consumer, and currently
+    setContent is a hack that actually writes to the fd.
 
-    def _send_chunk(self, data, n):
-        content = self._get_chunk(n)
-        if content is None:
-            data.getMetaInfo().setType(ContentType.NACK)
-        else:
-            data.setContent(content)
-        self.sendFinish(data)
+    """
+    def __init__(self, fd):
+        super(Data, self).__init__()
 
-    def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
-        name = interest.getName()
+        self.fd = fd
 
-        chunk_component = get_chunk_component(name)
-        if chunk_component.isSegment():
-            # If we have a segment component, then the client is asking for
-            # a specific chunk here.
-            seg = chunk_component.toSegment()
-        else:
-            # If not, then the user is asking for the barebones file. Return
-            # to them the first segment.
-            seg = 0
-            name.appendSegment(seg)
-
-        final_segment = self._get_final_segment()
-        meta_info = MetaInfo()
-        meta_info.setFinalBlockId(Name.Component.fromSegment(final_segment))
-        data = Data(name)
-        data.setMetaInfo(meta_info)
-
-        logger.debug('got interest: %s, %d/%d', name, seg, final_segment)
-
-        self._send_chunk(data, seg)
+    def setContent(self, buf):
+        return self.fd.write(buf)
 
 
-class SegmentState(object):
-    UNSENT = 0
-    OUTGOING = 1
-    COMPLETE = 2
-
-
-class Consumer(base.Consumer):
+class Consumer(Base):
     __gsignals__ = {
         'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )),
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, name, chunk_size=CHUNK_SIZE, pipeline=5, *args, **kwargs):
-        self.chunk_size = chunk_size
-        self._total_interest_requests = pipeline
+    def __init__(self, name, *args, **kwargs):
         self._final_segment = None
         self._num_segments = None
         self._segments = None
-        self._num_outstanding_interests = 0
         self._qualified_name = None
         self._emitted_complete = False
 
-        self.interest = Interest(Name(name))
-        self.interest.setMustBeFresh(True)
-
         super(Consumer, self).__init__(name=name, *args, **kwargs)
-        self.connect('data', self._on_data)
-        logger.debug('init chunks.Consumer: %s', name)
+        # XXX Conect to dbus and connect the 'on data signal to it'
+
+        logger.debug('init DBUS chunks.Consumer: %s', name)
 
     def start(self):
         if not self._segments:
@@ -151,11 +124,16 @@ class Consumer(base.Consumer):
         else:
             self._schedule_interests()
 
+
+    def expressInterest(self, interest):
+        # XXX connect to dbus and do magic
+        pass
+
     def _save_chunk(self, n, data):
         raise NotImplementedError()
 
     def _on_complete(self):
-c        self.emit('complete')
+        self.emit('complete')
         logger.debug('fully retrieved: %s', self.name)
 
     def _check_for_complete(self):
@@ -243,3 +221,79 @@ c        self.emit('complete')
             'progress', (float(num_complete_segments) / len(self._segments)) * 100)
 
         self._schedule_interests()
+
+class Producer(Base):
+    __gsignals__ = {
+        'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
+        'register-success': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
+        'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
+    }
+
+    def __init__(self, name, *args, **kwargs):
+        self.registered = False
+
+        super(Producer, self).__init__(name=name, *args, **kwargs)
+
+    def start(self):
+        self.registerPrefix()
+
+    def registerPrefix(self, prefix=None):
+        if prefix:
+            # XXX: prefix registeration is handled checking that the prefix
+            # is a strict subname, but 'strict' is still to be defined
+            logger.error("We don't support prefix registeration")
+            raise NotImplementedError()
+
+        dbusable_name = self.name.replace('/', '%')
+
+        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        dbus_path = DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
+        iface_info= Gio.DBusNodeInfo.new_for_xml(
+            IFACE_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
+            ).interfaces[0]
+
+        # XXX: install handlers for subnames
+
+        if self.registered:
+            return
+
+        Gio.bus_own_name_on_connection(
+            self.con, dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
+
+        registred = self.con.register_object(
+            object_path=dbus_path,
+            interface_info=iface_info, method_call_closure=self._on_method_call)
+
+        if not registred:
+            logger.error('got error: %s', registred)
+            self.emit('register-failed', registred)
+        self.registered = True
+
+    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
+        # Dispatch.
+        getattr(self, 'impl_%s' % (method_name, ))(invocation, parameters)
+
+    def impl_RequestInterest(self, invocation, parameters):
+        name, fd = parameters.unpack()
+
+        # do we start on chunk 0 ? full file ? do we start on another chunk
+        # ? we need to seek the file, subsequent calls to get the same
+        # chunks have to be handled in the consumer part and folded into
+        # answering to only one dbus call
+
+        invocation.return_value(self._produce(name, fd))
+
+    def _produce(self, name, fd, start=0):
+        last = self._get_final_block_id()
+        n = start
+        d = Data(fd)
+
+        if not last:
+            raise NotImplementedError()
+
+        while (n <= last):
+            self._send_chunk(data, n)
+            n += 1
+
+        return True
+
