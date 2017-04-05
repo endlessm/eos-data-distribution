@@ -25,12 +25,19 @@ import re
 class Name(list):
     def __init__(self, name):
         super(Name, self).__init__()
-        self.append(name)
+        if isinstance(name, str):
+            self.append(name)
+        else:
+            self.extend(name)
 
     def append(self, subname):
         subname = re.sub(r'^\/+', '', subname)
         subname = re.sub(r'\/+$', '', subname)
         self.extend(subname.split('/'))
+        return self
+
+    def __repr__(self):
+        return '/' + '/'.join(self)
 
 # Why isn't our name com.endlessm ?
 
@@ -46,5 +53,5 @@ class Name(list):
 
 
 SUBSCRIPTIONS_BASE = Name('/endlessm/subscriptions/')
-SUBSCRIPTIONS_INSTALLED = SUBSCRIPTIONS_BASE.append('/installed')
-SUBSCRIPTIONS_SOMA = SUBSCRIPTIONS_BASE.append('/soma')
+SUBSCRIPTIONS_INSTALLED = Name(SUBSCRIPTIONS_BASE).append('/installed')
+SUBSCRIPTIONS_SOMA = Name(SUBSCRIPTIONS_BASE).append('/soma')
