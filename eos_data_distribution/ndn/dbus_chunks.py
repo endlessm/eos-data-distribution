@@ -38,7 +38,7 @@ from gi.repository import Notify
 
 from .. import defaults
 
-from .base import singleton
+from .utils import singleton
 
 logger = logging.getLogger(__name__)
 

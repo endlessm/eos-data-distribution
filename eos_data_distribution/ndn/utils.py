@@ -17,19 +17,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
+import logging
+logger = logging.getLogger(__name__)
 
-FRESHNESS_PERIOD = 1000  # ms
-CHUNK_SIZE = 4096
+def singleton(f):
+    instance = [None]
 
-
-class RouteCost(object):
-    DEFAULT = 1000
-    HTTP = 100
-    LOCAL_NETWORK = 20
-    USB = 10
-
-class SegmentState(object):
-    UNSENT = 0
-    OUTGOING = 1
-    COMPLETE = 2
+    def inner():
+        if instance[0] is None:
+            instance[0] = f()
+        return instance[0]
+    return inner
