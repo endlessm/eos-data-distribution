@@ -73,11 +73,12 @@ class Base(GObject.GObject):
     def __init__(self, name,
                  chunk_size=CHUNK_SIZE,
                  cost=defaults.RouteCost.DEFAULT):
-
+        GObject.GObject.__init__(self)
         self.chunk_size = chunk_size
         self.cost = cost
         self.name = name
         self.con = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+
 
 class Data(object):
     """Data:
