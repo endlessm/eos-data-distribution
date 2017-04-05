@@ -34,9 +34,9 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
-from gi.repository import Notify
 
 from .. import defaults
+from .. import names
 
 from .utils import singleton
 
@@ -120,12 +120,12 @@ class Consumer(Base):
             # qualified request back for the first segment, with a timestamp and
             # segment number. Future requests will request the fully qualified
             # name.
-            self.expressInterest(self.interest, try_again=True)
+            self.expressInterest(try_again=True)
         else:
             self._schedule_interests()
 
 
-    def expressInterest(self, interest):
+    def expressInterest(self, interest=None, try_again=False):
         # XXX connect to dbus and do magic
         pass
 
@@ -244,29 +244,32 @@ class Producer(Base):
             logger.error("We don't support prefix registeration")
             raise NotImplementedError()
 
-        dbusable_name = self.name.replace('/', '%')
 
-        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        dbusable_name = self.name.replace('/', '.').replace(':', '.')
+        print (names.SUBSCRIPTIONS_SOMA)
+
         dbus_path = DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
-        iface_info= Gio.DBusNodeInfo.new_for_xml(
-            IFACE_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
-            ).interfaces[0]
+        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        iface_str =     IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        iface_info= Gio.DBusNodeInfo.new_for_xml(iface_str).interfaces[0]
 
         # XXX: install handlers for subnames
 
         if self.registered:
+            console.error('already registered')
             return
 
         Gio.bus_own_name_on_connection(
             self.con, dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
 
-        registred = self.con.register_object(
+        registered = self.con.register_object(
             object_path=dbus_path,
             interface_info=iface_info, method_call_closure=self._on_method_call)
 
-        if not registred:
-            logger.error('got error: %s', registred)
-            self.emit('register-failed', registred)
+        if not registered:
+            logger.error('got error: %s, %s, %s, %s, %s',
+                         registered, dbus_name, dbus_path, iface_str, registered)
+            self.emit('register-failed', registered)
         self.registered = True
 
     def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
@@ -297,3 +300,20 @@ class Producer(Base):
 
         return True
 
+if __name__ == '__main__':
+    import re
+    from .tests import utils
+
+    parser = utils.process_args()
+    parser.add_argument("-c", "--cost", default=10)
+    parser.add_argument("-o", "--output")
+    parser.add_argument("url")
+    args = parser.parse_args()
+
+    if args.name:
+        name = args.name
+    else:
+        name = re.sub('https?://', '', args.url)
+
+    consumer = Consumer(name=name, url=args.url)
+    utils.run_consumer_test(consumer, name, args)
