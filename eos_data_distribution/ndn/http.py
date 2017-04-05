@@ -140,7 +140,7 @@ class Producer(chunks.Producer):
 
 if __name__ == '__main__':
     import re
-    from tests import utils
+    from .tests import utils
 
     parser = utils.process_args()
     parser.add_argument("-c", "--cost", default=10)

@@ -55,12 +55,14 @@ def process_args(description=None, *args, **kwargs):
 
 
 def run_producer_test(producer, name, args):
+    logging.basicConfig(level=logging.DEBUG)
+
     loop = GLib.MainLoop()
 
     producer.start()
     if args.output:
-        from .. import file
-        consumer = file.FileConsumer(name, filename=args.output)
+        from ..file import FileConsumer
+        consumer = FileConsumer(name, filename=args.output)
         consumer.connect('complete', lambda *a: loop.quit())
         consumer.start()
     loop.run()
