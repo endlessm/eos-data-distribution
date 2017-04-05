@@ -133,7 +133,10 @@ class Base(GObject.GObject):
 
     def expressInterest(self, interest=None, *args, **kwargs):
         if interest is None:
-            interest = Interest(self.name)
+            try:
+                interest = self.interest
+            except keyError:
+                interest = Interest(self.name)
         return self._expressInterest(interest, *args, **kwargs)
 
     def _expressInterest(self, interest, try_again=False,

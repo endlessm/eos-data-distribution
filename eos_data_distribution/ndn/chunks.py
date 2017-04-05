@@ -141,7 +141,7 @@ class Consumer(base.Consumer):
             # qualified request back for the first segment, with a timestamp and
             # segment number. Future requests will request the fully qualified
             # name.
-            self.expressInterest(self.interest, try_again=True)
+            self.expressInterest(try_again=True)
         else:
             self._schedule_interests()
 
