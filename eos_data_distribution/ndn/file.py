@@ -148,7 +148,8 @@ class Consumer(chunks.Consumer):
         assert self._part_fd >= 0
         offs = self.chunk_size * n
         os.lseek(self._part_fd, offs, os.SEEK_SET)
-        os.write(self._part_fd, data)
+        # this is needed for python3…
+        os.write(self._part_fd, data.encode())
         self._write_segment_table()
 
         return True

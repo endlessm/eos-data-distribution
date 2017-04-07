@@ -45,7 +45,8 @@ def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunk
 
     def got_data(istream, res):
         gbytes = istream.read_bytes_finish(res)
-        chunks.append(gbytes.get_data())
+        # this is needed for python3…
+        chunks.append(str(gbytes.get_data()))
         if gbytes.get_size() == 0:
             callback(''.join(chunks))
         else:
