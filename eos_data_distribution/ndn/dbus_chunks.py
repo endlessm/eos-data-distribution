@@ -55,8 +55,9 @@ DBUS_PATH_TEMPLATE = '%s/%s'
 IFACE_TEMPLATE = '''<node>
 <interface name='%s.%s'>
 <method name='RequestInterest'>
-    <arg type='s' direction='in' name='name' />
-    <arg type='h' direction='in' name='fd' />
+    <arg type='s' direction='in'  name='name' />
+    <arg type='h' direction='in'  name='fd' />
+    <arg type='i' direction='out' name='last' />
 </method>
 </interface>
 </node>'''
