@@ -36,7 +36,7 @@ from gi.repository import GLib
 from gi.repository import Gio
 
 from .. import defaults
-from .. import names
+from ..names import Name, SUBSCRIPTIONS_BASE
 
 from .utils import singleton
 
@@ -120,11 +120,31 @@ class Consumer(Base):
         self._emitted_complete = False
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
-        # XXX Conect to dbus and connect the 'on data signal to it'
+        dbusable_name = get_dbusable_name(name)
+        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        Gio.bus_watch_name(BUS_TYPE, dbus_name,
+                           Gio.BusNameWatcherFlags.AUTO_START,
+                           self._name_appeared_cb,
+                           self._name_vanished_cb)
 
-        logger.debug('init DBUS chunks.Consumer: %s', name)
+        logger.info('init DBUS chunks.Consumer: %s → %s', name, dbus_name)
+
+    def _name_appeared_cb(self, con, name, owner):
+        logger.info('name: %s, appeared, owned by %s', name, owner)
+        self.con = con
+        if self._wants_start:
+            self.start()
+            self._wants_start = False
+
+    def _name_vanished_cb(self, con, name):
+        self.con = None
 
     def start(self):
+        if not self.con:
+            # come back when you have someone to talk too
+            self._wants_start = True
+            return
+
         if not self._segments:
             # Make an initial request for the barename. We should get a fully
             # qualified request back for the first segment, with a timestamp and
@@ -136,15 +156,51 @@ class Consumer(Base):
 
 
     def expressInterest(self, interest=None, try_again=False):
-        # XXX connect to dbus and do magic
-        pass
+        if not interest:
+            interest = self.name
+
+        # XXX parse interest to see if we're requesting the first chunk
+        self.first_segment = 0
+
+        # we prepare the file where we're going to write the data
+        fd = self.fd[interest] = open('.edd-file-cache-' + interest.replace('/', '%'), 'r+')
+
+
+        dbusable_name = get_dbusable_name(interest)
+
+        dbus_path = DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
+        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+
+        logger.info('calling on; %s %s', dbus_path, dbus_name)
+
+        args = GLib.Variant('(sh)', (self.name, fd.fileno()))
+        self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
+                      args, None, Gio.DBusCallFlags.NONE, -1, None,
+                      self._on_call_complete, fd)
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
 
+    def _on_call_complete(self, source, res, fd):
+        self.con.call_finish(res)
+
+        fd.seek(0)
+        n = self.first_segment
+        while (True):
+            buf = fd.read(self.chunk_size)
+            if not buf:
+                # XXX reorder for readability
+                os.unlink(fd.name)
+                return self._on_complete()
+
+            self._save_chunk(n, buf)
+            n += 1
+
+
     def _on_complete(self):
         self.emit('complete')
         logger.debug('fully retrieved: %s', self.name)
+
 
     def _check_for_complete(self):
         if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
