@@ -102,7 +102,7 @@ class Data(object):
     def __init__(self, fd):
         super(Data, self).__init__()
 
-        self.fd = fd
+        self.fd = os.fdopen(fd, 'w+')
 
     def setContent(self, buf):
         # write directly to the fd, sendFinish is a NOP
@@ -116,6 +116,11 @@ class Consumer(Base):
     }
 
     def __init__(self, name, *args, **kwargs):
+        self.con = None
+        self.first_segment = 0
+        self.fd = dict()
+
+        self._wants_start = False
         self._final_segment = None
         self._num_segments = None
         self._segments = None
@@ -336,7 +341,9 @@ class Producer(Base):
         data = Data(fd)
 
         if not last:
-            raise NotImplementedError()
+            # XXX hack
+            #raise NotImplementedError()
+            last = 100
 
         while (n <= last):
             self._send_chunk(data, n)

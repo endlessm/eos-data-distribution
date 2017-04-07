@@ -113,7 +113,6 @@ class Consumer(chunks.Consumer):
     def __init__(self, *args, **kwargs):
         super(Consumer, self).__init__(*args, **kwargs)
 
-        self._filename = None
         self._part_filename = None
         self._part_fd = -1
         self._sgt_filename = None
@@ -326,16 +325,18 @@ class Consumer(chunks.Consumer):
             else:
                 raise
 
+        # XXX hack
+        return True
         # Reserve space for the full file and truncate any existing content to
         # the start of the final chunk (because it might be smaller than the
         # chunk size).
+        size = self.chunk_size * (self._num_segments - 1)
         try:
-            fallocate.fallocate(self._part_fd, 0, self._size)
+            fallocate.fallocate(self._part_fd, 0, size)
         except IOError as e:  # if it fails, we might get surprises later, but it's ok.
             logger.debug('Error calling fallocate(%u, 0, %u): %s' %
                          (self._part_fd, self._size, e.message))
         try:
-            size = self.chunk_size * (self._num_segments - 1)
             os.ftruncate(self._part_fd, size)
         except IOError as e:
             logger.debug('Error calling ftruncate(%u, %u): %s' %
