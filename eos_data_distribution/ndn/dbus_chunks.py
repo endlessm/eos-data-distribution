@@ -44,6 +44,8 @@ logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = defaults.CHUNK_SIZE
 
+BUS_TYPE = Gio.BusType.SESSION
+
 BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge'
 BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
@@ -63,6 +65,14 @@ IFACE_TEMPLATE = '''<node>
 def get_name_registry():
     return dict()
 
+def get_dbusable_name(base):
+    name = Name(base)
+    if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
+
+        return name[len(SUBSCRIPTIONS_BASE)]
+    else:
+        return name[0].replace(':','_port_')
+
 class Base(GObject.GObject):
     """Base class
 
@@ -77,7 +87,6 @@ class Base(GObject.GObject):
         self.chunk_size = chunk_size
         self.cost = cost
         self.name = name
-        self.con = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
 
 class Data(object):
@@ -234,6 +243,7 @@ class Producer(Base):
         self.registered = False
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
+        self.con = Gio.bus_get_sync(BUS_TYPE, None)
 
     def start(self):
         self.registerPrefix()
@@ -245,9 +255,7 @@ class Producer(Base):
             logger.error("We don't support prefix registeration")
             raise NotImplementedError()
 
-
-        dbusable_name = self.name.replace('/', '.').replace(':', '.')
-        print (names.SUBSCRIPTIONS_SOMA)
+        dbusable_name = get_dbusable_name(self.name)
 
         dbus_path = DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
         dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
