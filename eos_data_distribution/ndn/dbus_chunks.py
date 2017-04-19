@@ -81,6 +81,12 @@ def get_dbusable_name(base):
     else:
         return 'custom'
 
+def build_dbus_path(name):
+    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.replace('-', '_'))
+
+def build_dbus_name(name):
+    return DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, name)
+
 class Base(GObject.GObject):
     """Base class
 
@@ -192,8 +198,8 @@ class Consumer(Base):
 
         dbusable_name = get_dbusable_name(interest)
 
-        dbus_path = DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
-        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        dbus_path = build_dbus_path(dbusable_name)
+        dbus_name = build_dbus_name(dbusable_name)
 
         logger.info('calling on; %s %s', dbus_path, dbus_name)
 
@@ -336,8 +342,8 @@ class Producer(Base):
 
         dbusable_name = get_dbusable_name(self.name)
 
-        dbus_path = DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, dbusable_name)
-        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        dbus_path = build_dbus_path (dbusable_name)
+        dbus_name = build_dbus_name (dbusable_name)
         iface_str =     IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
         iface_info= Gio.DBusNodeInfo.new_for_xml(iface_str).interfaces[0]
 
