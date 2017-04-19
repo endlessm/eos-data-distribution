@@ -415,10 +415,11 @@ class Producer(Base):
 if __name__ == '__main__':
     import re
     from .tests import utils
+    from . import http
 
     parser = utils.process_args()
     parser.add_argument("-c", "--cost", default=10)
-    parser.add_argument("-o", "--output")
+    parser.add_argument("-o", "--output", default='test.shard')
     parser.add_argument("url")
     args = parser.parse_args()
 
@@ -427,5 +428,5 @@ if __name__ == '__main__':
     else:
         name = re.sub('https?://', '', args.url)
 
-    consumer = Consumer(name=name, url=args.url)
+    consumer = http.Consumer(name=name, url=args.url)
     utils.run_consumer_test(consumer, name, args)
