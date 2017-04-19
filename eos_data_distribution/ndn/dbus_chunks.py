@@ -400,6 +400,7 @@ class Producer(Base):
             self._send_chunk(data, current_segment)
             current_segment += 1
 
+        current_segment -= 1
         logger.info('end segments: %s, %s', current_segment, final_segment)
         self.con.emit_signal(sender, object_path,
                              interface_name, 'complete',
