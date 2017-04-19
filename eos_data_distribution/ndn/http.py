@@ -109,9 +109,18 @@ class Getter(object):
         msg = Soup.Message.new('GET', self.url)
         msg.request_headers.append('Range', 'bytes=%d-%d' %
                                    (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
-        self._session.send_async(
-            msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
+#        self._session.send_async(
+#            msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
+        self._session.queue_message(
+            msg, lambda session, msg: self._got_reply(msg, data))
         logger.debug('getter: soup_get: %d', n)
+
+    def _got_reply(self, msg, data):
+        if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
+            logger.info('got error in soup_get: %s', msg.status_code)
+            return
+
+        return self._got_buf(data, msg.get_property('response-body-data').get_data())
 
     def _got_stream(self, msg, task, data):
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
