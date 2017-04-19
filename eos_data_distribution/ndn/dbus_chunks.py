@@ -241,6 +241,8 @@ class Consumer(Base):
         self._final_segment, = self.con.call_finish(res).unpack()
 
     def _on_dbus_complete(self, con, sender, path, interface, signal_name, parameters):
+        # XXX name is probably not needed as we have a consumer ↔ producer
+        # binding, via dbus sender address
         name, final_segment = parameters.unpack()
         self._final_segment = final_segment
         if self.current_segment < self._final_segment:
