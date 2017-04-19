@@ -57,8 +57,17 @@ IFACE_TEMPLATE = '''<node>
 <method name='RequestInterest'>
     <arg type='s' direction='in'  name='name' />
     <arg type='h' direction='in'  name='fd' />
-    <arg type='i' direction='out' name='last' />
+    <arg type='i' direction='in'  name='first_segment' />
+    <arg type='i' direction='out' name='final_segment' />
 </method>
+<signal name='progress'>
+    <arg type='s' direction='out' name='name' />
+    <arg type='i' direction='out' name='last_segment' />
+</signal>
+<signal name='completed'>
+    <arg type='s' direction='out' name='name' />
+    <arg type='i' direction='out' name='final_segment' />
+</signal>
 </interface>
 </node>'''
 
@@ -117,9 +126,11 @@ class Consumer(Base):
 
     def __init__(self, name, *args, **kwargs):
         self.con = None
-        self.first_segment = 0
-        self.fd = dict()
+        self.filename = None
+        self.fd = None
 
+        self.first_segment = 0
+        self.current_segment = 0
         self._wants_start = False
         self._final_segment = None
         self._num_segments = None
@@ -169,10 +180,17 @@ class Consumer(Base):
 
         # XXX parse interest to see if we're requesting the first chunk
         self.first_segment = 0
+        self.interest = interest
+
+        # XXX this comes from the original consumer implementation, not sure
+        # we actually need them
+
+        assert(not self.filename)
+        assert(not self.fd)
 
         # we prepare the file where we're going to write the data
-        fd = self.fd[interest] = open('.edd-file-cache-' + interest.replace('/', '%'), 'r+')
-
+        self.filename = '.edd-file-cache-' + interest.replace('/', '%')
+        self.fd = open(self.filename, 'w+b')
 
         dbusable_name = get_dbusable_name(interest)
 
@@ -181,36 +199,62 @@ class Consumer(Base):
 
         logger.info('calling on; %s %s', dbus_path, dbus_name)
 
-        args = GLib.Variant('(sh)', (self.name, fd.fileno()))
+        args = GLib.Variant('(shi)', (interest, self.fd.fileno(), self.first_segment))
         self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
                       args, None, Gio.DBusCallFlags.NONE, -1, None,
-                      self._on_call_complete, fd)
+                      self._on_call_complete, self.fd)
+        self.con.signal_subscribe(None, dbus_name, 'progress', dbus_path, None, Gio.DBusSignalFlags.NO_MATCH_RULE, self._on_progress)
+        self.con.signal_subscribe(None, dbus_name, 'complete', dbus_path, None, Gio.DBusSignalFlags.NO_MATCH_RULE, self._on_dbus_complete)
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
 
-    def _on_call_complete(self, source, res, fd):
-        self.con.call_finish(res)
+    def _on_progress(self, con, sender, path, interface, signal_name, parameters):
+        name, last_segment = parameters.unpack()
+        logger.info('got progress, %s', last_segment)
 
-        fd.seek(0)
-        n = self.first_segment
-        while (True):
-            buf = fd.read(self.chunk_size)
+        assert(self._final_segment)
+
+        self.current_segment = max(self.current_segment, self.first_segment)
+        self.fd.seek(self.current_segment * self.chunk_size)
+        while (self.current_segment <= last_segment):
+            progress = (float(self.current_segment) / (self._final_segment or 1)) * 100
+            self.emit('progress', progress)
+            logger.info('consumer read segment: %s', self.current_segment)
+            buf = self.fd.read(self.chunk_size)
             if not buf:
-                # XXX reorder for readability
-                os.unlink(fd.name)
-                return self._on_complete()
+                # XXX should we retry ?
+                logger.info('consumer read segment FAILED: %s @ %s', self.current_segment, self.fd.tell())
+                return
 
-            self._save_chunk(n, buf)
-            n += 1
+            self._save_chunk(self.current_segment, buf)
+            self.current_segment += 1
 
+        # XXX this would be self._check_for_complete()
+        self._on_complete()
+
+    def _on_call_complete(self, source, res, fd):
+        self._final_segment, = self.con.call_finish(res).unpack()
+
+    def _on_dbus_complete(self, con, sender, path, interface, signal_name, parameters):
+        name, final_segment = parameters.unpack()
+        self._final_segment = final_segment
+        if self.current_segment < self._final_segment:
+            self._wants_complete = True
+            return
+
+        return self._on_complete()
 
     def _on_complete(self):
+        assert (self.current_segment == self._final_segment)
         self.emit('complete')
+        os.unlink(self.fd.name)
+        self.fd.close()
         logger.debug('fully retrieved: %s', self.name)
 
 
     def _check_for_complete(self):
+        # XXX we're not using this yet
         if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
             if not self._emitted_complete:
                 self._emitted_complete = True
@@ -322,34 +366,38 @@ class Producer(Base):
 
     def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
         # Dispatch.
-        getattr(self, 'impl_%s' % (method_name, ))(invocation, parameters)
+        getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
 
-    def impl_RequestInterest(self, invocation, parameters):
-        name, fd = parameters.unpack()
+    def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
+        name, fd, first = parameters.unpack()
 
         # do we start on chunk 0 ? full file ? do we start on another chunk
         # ? we need to seek the file, subsequent calls to get the same
         # chunks have to be handled in the consumer part and folded into
         # answering to only one dbus call
 
-        ret = self._produce(name, fd),
-        invocation.return_value(GLib.Variant('(i)', (ret)))
-
-    def _produce(self, name, fd, first_segment=0):
-        last = self._get_final_segment()
-        n = first_segment
+        final_segment = self._get_final_segment()
+        current_segment = first
         data = Data(fd)
 
-        if not last:
-            # XXX hack
-            #raise NotImplementedError()
-            last = 100
+        if not final_segment:
+            raise NotImplementedError()
 
-        while (n <= last):
-            self._send_chunk(data, n)
-            n += 1
+        # XXX: is this racy ?
+        invocation.return_value(GLib.Variant('(i)', (final_segment,)))
+        GLib.timeout_add_seconds(5,
+            lambda: self.con.emit_signal(sender, object_path,
+                                        interface_name, 'progress',
+                                        GLib.Variant('(si)', (name, current_segment))) or True)
+        logger.info('start segments: %s, %s', current_segment, final_segment)
+        while (current_segment <= final_segment):
+            self._send_chunk(data, current_segment)
+            current_segment += 1
 
-        return n
+        logger.info('end segments: %s, %s', current_segment, final_segment)
+        self.con.emit_signal(sender, object_path,
+                             interface_name, 'complete',
+                             GLib.Variant('(si)', (name, current_segment)))
 
     def sendFinish(self, data):
         # we don't need to do anything here because we write the file in
