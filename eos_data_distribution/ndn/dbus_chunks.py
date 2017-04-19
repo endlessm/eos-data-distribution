@@ -76,12 +76,10 @@ def get_name_registry():
     return dict()
 
 def get_dbusable_name(base):
-    name = Name(base)
     if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
-
-        return name[len(SUBSCRIPTIONS_BASE)]
+        return SUBSCRIPTIONS_BASE[-1]
     else:
-        return name[0].replace(':','_port_')
+        return 'custom'
 
 class Base(GObject.GObject):
     """Base class
