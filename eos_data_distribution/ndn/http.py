@@ -41,14 +41,14 @@ def make_soup_session():
 
 
 def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunks.CHUNK_SIZE):
-    chunks = []
+    chunks = bytearray()
 
     def got_data(istream, res):
         gbytes = istream.read_bytes_finish(res)
         # this is needed for python3…
-        chunks.append(str(gbytes.get_data()))
+        chunks.extend(gbytes.get_data())
         if gbytes.get_size() == 0:
-            callback(''.join(chunks))
+            callback(chunks)
         else:
             read_bytes_async()
 

@@ -115,7 +115,7 @@ class Data(object):
     def __init__(self, fd):
         super(Data, self).__init__()
 
-        self.fd = os.fdopen(fd, 'w+')
+        self.fd = os.fdopen(fd, 'w+b')
 
     def setContent(self, buf):
         # write directly to the fd, sendFinish is a NOP

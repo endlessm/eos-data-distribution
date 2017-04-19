@@ -149,7 +149,7 @@ class Consumer(chunks.Consumer):
         offs = self.chunk_size * n
         os.lseek(self._part_fd, offs, os.SEEK_SET)
         # this is needed for python3…
-        os.write(self._part_fd, data.encode())
+        os.write(self._part_fd, data)
         self._write_segment_table()
 
         return True
