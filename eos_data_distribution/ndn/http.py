@@ -143,6 +143,10 @@ if __name__ == '__main__':
     import re
     from .tests import utils
 
+    # to use this you should call the module like this from the toplevel:
+    # PYTHONPATH=. python3 -m eos_data_distribution.ndn.http "https://com-endless--cloud-soma-prod--shared-shard.s3-us-west-2.amazonaws.com/a76c961c62d543840f11719ed31b9e6f40cc7715469236c14d9c622422eac5ab.shard" -o test.shard
+
+
     parser = utils.process_args()
     parser.add_argument("-c", "--cost", default=10)
     parser.add_argument("-o", "--output")
