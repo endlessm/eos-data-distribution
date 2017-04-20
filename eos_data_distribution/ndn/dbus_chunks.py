@@ -220,7 +220,7 @@ class Consumer(Base):
 
     def _on_progress(self, con, sender, path, interface, signal_name, parameters):
         name, last_segment = parameters.unpack()
-        logger.info('got progress, %s', last_segment)
+        logger.info('got progress, (%s) %s → %s', self.fd,  self.current_segment, last_segment)
 
         assert(self._final_segment)
 
