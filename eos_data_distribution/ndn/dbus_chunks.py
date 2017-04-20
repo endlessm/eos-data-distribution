@@ -115,7 +115,7 @@ class Data(object):
     def __init__(self, fd):
         super(Data, self).__init__()
 
-        self.fd = os.fdopen(fd, 'w+b')
+        self.fd = fd
 
     def setContent(self, buf):
         # write directly to the fd, sendFinish is a NOP
@@ -384,7 +384,7 @@ class Producer(Base):
 
         final_segment = self._get_final_segment()
         current_segment = first
-        data = Data(fd)
+        data = Data(os.fdopen(fd, 'w+b'))
 
         if not final_segment:
             raise NotImplementedError()
