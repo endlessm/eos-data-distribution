@@ -108,17 +108,18 @@ class Data(object):
     we write here so that we don't have to cache big chunks of data in memory.
 
     """
-    def __init__(self, fd):
+    def __init__(self, fd, n = 0):
         super(Data, self).__init__()
 
         self.fd = fd
-        self.n = 0
+        self.n = n
 
     def setContent(self, buf):
         # write directly to the fd, sendFinish is a NOP
-        #logger.info('write data START: %s, fd: %s, buf: %s', self.n, self.fd.tell(), len(buf))
+        logger.info('write data START: %s, fd: %s, buf: %s', self.n, self.fd.tell(), len(buf))
+        assert(self.fd.tell()/CHUNK_SIZE == self.n)
         ret =  self.fd.write(buf)
-        #logger.info('write data END: %s, fd: %s', self.n, self.fd.tell())
+        logger.info('write data END: %s, fd: %s', self.n, self.fd.tell())
         self.n += 1
         return ret
 
@@ -401,18 +402,17 @@ class Producer(Base):
         GLib.timeout_add_seconds(5,
             lambda: self.con.emit_signal(sender, object_path,
                                         interface_name, 'progress',
-                                        GLib.Variant('(si)', (name, worker.current_segment))) or True)
+                                        GLib.Variant('(si)', (name, worker.data.n))) or True)
 
 class ProducerWorker():
     def __init__(self, fd, first_segment, final_segment, send_chunk):
         self.current_segment = first_segment
         self.fd = os.fdopen(fd, 'w+b')
-        data = Data(self.fd)
+        self.data = Data(self.fd, first_segment)
 
         logger.info('start segments: %s, %s', self.current_segment, final_segment)
         while(True):
-            logger.info('producer SEND chunk: %s', self.current_segment)
-            send_chunk(data, self.current_segment)
+            send_chunk(self.data, self.current_segment)
             if self.current_segment < final_segment:
                 self.current_segment += 1
             else:
