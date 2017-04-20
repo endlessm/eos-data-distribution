@@ -39,10 +39,14 @@ class ArgParseWrapper(object):
 
     def parse_args(self, *args, **kwargs):
         args = self.parser.parse_args()
-        if args.v == 0:
+        if args.v > 1:
+            logging.basicConfig(level=logging.DEBUG)
+        elif args.v == 1:
             logging.basicConfig(level=logging.INFO)
         else:
-            logging.basicConfig(level=logging.DEBUG)
+            # We use the default WARNING level if -v was not specified
+            pass
+
         return args
 
 
@@ -55,8 +59,6 @@ def process_args(description=None, *args, **kwargs):
 
 
 def run_producer_test(producer, name, args):
-    logging.basicConfig(level=logging.DEBUG)
-
     loop = GLib.MainLoop()
 
     producer.start()
