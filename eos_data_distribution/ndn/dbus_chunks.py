@@ -116,10 +116,15 @@ class Data(object):
         super(Data, self).__init__()
 
         self.fd = fd
+        self.n = 0
 
     def setContent(self, buf):
         # write directly to the fd, sendFinish is a NOP
-        return self.fd.write(buf)
+        #logger.info('write data START: %s, fd: %s, buf: %s', self.n, self.fd.tell(), len(buf))
+        ret =  self.fd.write(buf)
+        #logger.info('write data END: %s, fd: %s', self.n, self.fd.tell())
+        self.n += 1
+        return ret
 
 
 class Consumer(Base):
