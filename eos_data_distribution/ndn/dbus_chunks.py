@@ -116,10 +116,10 @@ class Data(object):
 
     def setContent(self, buf):
         # write directly to the fd, sendFinish is a NOP
-        logger.info('write data START: %s, fd: %s, buf: %s', self.n, self.fd.tell(), len(buf))
+        logger.debug('write data START: %s, fd: %s, buf: %s', self.n, self.fd.tell(), len(buf))
         assert(self.fd.tell()/CHUNK_SIZE == self.n)
         ret =  self.fd.write(buf)
-        logger.info('write data END: %s, fd: %s', self.n, self.fd.tell())
+        logger.debug('write data END: %s, fd: %s', self.n, self.fd.tell())
         self.n += 1
         return ret
 
