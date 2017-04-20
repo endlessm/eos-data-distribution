@@ -333,6 +333,7 @@ class Producer(Base):
 
     def __init__(self, name, *args, **kwargs):
         self.registered = False
+        self._workers = dict()
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
@@ -375,6 +376,12 @@ class Producer(Base):
 
         self.registered = True
 
+    def sendFinish(self, data):
+        # we don't need to do anything here because we write the file in
+        # setContent, we don't do it here because that would require us to
+        # cache big chunks of data in memory.
+        pass
+
     def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
         # Dispatch.
         getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
@@ -388,34 +395,34 @@ class Producer(Base):
         # answering to only one dbus call
 
         final_segment = self._get_final_segment()
-        current_segment = first
-        data = Data(os.fdopen(fd, 'w+b'))
-
         if not final_segment:
             raise NotImplementedError()
 
-        # XXX: is this racy ?
+        self._workers[name] = worker = ProducerWorker(fd, first, final_segment, self._send_chunk)
         invocation.return_value(GLib.Variant('(i)', (final_segment,)))
+
+        # XXX: is this racy ?
         GLib.timeout_add_seconds(5,
             lambda: self.con.emit_signal(sender, object_path,
                                         interface_name, 'progress',
-                                        GLib.Variant('(si)', (name, current_segment))) or True)
-        logger.info('start segments: %s, %s', current_segment, final_segment)
-        while (current_segment <= final_segment):
-            self._send_chunk(data, current_segment)
-            current_segment += 1
+                                        GLib.Variant('(si)', (name, worker.current_segment))) or True)
 
-        current_segment -= 1
-        logger.info('end segments: %s, %s', current_segment, final_segment)
-        self.con.emit_signal(sender, object_path,
-                             interface_name, 'complete',
-                             GLib.Variant('(si)', (name, current_segment)))
+class ProducerWorker():
+    def __init__(self, fd, first_segment, final_segment, send_chunk):
+        self.current_segment = first_segment
+        self.fd = os.fdopen(fd, 'w+b')
+        data = Data(self.fd)
 
-    def sendFinish(self, data):
-        # we don't need to do anything here because we write the file in
-        # setContent, we don't do it here because that would require us to
-        # cache big chunks of data in memory.
-        pass
+        logger.info('start segments: %s, %s', self.current_segment, final_segment)
+        while(True):
+            logger.info('producer SEND chunk: %s', self.current_segment)
+            send_chunk(data, self.current_segment)
+            if self.current_segment < final_segment:
+                self.current_segment += 1
+            else:
+                break
+
+        logger.info('end segments: %s, %s', self.current_segment, final_segment)
 
 if __name__ == '__main__':
     import re
