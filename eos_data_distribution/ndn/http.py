@@ -95,6 +95,7 @@ class Getter(object):
         self.chunk_size = chunk_size
 
         self._queue = list()
+        self._data = dict()
         self._in_flight = None
 
         self._session = session
@@ -109,7 +110,7 @@ class Getter(object):
             raise ValueError("Could not determine Content-Size for %s" % url)
         logger.debug('getter init: %s', url)
 
-    def soup_get(self, data, n, count=1, cancellable=None):
+    def soup_get(self, n, count=1, cancellable=None):
         msg = Soup.Message.new('GET', self.url)
         _bytes = 'bytes=%d-%d' % (n * self.chunk_size, (n + count) * self.chunk_size - 1)
         logger.debug('GET %s', _bytes)
@@ -117,54 +118,58 @@ class Getter(object):
 #        self._session.send_async(
 #            msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
         self._session.queue_message(
-            msg, lambda session, msg: self._got_reply(msg, (data, n, count)))
+            msg, lambda session, msg: self._got_reply(msg, (n, count)))
         logger.debug('getter: soup_get: %d', n)
 
     def _got_reply(self, msg, args):
-        data, n, count = args
+        n, count = args
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
             logger.info('got error in soup_get: %s', msg.status_code)
             return
 
-        logger.debug ('getting buffer: %s ↔ %s', n, data.n)
         buf = msg.get_property('response-body-data').get_data()
         bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
-        [self._got_buf(data, b) for b in bufs]
+        [self._got_buf(b, n + i) for i, b in enumerate(bufs)]
 
-    def _got_stream(self, msg, task, data):
-        if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
-            return
+    # def _got_stream(self, msg, task, data):
+    #     if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
+    #         logger.info('got error in soup_get: %s', msg.status_code)
+    #         return
 
-        istream = self._session.send_finish(task)
-        read_from_stream_async(istream, lambda buf: self._got_buf(data, buf))
+    #     logger.info('NO error in soup_get: %s', msg.status_code)
+    #     istream = self._session.send_finish(task)
+    #     read_from_stream_async(istream, lambda buf: self._got_buf(data, buf))
 
-    def _got_buf(self, data, buf):
+    def _got_buf(self, buf, index):
+        data = self._data[index]
         data.setContent(buf)
         self.onData(data)
-        self._consume_queue(data)
+        self._consume_queue()
 
     def queue_request(self, data, n):
+        self._data[n] = data
         if not self._in_flight:
             self._in_flight = 1
-            return self.soup_get(data, n)
+            return self.soup_get(n)
 
         bisect.insort(self._queue, n)
 
-    def _consume_queue(self, data):
+    def _consume_queue(self):
         if len(self._queue) == 0:
             self._in_flight = None
             return
+
         n = self._queue[0]
         if len(self._queue) == 1:
             self._in_flight = 1
-            return self.soup_get(data, n)
+            return self.soup_get(n)
 
         # we are now sure to have more than 1 element
         simil = [e for i, e in enumerate(self._queue) if e == n + i]
         size = len(simil)
         del self._queue[:size]
         self._in_flight = len(self._queue)
-        self.soup_get(data, n, size)
+        self.soup_get(n, size)
 
 class Producer(chunks.Producer):
 
