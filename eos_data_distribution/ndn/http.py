@@ -19,6 +19,7 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import logging
+import bisect
 
 import gi
 gi.require_version('Soup', '2.4')
@@ -93,6 +94,9 @@ class Getter(object):
         self.onData = onData
         self.chunk_size = chunk_size
 
+        self._queue = list()
+        self._in_flight = None
+
         self._session = session
         if self._session is None:
             self._session = make_soup_session()
@@ -105,22 +109,27 @@ class Getter(object):
             raise ValueError("Could not determine Content-Size for %s" % url)
         logger.debug('getter init: %s', url)
 
-    def soup_get(self, data, n, cancellable=None):
+    def soup_get(self, data, n, count=1, cancellable=None):
         msg = Soup.Message.new('GET', self.url)
-        msg.request_headers.append('Range', 'bytes=%d-%d' %
-                                   (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
+        _bytes = 'bytes=%d-%d' % (n * self.chunk_size, (n + count) * self.chunk_size - 1)
+        logger.debug('GET %s', _bytes)
+        msg.request_headers.append('Range', _bytes)
 #        self._session.send_async(
 #            msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
         self._session.queue_message(
-            msg, lambda session, msg: self._got_reply(msg, data))
+            msg, lambda session, msg: self._got_reply(msg, (data, n, count)))
         logger.debug('getter: soup_get: %d', n)
 
-    def _got_reply(self, msg, data):
+    def _got_reply(self, msg, args):
+        data, n, count = args
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
             logger.info('got error in soup_get: %s', msg.status_code)
             return
 
-        return self._got_buf(data, msg.get_property('response-body-data').get_data())
+        logger.debug ('getting buffer: %s ↔ %s', n, data.n)
+        buf = msg.get_property('response-body-data').get_data()
+        bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
+        [self._got_buf(data, b) for b in bufs]
 
     def _got_stream(self, msg, task, data):
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
@@ -132,7 +141,30 @@ class Getter(object):
     def _got_buf(self, data, buf):
         data.setContent(buf)
         self.onData(data)
+        self._consume_queue(data)
 
+    def queue_request(self, data, n):
+        if not self._in_flight:
+            self._in_flight = 1
+            return self.soup_get(data, n)
+
+        bisect.insort(self._queue, n)
+
+    def _consume_queue(self, data):
+        if len(self._queue) == 0:
+            self._in_flight = None
+            return
+        n = self._queue[0]
+        if len(self._queue) == 1:
+            self._in_flight = 1
+            return self.soup_get(data, n)
+
+        # we are now sure to have more than 1 element
+        simil = [e for i, e in enumerate(self._queue) if e == n + i]
+        size = len(simil)
+        del self._queue[:size]
+        self._in_flight = len(self._queue)
+        self.soup_get(data, n, size)
 
 class Producer(chunks.Producer):
 
@@ -146,7 +178,8 @@ class Producer(chunks.Producer):
         return self._getter._size // self.chunk_size
 
     def _send_chunk(self, data, n):
-        self._getter.soup_get(data, n)
+        logger.info('HTTP send_chunk: %s', n)
+        self._getter.queue_request(data, n)
 
 if __name__ == '__main__':
     import re
