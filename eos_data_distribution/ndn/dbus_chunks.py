@@ -67,10 +67,6 @@ IFACE_TEMPLATE = '''<node>
 </interface>
 </node>'''
 
-@singleton
-def get_name_registry():
-    return dict()
-
 def get_dbusable_name(base):
     if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
         return SUBSCRIPTIONS_BASE[-1]
