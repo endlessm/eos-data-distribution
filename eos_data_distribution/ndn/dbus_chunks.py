@@ -58,11 +58,8 @@ IFACE_TEMPLATE = '''<node>
 </method>
 <signal name='progress'>
     <arg type='s' direction='out' name='name' />
+    <arg type='i' direction='out' name='first_segment' />
     <arg type='i' direction='out' name='last_segment' />
-</signal>
-<signal name='completed'>
-    <arg type='s' direction='out' name='name' />
-    <arg type='i' direction='out' name='final_segment' />
 </signal>
 </interface>
 </node>'''
@@ -212,10 +209,11 @@ class Consumer(Base):
         raise NotImplementedError()
 
     def _on_progress(self, con, sender, path, interface, signal_name, parameters):
-        name, last_segment = parameters.unpack()
+        name, first_segment, last_segment = parameters.unpack()
         logger.info('got progress, (%s) %s → %s', self.fd,  self.current_segment, last_segment)
 
         assert(self._final_segment)
+        assert(first_segment <= self.current_segment)
 
         self.current_segment = max(self.current_segment, self.first_segment)
         self.fd.seek(self.current_segment * self.chunk_size)
@@ -398,10 +396,11 @@ class Producer(Base):
         GLib.timeout_add_seconds(5,
             lambda: self.con.emit_signal(sender, object_path,
                                         interface_name, 'progress',
-                                        GLib.Variant('(si)', (name, worker.data.n))) or True)
+                                        GLib.Variant('(sii)', (name, worker.first_segment, worker.data.n))) or True)
 
 class ProducerWorker():
     def __init__(self, fd, first_segment, final_segment, send_chunk):
+        self.first_segment = first_segment
         self.current_segment = first_segment
         self.fd = os.fdopen(fd, 'w+b')
         self.data = Data(self.fd, first_segment)
