@@ -105,7 +105,7 @@ class Data(object):
         super(Data, self).__init__()
 
         self.fd = fd
-        self.n = n
+        self.n = n - 1
 
     def setContent(self, buf):
         # write directly to the fd, sendFinish is a NOP
