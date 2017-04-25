@@ -52,10 +52,11 @@ def fetch_http_headers(session, url):
 
 
 def get_content_size(headers):
-    res, start, end, total = headers.get_content_range()
-    if not res:
+    content_range = headers.get_one('Content-Range')
+    if not content_range:
         return -1
-    return total
+    size = int(content_range.split('/')[1])
+    return size
 
 
 def get_last_modified(headers):
