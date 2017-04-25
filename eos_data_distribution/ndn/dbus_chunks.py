@@ -109,16 +109,17 @@ class Data(object):
 
     def setContent(self, buf):
         cur_pos = self.fd.tell()
-        self.n += 1
+        n = self.n + 1
 
-        assert(cur_pos/CHUNK_SIZE == self.n)
+        assert(cur_pos/CHUNK_SIZE == n)
 
         # write directly to the fd, sendFinish is a NOP
         logger.debug('write data START: %d, fd: %d, buf: %d',
-                     self.n, cur_pos, len(buf))
+                     n, cur_pos, len(buf))
         ret = self.fd.write(buf)
         self.fd.flush()
-        logger.debug('write data END: %d, fd: %d', self.n, self.fd.tell())
+        logger.debug('write data END: %d, fd: %d', n, self.fd.tell())
+        self.n = n
         return ret
 
 
