@@ -92,13 +92,15 @@ class Getter(object):
         logger.debug('getter init: %s', url)
 
     def soup_get(self, n, count=1, cancellable=None):
+        range_start = n * self.chunk_size
+        range_end = (n + count) * self.chunk_size - 1
+        logger.debug('getter: GET chunk %d, bytes=%d-%d',
+                     n, range_start, range_end)
+
         msg = Soup.Message.new('GET', self.url)
-        _bytes = 'bytes=%d-%d' % (n * self.chunk_size, (n + count) * self.chunk_size - 1)
-        logger.debug('GET %s', _bytes)
-        msg.request_headers.append('Range', _bytes)
+        msg.request_headers.set_range(range_start, range_end)
         self._session.queue_message(
             msg, lambda session, msg: self._got_reply(msg, (n, count)))
-        logger.debug('getter: soup_get: %d', n)
 
     def _got_reply(self, msg, args):
         n, count = args
