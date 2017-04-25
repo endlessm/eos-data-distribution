@@ -117,6 +117,7 @@ class Data(object):
         logger.debug('write data START: %d, fd: %d, buf: %d',
                      self.n, cur_pos, len(buf))
         ret = self.fd.write(buf)
+        self.fd.flush()
         logger.debug('write data END: %d, fd: %d', self.n, self.fd.tell())
         return ret
 
