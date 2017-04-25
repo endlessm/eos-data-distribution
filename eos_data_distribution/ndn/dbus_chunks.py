@@ -236,6 +236,7 @@ class Consumer(Base):
             self._save_chunk(self.current_segment, buf)
             self.current_segment += 1
 
+        self.current_segment -= 1
         # XXX this would be self._check_for_complete()
         self._on_complete()
 
