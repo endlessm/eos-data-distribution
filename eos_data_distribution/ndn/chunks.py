@@ -149,7 +149,7 @@ class Consumer(base.Consumer):
         raise NotImplementedError()
 
     def _on_complete(self):
-c        self.emit('complete')
+        self.emit('complete')
         logger.debug('fully retrieved: %s', self.name)
 
     def _check_for_complete(self):

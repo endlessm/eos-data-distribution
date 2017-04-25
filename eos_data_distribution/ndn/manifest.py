@@ -23,7 +23,7 @@ import logging
 from pyndn import Name
 
 from . import http
-from . import chunks
+from .dbus import chunks
 from .. import defaults
 
 logger = logging.getLogger(__name__)

@@ -27,7 +27,7 @@ gi.require_version('Soup', '2.4')
 from gi.repository import Soup
 from gi.repository import GObject
 
-from . import dbus_chunks as chunks
+from .dbus import chunks
 from .. import defaults
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def get_last_modified(headers):
 
 class Getter(object):
 
-    def __init__(self, url, onData, session=None, chunk_size=chunks.CHUNK_SIZE):
+    def __init__(self, url, onData, session=None, chunk_size=defaults.CHUNK_SIZE):
         super(Getter, self).__init__()
 
         self.url = url
@@ -145,7 +145,7 @@ class Getter(object):
 class Producer(chunks.Producer):
 
     def __init__(self, name, url, session=None, *args, **kwargs):
-        self._getter = Getter(url, session=session, chunk_size=chunks.CHUNK_SIZE,
+        self._getter = Getter(url, session=session, chunk_size=defaults.CHUNK_SIZE,
                               onData=lambda d: self.sendFinish(d))
         super(Producer, self).__init__(
             name, cost=defaults.RouteCost.HTTP, *args, **kwargs)

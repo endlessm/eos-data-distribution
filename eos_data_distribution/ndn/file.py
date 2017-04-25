@@ -10,7 +10,8 @@ import struct
 gi.require_version('Gio', '2.0')
 from gi.repository import Gio
 
-from . import fallocate, dbus_chunks as chunks
+from . import fallocate
+from .dbus import chunks
 from ..defaults import SegmentState
 
 

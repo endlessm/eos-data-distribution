@@ -31,14 +31,11 @@ from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
 
-from .. import defaults
-from ..names import Name, SUBSCRIPTIONS_BASE
+from ...names import Name, SUBSCRIPTIONS_BASE
 
-from .utils import singleton
+from .base import Base, Data
 
 logger = logging.getLogger(__name__)
-
-CHUNK_SIZE = defaults.CHUNK_SIZE
 
 BUS_TYPE = Gio.BusType.SESSION
 
@@ -47,6 +44,10 @@ BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
 DBUS_NAME_TEMPLATE = '%s.%s'
 DBUS_PATH_TEMPLATE = '%s/%s'
+
+# signals -> property notification
+# kill temporal signal
+# only multiplex on the object path
 
 IFACE_TEMPLATE = '''<node>
 <interface name='%s.%s'>
@@ -75,53 +76,6 @@ def build_dbus_path(name):
 
 def build_dbus_name(name):
     return DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, name)
-
-class Base(GObject.GObject):
-    """Base class
-
-    All this is a lie, we put here all the boilerplate code we need to have
-    our clases behave like the real chunks
-
-    """
-    def __init__(self, name,
-                 chunk_size=CHUNK_SIZE,
-                 cost=defaults.RouteCost.DEFAULT):
-        GObject.GObject.__init__(self)
-        self.chunk_size = chunk_size
-        self.cost = cost
-        self.name = name
-
-
-class Data(object):
-    """Data:
-
-    This mimics the NDN Data object, it should implement as little API as we
-    need, we pass an fd that comes from the Consumer, and currently
-    setContent is a hack that actually writes to the fd.
-    we write here so that we don't have to cache big chunks of data in memory.
-
-    """
-    def __init__(self, fd, n = 0):
-        super(Data, self).__init__()
-
-        self.fd = fd
-        self.n = n - 1
-
-    def setContent(self, buf):
-        cur_pos = self.fd.tell()
-        n = self.n + 1
-
-        assert(cur_pos/CHUNK_SIZE == n)
-
-        # write directly to the fd, sendFinish is a NOP
-        logger.debug('write data START: %d, fd: %d, buf: %d',
-                     n, cur_pos, len(buf))
-        ret = self.fd.write(buf)
-        self.fd.flush()
-        logger.debug('write data END: %d, fd: %d', n, self.fd.tell())
-        self.n = n
-        return ret
-
 
 class Consumer(Base):
     __gsignals__ = {
@@ -255,6 +209,7 @@ class Consumer(Base):
         return self._on_complete()
 
     def _on_complete(self):
+        logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
         assert (self.current_segment == self._final_segment)
         self.emit('complete')
         os.unlink(self.fd.name)
@@ -350,7 +305,7 @@ class Producer(Base):
 
         dbus_path = build_dbus_path (dbusable_name)
         dbus_name = build_dbus_name (dbusable_name)
-        iface_str =     IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        iface_str = IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
         iface_info= Gio.DBusNodeInfo.new_for_xml(iface_str).interfaces[0]
 
         if self.registered:
