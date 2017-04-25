@@ -41,24 +41,6 @@ def make_soup_session():
     return session
 
 
-def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunks.CHUNK_SIZE):
-    chunks = bytearray()
-
-    def got_data(istream, res):
-        gbytes = istream.read_bytes_finish(res)
-        # this is needed for python3…
-        chunks.extend(gbytes.get_data())
-        if gbytes.get_size() == 0:
-            callback(chunks)
-        else:
-            read_bytes_async()
-
-    def read_bytes_async():
-        istream.read_bytes_async(chunk_size, 0, cancellable, got_data)
-
-    read_bytes_async()
-
-
 def fetch_http_headers(session, url):
     # XXX: SOMA's subscriptions-frontend doesn't handle HEAD requests yet because S3
     # is a bit silly with signed requests. For now, request a bytes=0-0 range and
@@ -115,8 +97,6 @@ class Getter(object):
         _bytes = 'bytes=%d-%d' % (n * self.chunk_size, (n + count) * self.chunk_size - 1)
         logger.debug('GET %s', _bytes)
         msg.request_headers.append('Range', _bytes)
-#        self._session.send_async(
-#            msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
         self._session.queue_message(
             msg, lambda session, msg: self._got_reply(msg, (n, count)))
         logger.debug('getter: soup_get: %d', n)
@@ -130,15 +110,6 @@ class Getter(object):
         buf = msg.get_property('response-body-data').get_data()
         bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
         [self._got_buf(b, n + i) for i, b in enumerate(bufs)]
-
-    # def _got_stream(self, msg, task, data):
-    #     if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
-    #         logger.info('got error in soup_get: %s', msg.status_code)
-    #         return
-
-    #     logger.info('NO error in soup_get: %s', msg.status_code)
-    #     istream = self._session.send_finish(task)
-    #     read_from_stream_async(istream, lambda buf: self._got_buf(data, buf))
 
     def _got_buf(self, buf, index):
         data = self._data[index]
