@@ -205,7 +205,7 @@ class Consumer(Base):
         args = GLib.Variant('(shi)', (interest, self.fd.fileno(), self.first_segment))
         self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
                       args, None, Gio.DBusCallFlags.NONE, -1, None,
-                      self._on_call_complete, self.fd)
+                      self._on_call_complete)
         self.con.signal_subscribe(None, dbus_name, 'progress', dbus_path, None, Gio.DBusSignalFlags.NO_MATCH_RULE, self._on_progress)
         self.con.signal_subscribe(None, dbus_name, 'complete', dbus_path, None, Gio.DBusSignalFlags.NO_MATCH_RULE, self._on_dbus_complete)
 
@@ -237,7 +237,7 @@ class Consumer(Base):
         # XXX this would be self._check_for_complete()
         self._on_complete()
 
-    def _on_call_complete(self, source, res, fd):
+    def _on_call_complete(self, source, res):
         self._final_segment, = self.con.call_finish(res).unpack()
 
     def _on_dbus_complete(self, con, sender, path, interface, signal_name, parameters):
