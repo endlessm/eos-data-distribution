@@ -20,9 +20,43 @@
 import logging
 
 from gi.repository import GObject
+from gi.repository import GLib
+from gi.repository import Gio
+
 from ...defaults import CHUNK_SIZE, RouteCost
+from ...names import Name, SUBSCRIPTIONS_BASE
 
 logger = logging.getLogger(__name__)
+
+BUS_TYPE = Gio.BusType.SESSION
+
+BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge'
+BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
+
+DBUS_NAME_TEMPLATE = '%s.%s'
+DBUS_PATH_TEMPLATE = '%s/%s'
+
+IFACE_TEMPLATE = '''<node>
+<interface name='%s.%s'>
+<method name='RequestInterest'>
+    <arg type='s' direction='in'  name='name' />
+    <arg type='s' direction='out' name='name' />
+    <arg type='s' direction='out' name='data' />
+</method>
+</interface>
+</node>'''
+
+def get_dbusable_name(base):
+    if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
+        return SUBSCRIPTIONS_BASE[-1]
+    else:
+        return 'custom'
+
+def build_dbus_path(name):
+    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.replace('-', '_'))
+
+def build_dbus_name(name):
+    return DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, name)
 
 class Base(GObject.GObject):
     """Base class
@@ -38,34 +72,149 @@ class Base(GObject.GObject):
         self.chunk_size = chunk_size
         self.cost = cost
         self.name = name
+class Consumer(Base):
+    """Base DBus-NDN consumer
 
-
-class Data(object):
-    """Data:
-
-    This mimics the NDN Data object, it should implement as little API as we
-    need, we pass an fd that comes from the Consumer, and currently
-    setContent is a hack that actually writes to the fd.
-    we write here so that we don't have to cache big chunks of data in memory.
-
+    this is for simple message passing with the NDN API
     """
-    def __init__(self, fd, n = 0):
-        super(Data, self).__init__()
 
-        self.fd = fd
-        self.n = n - 1
+    __gsignals__ = {
+        'data': (GObject.SIGNAL_RUN_FIRST, None, (str, object, )),
+        'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )),
+        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
 
-    def setContent(self, buf):
-        cur_pos = self.fd.tell()
-        n = self.n + 1
+    def __init__(self, name, *args, **kwargs):
+        self.con = None
+        self._wants_start = False
 
-        assert(cur_pos/CHUNK_SIZE == n)
+        super(Consumer, self).__init__(name=name, *args, **kwargs)
+        dbusable_name = get_dbusable_name(name)
+        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        Gio.bus_watch_name(BUS_TYPE, dbus_name,
+                           Gio.BusNameWatcherFlags.AUTO_START,
+                           self._name_appeared_cb,
+                           self._name_vanished_cb)
 
-        # write directly to the fd, sendFinish is a NOP
-        logger.debug('write data START: %d, fd: %d, buf: %d',
-                     n, cur_pos, len(buf))
-        ret = self.fd.write(buf)
-        self.fd.flush()
-        logger.debug('write data END: %d, fd: %d', n, self.fd.tell())
-        self.n = n
-        return ret
+    def _name_appeared_cb(self, con, name, owner):
+        logger.info('name: %s, appeared, owned by %s', name, owner)
+        self.con = con
+        if self._wants_start:
+            self.start()
+            self._wants_start = False
+
+    def _name_vanished_cb(self, con, name):
+        self.con = None
+
+    def start(self):
+        if not self.con:
+            # come back when you have someone to talk too
+            self._wants_start = True
+            return
+
+        self.expressInterest(try_again=True)
+
+
+    def expressInterest(self, interest=None, try_again=False):
+        if not interest:
+            interest = self.name
+
+        dbusable_name = get_dbusable_name(interest)
+
+        dbus_path = build_dbus_path(dbusable_name)
+        dbus_name = build_dbus_name(dbusable_name)
+
+        self._dbus_express_interest(interest, dbus_path, dbus_name)
+
+    def _dbus_express_interest(self, interest, dbus_path, dbus_name):
+        args = GLib.Variant('(s)', (interest,))
+        self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
+                      args, None, Gio.DBusCallFlags.NONE, -1, None,
+                      self._on_call_complete)
+
+    def _on_call_complete(self, source, res):
+        interest, data = self.con.call_finish(res).unpack()
+        self.emit('data', interest, data)
+        self.emit('complete')
+
+class Producer(Base):
+    """Base DBus-NDN producer
+
+    this is for simple message passing with the NDN API
+    """
+
+    __gsignals__ = {
+        'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
+        'register-success': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
+        'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
+    }
+
+
+    def __init__(self, name, iface_template=IFACE_TEMPLATE,
+                 *args, **kwargs):
+        self.IFACE_TEMPLATE = iface_template
+        self.registered = False
+        self._workers = dict()
+
+        super(Producer, self).__init__(name=name, *args, **kwargs)
+        self.con = Gio.bus_get_sync(BUS_TYPE, None)
+
+    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
+        # Dispatch.
+        getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
+
+    def start(self):
+        self.registerPrefix()
+
+    def registerPrefix(self, prefix=None):
+        if prefix:
+            # XXX: prefix registeration is handled checking that the prefix
+            # is a strict subname, but 'strict' is still to be defined
+            logger.error("We don't support prefix registeration")
+            raise NotImplementedError()
+
+        dbusable_name = get_dbusable_name(self.name)
+
+        dbus_path = build_dbus_path (dbusable_name)
+        dbus_name = build_dbus_name (dbusable_name)
+        iface_str = self.IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
+        iface_info= Gio.DBusNodeInfo.new_for_xml(iface_str).interfaces[0]
+
+        if self.registered:
+            console.error('already registered')
+            return
+
+        Gio.bus_own_name_on_connection(
+            self.con, dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
+
+        registered = self.con.register_object(
+            object_path=dbus_path,
+            interface_info=iface_info, method_call_closure=self._on_method_call)
+
+        if not registered:
+            logger.error('got error: %s, %s, %s, %s',
+                         registered, dbus_name, dbus_path, iface_str)
+            self.emit('register-failed', registered)
+
+        logger.info('registred: %s, %s, %s',
+                    dbus_name, dbus_path, iface_str)
+
+        self.registered = True
+
+    def sendFinish(self, data):
+        self.invocation.return_value(GLib.Variant('(ss)', (self.name, data)))
+
+    def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
+        logger.debug('GOT RequestInterest')
+        name, = parameters.unpack()
+        self.invocation = invocation
+        self.emit('interest', name, name, None, None, None)
+
+#        self._workers[name] = worker = ProducerWorker(name, invocation)
+
+class ProducerWorker():
+    def __init__(self, name, invocation):
+        self.name = name
+        self.invocation = invocation
+
+        self._on_interest(None, name, name, None, None, None)

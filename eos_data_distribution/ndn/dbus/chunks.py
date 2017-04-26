@@ -31,23 +31,9 @@ from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
 
-from ...names import Name, SUBSCRIPTIONS_BASE
-
-from .base import Base, Data
+from . import base
 
 logger = logging.getLogger(__name__)
-
-BUS_TYPE = Gio.BusType.SESSION
-
-BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge'
-BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
-
-DBUS_NAME_TEMPLATE = '%s.%s'
-DBUS_PATH_TEMPLATE = '%s/%s'
-
-# signals -> property notification
-# kill temporal signal
-# only multiplex on the object path
 
 IFACE_TEMPLATE = '''<node>
 <interface name='%s.%s'>
@@ -65,32 +51,49 @@ IFACE_TEMPLATE = '''<node>
 </interface>
 </node>'''
 
-def get_dbusable_name(base):
-    if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
-        return SUBSCRIPTIONS_BASE[-1]
-    else:
-        return 'custom'
+# signals -> property notification
+# kill temporal signal
+# only multiplex on the object path
 
-def build_dbus_path(name):
-    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.replace('-', '_'))
+class Data(object):
+    """Data:
 
-def build_dbus_name(name):
-    return DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, name)
+    This mimics the NDN Data object, it should implement as little API as we
+    need, we pass an fd that comes from the Consumer, and currently
+    setContent is a hack that actually writes to the fd.
+    we write here so that we don't have to cache big chunks of data in memory.
 
-class Consumer(Base):
-    __gsignals__ = {
-        'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )),
-        'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
-    }
+    """
+    def __init__(self, fd, n = 0):
+        super(Data, self).__init__()
+
+        self.fd = fd
+        self.n = n - 1
+
+    def setContent(self, buf):
+        cur_pos = self.fd.tell()
+        n = self.n + 1
+
+        assert(cur_pos/base.CHUNK_SIZE == n)
+
+        # write directly to the fd, sendFinish is a NOP
+        logger.debug('write data START: %d, fd: %d, buf: %d',
+                     n, cur_pos, len(buf))
+        ret = self.fd.write(buf)
+        self.fd.flush()
+        logger.debug('write data END: %d, fd: %d', n, self.fd.tell())
+        self.n = n
+        return ret
+
+
+class Consumer(base.Consumer):
 
     def __init__(self, name, *args, **kwargs):
-        self.con = None
         self.filename = None
         self.fd = None
 
         self.first_segment = 0
         self.current_segment = 0
-        self._wants_start = False
         self._final_segment = None
         self._num_segments = None
         self._segments = None
@@ -98,45 +101,9 @@ class Consumer(Base):
         self._emitted_complete = False
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
-        dbusable_name = get_dbusable_name(name)
-        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
-        Gio.bus_watch_name(BUS_TYPE, dbus_name,
-                           Gio.BusNameWatcherFlags.AUTO_START,
-                           self._name_appeared_cb,
-                           self._name_vanished_cb)
+        logger.info('init DBUS chunks.Consumer: %s', name)
 
-        logger.info('init DBUS chunks.Consumer: %s → %s', name, dbus_name)
-
-    def _name_appeared_cb(self, con, name, owner):
-        logger.info('name: %s, appeared, owned by %s', name, owner)
-        self.con = con
-        if self._wants_start:
-            self.start()
-            self._wants_start = False
-
-    def _name_vanished_cb(self, con, name):
-        self.con = None
-
-    def start(self):
-        if not self.con:
-            # come back when you have someone to talk too
-            self._wants_start = True
-            return
-
-        if not self._segments:
-            # Make an initial request for the barename. We should get a fully
-            # qualified request back for the first segment, with a timestamp and
-            # segment number. Future requests will request the fully qualified
-            # name.
-            self.expressInterest(try_again=True)
-        else:
-            self._schedule_interests()
-
-
-    def expressInterest(self, interest=None, try_again=False):
-        if not interest:
-            interest = self.name
-
+    def _dbus_express_interest(self, interest, dbus_path, dbus_name):
         # XXX parse interest to see if we're requesting the first chunk
         self.first_segment = 0
         self.interest = interest
@@ -150,11 +117,6 @@ class Consumer(Base):
         # we prepare the file where we're going to write the data
         self.filename = '.edd-file-cache-' + interest.replace('/', '%')
         self.fd = open(self.filename, 'w+b')
-
-        dbusable_name = get_dbusable_name(interest)
-
-        dbus_path = build_dbus_path(dbusable_name)
-        dbus_name = build_dbus_name(dbusable_name)
 
         logger.info('calling on; %s %s', dbus_path, dbus_name)
 
@@ -284,60 +246,11 @@ class Producer(Base):
         'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
     }
 
+class Producer(base.Producer):
     def __init__(self, name, *args, **kwargs):
-        self.registered = False
-        self._workers = dict()
-
-        super(Producer, self).__init__(name=name, *args, **kwargs)
-        self.con = Gio.bus_get_sync(BUS_TYPE, None)
-
-    def start(self):
-        self.registerPrefix()
-
-    def registerPrefix(self, prefix=None):
-        if prefix:
-            # XXX: prefix registeration is handled checking that the prefix
-            # is a strict subname, but 'strict' is still to be defined
-            logger.error("We don't support prefix registeration")
-            raise NotImplementedError()
-
-        dbusable_name = get_dbusable_name(self.name)
-
-        dbus_path = build_dbus_path (dbusable_name)
-        dbus_name = build_dbus_name (dbusable_name)
-        iface_str = IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
-        iface_info= Gio.DBusNodeInfo.new_for_xml(iface_str).interfaces[0]
-
-        if self.registered:
-            console.error('already registered')
-            return
-
-        Gio.bus_own_name_on_connection(
-            self.con, dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
-
-        registered = self.con.register_object(
-            object_path=dbus_path,
-            interface_info=iface_info, method_call_closure=self._on_method_call)
-
-        if not registered:
-            logger.error('got error: %s, %s, %s, %s',
-                         registered, dbus_name, dbus_path, iface_str)
-            self.emit('register-failed', registered)
-
-        logger.info('registred: %s, %s, %s',
-                    dbus_name, dbus_path, iface_str)
-
-        self.registered = True
-
-    def sendFinish(self, data):
-        # we don't need to do anything here because we write the file in
-        # setContent, we don't do it here because that would require us to
-        # cache big chunks of data in memory.
-        pass
-
-    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        # Dispatch.
-        getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
+        super(Producer, self).__init__(name=name,
+                                       iface_template=IFACE_TEMPLATE,
+                                       *args, **kwargs)
 
     def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
         name, fd, first = parameters.unpack()
@@ -359,6 +272,12 @@ class Producer(Base):
             lambda: self.con.emit_signal(sender, object_path,
                                         interface_name, 'progress',
                                         GLib.Variant('(sii)', (name, worker.first_segment, worker.data.n))) or True)
+
+    def sendFinish(self, data):
+        # we don't need to do anything here because we write the file in
+        # setContent, we don't do it here because that would require us to
+        # cache big chunks of data in memory.
+        pass
 
 class ProducerWorker():
     def __init__(self, fd, first_segment, final_segment, send_chunk):
