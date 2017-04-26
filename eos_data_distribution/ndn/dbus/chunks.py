@@ -138,11 +138,11 @@ class Consumer(base.Consumer):
         while (self.current_segment <= last_segment):
             progress = (float(self.current_segment) / (self._final_segment or 1)) * 100
             self.emit('progress', progress)
-            logger.info('consumer read segment: %s', self.current_segment)
+            logger.debug('consumer read segment: %s', self.current_segment)
             buf = self.fd.read(self.chunk_size)
             if not buf:
                 # XXX should we retry ?
-                logger.info('consumer read segment FAILED: %s @ %s', self.current_segment, self.fd.tell())
+                logger.warning('consumer read segment FAILED: %s @ %s', self.current_segment, self.fd.tell())
                 return
 
             self._save_chunk(self.current_segment, buf)
