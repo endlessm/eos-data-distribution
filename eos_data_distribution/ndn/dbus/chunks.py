@@ -108,9 +108,6 @@ class Consumer(base.Consumer):
         self.first_segment = 0
         self.interest = interest
 
-        # XXX this comes from the original consumer implementation, not sure
-        # we actually need them
-
         assert(not self.filename)
         assert(not self.fd)
 
@@ -125,7 +122,6 @@ class Consumer(base.Consumer):
                       args, None, Gio.DBusCallFlags.NONE, -1, None,
                       self._on_call_complete)
         self.con.signal_subscribe(None, dbus_name, 'progress', dbus_path, None, Gio.DBusSignalFlags.NO_MATCH_RULE, self._on_progress)
-        self.con.signal_subscribe(None, dbus_name, 'complete', dbus_path, None, Gio.DBusSignalFlags.NO_MATCH_RULE, self._on_dbus_complete)
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
@@ -159,92 +155,13 @@ class Consumer(base.Consumer):
     def _on_call_complete(self, source, res):
         self._final_segment, = self.con.call_finish(res).unpack()
 
-    def _on_dbus_complete(self, con, sender, path, interface, signal_name, parameters):
-        # XXX name is probably not needed as we have a consumer ↔ producer
-        # binding, via dbus sender address
-        name, final_segment = parameters.unpack()
-        self._final_segment = final_segment
-        if self.current_segment < self._final_segment:
-            self._wants_complete = True
-            return
-
-        return self._on_complete()
-
     def _on_complete(self):
         logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
         assert (self.current_segment == self._final_segment)
         self.emit('complete')
         os.unlink(self.fd.name)
         self.fd.close()
-        logger.debug('fully retrieved: %s', self.name)
-
-
-    def _check_for_complete(self):
-        # XXX we're not using this yet
-        if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
-            if not self._emitted_complete:
-                self._emitted_complete = True
-                self._on_complete()
-            else:
-                logger.debug('Prevented emitting repeated complete signal')
-
-    def _check_final_segment(self, n):
-        if self._final_segment is not None:
-            if n == self._final_segment:
-                return
-            else:
-                raise ValueError("Could not read final segment")
-        else:
-            self._set_final_segment(n)
-
-    def _on_data(self, o, interest, data):
-        # XXX we're not using this yet
-        self._num_outstanding_interests -= 1
-
-        # If we get a NACK, then check for completion.
-        meta_info = data.getMetaInfo()
-        if meta_info.getType() == ContentType.NACK:
-            self._check_for_complete()
-            return
-
-        self._check_final_segment(meta_info.getFinalBlockId().toSegment())
-
-        name = data.getName()
-        logger.debug('got data: %s', name)
-
-        if self._qualified_name is None:
-            # Strip off the chunk component for our final FQDN...
-            # XXX: We should probably have a better parsing algorithm at some point
-            # rather than relying on the chunk component being last.
-            self._qualified_name = name.getPrefix(-1)
-
-        seg = get_chunk_component(name).toSegment()
-
-        # Have we somehow already got this segment?
-        if self._segments[seg] == SegmentState.COMPLETE:
-            logger.debug('Ignoring data ‘%s’ as it’s already been received',
-                         name)
-            self._check_for_complete()
-            return
-
-        # If saving the chunk fails, it might be because the chunk was invalid,
-        # or is being deferred.
-        if not self._save_chunk(seg, data):
-            return
-        self._segments[seg] = SegmentState.COMPLETE
-
-        num_complete_segments = self._segments.count(SegmentState.COMPLETE)
-        self.emit(
-            'progress', (float(num_complete_segments) / len(self._segments)) * 100)
-
-        self._schedule_interests()
-
-class Producer(Base):
-    __gsignals__ = {
-        'register-failed': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
-        'register-success': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
-        'interest': (GObject.SIGNAL_RUN_FIRST, None, (object, object, object, object, object))
-    }
+        logger.info('fully retrieved: %s', self.name)
 
 class Producer(base.Producer):
     def __init__(self, name, *args, **kwargs):
