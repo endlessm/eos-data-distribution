@@ -104,8 +104,7 @@ class DBusService(object):
             object_path='/com/endlessm/EknSubscriptionsDownloader',
                                  interface_info=IFACE_INFO, method_call_closure=self._on_method_call)
 
-        # We have to fill in a name here even though we never use it...
-        self._consumer = Consumer(name='dummy')
+        self._consumer = Consumer(name=SUBSCRIPTIONS_INSTALLED)
         self._consumer.connect('data', self._on_data)
 
         # FIXME: Port to GNotification instead
