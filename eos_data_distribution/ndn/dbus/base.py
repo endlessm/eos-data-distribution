@@ -72,6 +72,20 @@ class Base(GObject.GObject):
         self.chunk_size = chunk_size
         self.cost = cost
         self.name = name
+
+class Interest(str):
+    """Fake Interest Class
+
+    This mimics NDN's Interest class as much as we need
+
+    """
+
+    def __init__(self, name=None):
+        super(Interest, self).__init__(name)
+
+    def getName(self):
+        return self
+
 class Consumer(Base):
     """Base DBus-NDN consumer
 
