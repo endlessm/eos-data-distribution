@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BASE_PATH="/vagrant"
+BASE_PATH=$1
 
 TEMP_DIR="${BASE_PATH}/tmp"
 APPIDS="10521bb3a18b573f088f84e59c9bbb6c2e2a1a67"
