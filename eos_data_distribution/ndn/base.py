@@ -206,9 +206,11 @@ class Producer(Base):
     def start(self):
         self.registerPrefix()
 
-    def send(self, name, content):
+    def send(self, name, content, flags = {}):
         data = Data(name)
         data.setContent(content)
+        metadata = data.getMetaInfo()
+        [getattr(metadata, 'set' + flag.capitalie())(arg) for (flag, arg) in flags]
         logger.debug('sending: %d, on %s', content.__len__(), name)
         self.sendFinish(data)
         return name

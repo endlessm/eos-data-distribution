@@ -1,13 +1,14 @@
 from ..dbus import base
+from ... import defaults
 
-TEST_NAME = '/endlessm/test/'
+TEST_NAME = '/endlessm/test'
 
 def _on_data(consumer, interest, response):
     print("GOT DATA: %s", response)
 
 def _on_interest(producer, prefix, interest, *args):
     print("Sending back")
-    producer.sendFinish("ALL DONE")
+    producer.send(interest, "ALL DONE", flags={'freshnessPeriod': defaults.FRESHNESS_PERIOD})
 
 if __name__ == '__main__':
     from gi.repository import GLib

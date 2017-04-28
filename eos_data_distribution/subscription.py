@@ -137,7 +137,4 @@ class Producer(object):
 
     def _on_subscription_response(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
-        data = Data(interest.getName())
-        data.setContent(response)
-        data.getMetaInfo().setFreshnessPeriod(defaults.FRESHNESS_PERIOD)
-        self._producer.sendFinish(data)
+        self._producer.send(interest.getName(), response, flags={'freshnessPeriod': defaults.FRESHNESS_PERIOD})
