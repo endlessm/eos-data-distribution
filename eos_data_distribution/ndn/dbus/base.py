@@ -114,24 +114,24 @@ class Consumer(Base):
         logger.info('name: %s, appeared, owned by %s', name, owner)
         self.con = con
         if self._wants_start:
-            self.start()
+            self.expressInterest(self.interest, try_again=True)
             self._wants_start = False
 
     def _name_vanished_cb(self, con, name):
         self.con = None
 
     def start(self):
-        if not self.con:
-            # come back when you have someone to talk too
-            self._wants_start = True
-            return
-
         self.expressInterest(try_again=True)
-
 
     def expressInterest(self, interest=None, try_again=False):
         if not interest:
             interest = self.name
+
+        self.interest = interest
+        if not self.con:
+            # come back when you have someone to talk too
+            self._wants_start = True
+            return
 
         dbusable_name = get_dbusable_name(interest)
 
