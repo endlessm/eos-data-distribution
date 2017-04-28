@@ -135,7 +135,7 @@ class Base(GObject.GObject):
         if interest is None:
             try:
                 interest = self.interest
-            except keyError:
+            except AttributeError:
                 interest = Interest(self.name)
         return self._expressInterest(interest, *args, **kwargs)
 
