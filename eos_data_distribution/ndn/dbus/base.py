@@ -141,7 +141,7 @@ class Consumer(Base):
         self._dbus_express_interest(interest, dbus_path, dbus_name)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        args = GLib.Variant('(s)', (interest,))
+        args = GLib.Variant('(s)', (str(interest),))
         self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
                       args, None, Gio.DBusCallFlags.NONE, -1, None,
                       self._on_call_complete)
@@ -215,14 +215,17 @@ class Producer(Base):
 
         self.registered = True
 
+    def send(self, name, data, flags = {}):
+        self.invocation.return_value(GLib.Variant('(ss)', (str(name), data)))
+
     def sendFinish(self, data):
-        self.invocation.return_value(GLib.Variant('(ss)', (self.name, data)))
+        self.invocation.return_value(GLib.Variant('(ss)', (str(self.name), data)))
 
     def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
         logger.debug('GOT RequestInterest')
         name, = parameters.unpack()
         self.invocation = invocation
-        self.emit('interest', name, name, None, None, None)
+        self.emit('interest', name, Interest(name), None, None, None)
 
 #        self._workers[name] = worker = ProducerWorker(name, invocation)
 
