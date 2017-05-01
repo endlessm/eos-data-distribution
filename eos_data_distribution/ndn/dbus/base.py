@@ -116,7 +116,7 @@ class Consumer(Base):
 
     def expressInterest(self, interest=None, try_again=False):
         if not interest:
-            interest = self.name
+            interest = str(self.name)
 
         self.interest = interest
         if not self.con:
