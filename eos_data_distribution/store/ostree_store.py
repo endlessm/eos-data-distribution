@@ -17,9 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import gi
-
-from gi.repository import GObject
 from gi.repository import GLib
 
 from eos_data_distribution import names, subscription, utils
@@ -27,9 +24,7 @@ from eos_data_distribution.store import simple_store
 
 
 def main():
-    import sys
     import argparse
-    from tempfile import mkdtemp
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--store-dir", required=True)
