@@ -24,6 +24,7 @@ from shutil import copyfile
 from os import path
 
 import gi
+gi.require_version('EosDataDistributionDbus', '0')
 gi.require_version('GLib', '2.0')
 gi.require_version('Notify', '0.7')
 
