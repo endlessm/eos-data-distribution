@@ -18,10 +18,6 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import argparse
-import sys
-import time
-
-from pyndn import Name
 
 from gi.repository import GLib
 
