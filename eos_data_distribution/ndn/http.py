@@ -146,7 +146,7 @@ class Getter(object):
 class Producer(chunks.Producer):
 
     def __init__(self, name, url, session=None, *args, **kwargs):
-        self._getter = Getter(url, session=session, chunk_size=defaults.CHUNK_SIZE,
+        self._getter = Getter(url, session=session,
                               onData=lambda d: self.sendFinish(d))
         super(Producer, self).__init__(
             name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
