@@ -19,9 +19,6 @@
 
 import re
 
-# from pyndn import Name
-# we replace this with a hack for this rewrite
-
 class Name(list):
     def __init__(self, name):
         super(Name, self).__init__()
