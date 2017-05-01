@@ -18,15 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import logging
-
-logging.basicConfig(level=logging.INFO)
-
 from subprocess import check_call
 
 from pyndn.control_parameters import ControlParameters
 
-from eos_data_distribution import defaults
+from eos_data_distribution import defaults, utils
 from eos_data_distribution.ndn import base
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.MDNS import ServiceDiscovery
@@ -101,6 +97,7 @@ class AvahiMonitor(object):
 def main():
     from gi.repository import GLib
 
+    utils.parse_args(include_name=False)
     monitor = AvahiMonitor()
 
     loop = GLib.MainLoop()

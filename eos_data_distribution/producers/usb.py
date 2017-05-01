@@ -31,9 +31,8 @@ from gi.repository import GLib
 
 from eos_data_distribution.names import SUBSCRIPTIONS_SOMA
 from eos_data_distribution.store import simple_store
-from eos_data_distribution import defaults
+from eos_data_distribution import defaults, utils
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -102,6 +101,7 @@ def signal_cb():
 
 
 def main():
+    utils.parse_args(include_name=False)
     loop = GLib.MainLoop()
 
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, signal_cb)

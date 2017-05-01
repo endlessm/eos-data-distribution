@@ -34,7 +34,6 @@ from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

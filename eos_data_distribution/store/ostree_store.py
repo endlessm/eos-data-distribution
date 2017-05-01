@@ -17,18 +17,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import logging
-
 import gi
 
 from gi.repository import GObject
 from gi.repository import GLib
 
-from eos_data_distribution import names, subscription
+from eos_data_distribution import names, subscription, utils
 from eos_data_distribution.store import simple_store
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 def main():
@@ -39,7 +34,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--store-dir", required=True)
 
-    args = parser.parse_args()
+    args = utils.parse_args(parser=parser, include_name=False)
 
     subscription_producer = subscription.Producer(args.store_dir)
     subscription_producer.start()
