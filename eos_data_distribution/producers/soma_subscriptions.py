@@ -28,7 +28,7 @@ from eos_data_distribution.soma_subscription_fetcher import Fetcher
 
 
 def main():
-    utils.parse_args()
+    utils.parse_args(include_name=False)
     fetcher = Fetcher()
     loop = GLib.MainLoop()
     loop.run()

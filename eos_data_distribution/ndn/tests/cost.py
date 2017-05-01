@@ -21,16 +21,16 @@ from .. import base
 
 if __name__ == '__main__':
     from eos_data_distribution.ndn import base
+    from eos_data_distribution import utils
     import argparse
-    from . import utils
+    from . import utils as testutils
 
     import logging
     logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.DEBUG)
 
-    parser = utils.process_args(description='Register with cost Test')
+    parser = argparse.ArgumentParser(description='Register with cost Test')
     parser.add_argument("-c", "--cost", default=10)
-    args = parser.parse_args()
+    args = utils.parse_args(parser=parser)
 
     name = args.name
     if not name:
