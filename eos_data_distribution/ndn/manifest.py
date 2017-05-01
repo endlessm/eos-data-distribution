@@ -20,11 +20,10 @@
 
 import logging
 
-from pyndn import Name
-
 from . import http
 from .dbus import chunks
 from .. import defaults
+from ..names import Name
 
 logger = logging.getLogger(__name__)
 
