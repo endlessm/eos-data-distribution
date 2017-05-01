@@ -17,11 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import errno
-import json
 import logging
 import os
-from shutil import copyfile
 from os import path
 
 import gi
