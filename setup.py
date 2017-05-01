@@ -96,9 +96,6 @@ setup(
         'setuptools_git >= 0.3',
         'sphinx',
     ],
-    install_requires=[
-        'pyndn >= 2.4b1',
-    ],
     tests_require=[
         'pytest',
     ],
