@@ -32,11 +32,10 @@ from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Notify
 
-from pyndn import Name, Face, Interest
-
 from eos_data_distribution import utils
 from eos_data_distribution.ndn import Consumer
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
+from eos_data_distribution.ndn.dbus.base import Interest
+from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
