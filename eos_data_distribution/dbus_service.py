@@ -135,3 +135,6 @@ def main():
 
     service = DBusService()
     GLib.MainLoop().run()
+
+if __name__ == '__main__':
+    main()
