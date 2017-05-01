@@ -19,6 +19,7 @@
 
 import logging
 
+from gi.repository import EosDataDistributionDbus
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
@@ -35,16 +36,6 @@ BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
 DBUS_NAME_TEMPLATE = '%s.%s'
 DBUS_PATH_TEMPLATE = '%s/%s'
-
-IFACE_TEMPLATE = '''<node>
-<interface name='%s.%s'>
-<method name='RequestInterest'>
-    <arg type='s' direction='in'  name='name' />
-    <arg type='s' direction='out' name='name' />
-    <arg type='s' direction='out' name='data' />
-</method>
-</interface>
-</node>'''
 
 def get_dbusable_name(base):
     if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
@@ -141,13 +132,16 @@ class Consumer(Base):
         self._dbus_express_interest(interest, dbus_path, dbus_name)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        args = GLib.Variant('(s)', (str(interest),))
-        self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
-                      args, None, Gio.DBusCallFlags.NONE, -1, None,
-                      self._on_call_complete)
+        EosDataDistributionDbus.BaseProducerProxy.new(
+            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
+            self._on_proxy_ready)
 
-    def _on_call_complete(self, source, res):
-        interest, data = self.con.call_finish(res).unpack()
+    def _on_proxy_ready(self, proxy, res):
+        self._proxy = EosDataDistributionDbus.BaseProducerProxy.new_finish(res)
+        self._proxy.call_request_interest(self.interest, None, self._on_call_complete)
+
+    def _on_call_complete(self, proxy, res):
+        interest, data = proxy.call_request_interest_finish(res)
         self.emit('data', interest, data)
         self.emit('complete')
 
@@ -164,18 +158,15 @@ class Producer(Base):
     }
 
 
-    def __init__(self, name, iface_template=IFACE_TEMPLATE,
+    def __init__(self, name, skeleton=EosDataDistributionDbus.BaseProducerSkeleton(),
                  *args, **kwargs):
-        self.IFACE_TEMPLATE = iface_template
+        self._skeleton = skeleton
+        self._skeleton.connect('handle-request-interest', self._on_request_interest)
         self.registered = False
         self._workers = dict()
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
-
-    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        # Dispatch.
-        getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
 
     def start(self):
         self.registerPrefix()
@@ -187,28 +178,24 @@ class Producer(Base):
             logger.error("We don't support prefix registeration")
             raise NotImplementedError()
 
-        dbusable_name = get_dbusable_name(self.name)
-
-        dbus_path = build_dbus_path (dbusable_name)
-        dbus_name = build_dbus_name (dbusable_name)
-        iface_str = self.IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
-        iface_info= Gio.DBusNodeInfo.new_for_xml(iface_str).interfaces[0]
-
         if self.registered:
             console.error('already registered')
             return
 
+        dbusable_name = get_dbusable_name(self.name)
+        dbus_name = build_dbus_name(dbusable_name)
         Gio.bus_own_name_on_connection(
             self.con, dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
 
-        registered = self.con.register_object(
-            object_path=dbus_path,
-            interface_info=iface_info, method_call_closure=self._on_method_call)
+        dbus_path = build_dbus_path(dbusable_name)
+        registered = self._skeleton.export(self.con, dbus_path)
+        iface_str = self._skeleton.get_info().name
 
         if not registered:
             logger.error('got error: %s, %s, %s, %s',
                          registered, dbus_name, dbus_path, iface_str)
             self.emit('register-failed', registered)
+            return
 
         logger.info('registred: %s, %s, %s',
                     dbus_name, dbus_path, iface_str)
@@ -216,13 +203,14 @@ class Producer(Base):
         self.registered = True
 
     def send(self, name, data, flags = {}):
-        self.invocation.return_value(GLib.Variant('(ss)', (str(name), data)))
+        self._skeleton.complete_request_interest(self.invocation, str(name), data)
 
     def sendFinish(self, data):
-        self.invocation.return_value(GLib.Variant('(ss)', (str(self.name), data)))
+        self._skeleton.complete_request_interest(self.invocation, str(self.name), data)
 
-    def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        logger.debug('GOT RequestInterest')
-        name, = parameters.unpack()
+    def _on_request_interest(self, skeleton, invocation, name):
+        logger.debug('RequestInterest: name=%s', name)
+
         self.invocation = invocation
         self.emit('interest', name, Interest(name), None, None, None)
+        return True
