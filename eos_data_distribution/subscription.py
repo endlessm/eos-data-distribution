@@ -23,13 +23,11 @@ import os
 import urllib
 from os import path
 
-from pyndn import Name, Data
-
 import gi
 from gi.repository import GObject
 
 from . import defaults, ndn
-from .names import SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
+from .names import Name, SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
 from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
