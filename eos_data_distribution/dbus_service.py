@@ -33,8 +33,7 @@ from gi.repository import Gio
 from gi.repository import Notify
 
 from eos_data_distribution import utils
-from eos_data_distribution.ndn import Consumer
-from eos_data_distribution.ndn.dbus.base import Interest
+from eos_data_distribution.ndn.dbus.base import Consumer, Interest
 from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED
 
 IFACE = '''<node>
