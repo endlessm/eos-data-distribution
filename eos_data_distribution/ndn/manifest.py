@@ -23,40 +23,9 @@ import logging
 
 from . import http
 from .dbus import chunks
-from .. import defaults, utils
-from ..names import Name
+from .. import utils
 
 logger = logging.getLogger(__name__)
-
-
-# the manifest producer is an http Producer that answers on a different name
-class Producer(chunks.Producer):
-
-    def __init__(self, name, url, session=None, *args, **kwargs):
-        self._getter = http.Getter(
-            url, onData=self._send_finish, session=session)
-        self._last_modified = http.get_last_modified(self._getter._headers)
-        if not self._last_modified:
-            raise ValueError("Could not get Last-Modified")
-
-        # XXX -- we mangle the name in the constructor, this is slow
-        self._qualified_name = Name(name).append(self._last_modified)
-
-        super(Producer, self).__init__(
-            name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
-
-    def _get_final_segment(self):
-        return self._getter._size // self.chunk_size
-
-    def _send_chunk(self, data, n):
-        qualified_name = Name(self._qualified_name).appendSegment(n)
-        data.setName(qualified_name)
-        self._getter.soup_get(data, n)
-
-    def _send_finish(self, data):
-        data.getMetaInfo().setFreshnessPeriod(defaults.FRESHNESS_PERIOD)
-
-        self.sendFinish(data)
 
 if __name__ == '__main__':
     import re
@@ -73,5 +42,5 @@ if __name__ == '__main__':
     else:
         name = re.sub('https?://', '', args.url)
 
-    producer = Producer(name=name, url=args.url)
+    producer = http.Producer(name=name, url=args.url)
     testutils.run_producer_test(producer, name, args)
