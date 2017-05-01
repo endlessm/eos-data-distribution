@@ -1,5 +1,5 @@
 from ..dbus import base
-from ... import defaults
+from ... import defaults, utils
 
 TEST_NAME = '/endlessm/test'
 
@@ -12,10 +12,8 @@ def _on_interest(producer, prefix, interest, *args):
 
 if __name__ == '__main__':
     from gi.repository import GLib
-    from . import utils
 
-    parser = utils.process_args()
-    args = parser.parse_args()
+    args = utils.parse_args()
 
     consumer = base.Consumer(TEST_NAME)
     consumer.connect('data', _on_data)

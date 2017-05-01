@@ -34,7 +34,7 @@ from gi.repository import Gio
 from eos_data_distribution.defaults import ENDLESS_NDN_CACHE_PATH
 from eos_data_distribution.subscription import Fetcher
 from eos_data_distribution.parallel import Batch
-from eos_data_distribution.tools import util
+from eos_data_distribution import utils
 
 
 def get_subscription_ids_for_arg(arg):
@@ -77,7 +77,7 @@ def main():
         "-t", "--store-dir", default=get_default_store_dir(), help="where to store the downloaded files")
     parser.add_argument("ids", nargs='+')
 
-    args = util.process_args(parser)
+    args = utils.parse_args(parser=parser, include_name=False)
 
     subscription_ids = list(itertools.chain.from_iterable(
         (get_subscription_ids_for_arg(arg) for arg in args.ids)))

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import argparse
 import errno
 import fcntl
 import gi
@@ -13,7 +14,7 @@ from gi.repository import Gio
 from . import fallocate
 from .dbus import chunks
 from ..defaults import SegmentState
-
+from .. import utils
 
 logger = logging.getLogger(__name__)
 
@@ -423,10 +424,9 @@ class DirConsumer(Consumer):
 
 
 if __name__ == '__main__':
-    from tests import util
-    parser = util.process_args("filename")
+    parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output")
-    args = parser.parse_args()
+    args = utils.parse_args(parser=parser)
 
     name = args.name or args.filename
 
