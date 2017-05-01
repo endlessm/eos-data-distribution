@@ -21,7 +21,6 @@ import logging
 
 from gi.repository import GObject
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
