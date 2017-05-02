@@ -54,6 +54,12 @@ IFACE_TEMPLATE = '''<node>
 # kill temporal signal
 # only multiplex on the object path
 
+def get_chunkless_name(name):
+    """
+    We don't ever generate chunked names in this implementation
+    """
+    return name
+
 class Data(object):
     """Data:
 
