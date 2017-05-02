@@ -76,7 +76,7 @@ class Fetcher(object):
             return
 
         route = chunkless_name.getSubName(SUBSCRIPTIONS_SOMA.size())
-        component = route.get(0).getValue().toRawStr()
+        component = str(route.get(0))
 
         if component == 'subscription':
             subscription_id = route.get(1).getValue().toRawStr()
