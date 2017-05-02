@@ -30,21 +30,20 @@ logger = logging.getLogger(__name__)
 
 BUS_TYPE = Gio.BusType.SESSION
 
-BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge'
+BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge.base'
 BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
-DBUS_NAME_TEMPLATE = '%s.%s'
 DBUS_PATH_TEMPLATE = '%s/%s'
 
 IFACE_TEMPLATE = '''<node>
-<interface name='%s.%s'>
+<interface name='%s'>
 <method name='RequestInterest'>
     <arg type='s' direction='in'  name='name' />
     <arg type='s' direction='out' name='name' />
     <arg type='s' direction='out' name='data' />
 </method>
 </interface>
-</node>'''
+</node>''' % (BASE_DBUS_NAME)
 
 def get_dbusable_name(base):
     if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
@@ -54,9 +53,6 @@ def get_dbusable_name(base):
 
 def build_dbus_path(name):
     return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.replace('-', '_'))
-
-def build_dbus_name(name):
-    return DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, name)
 
 class Base(GObject.GObject):
     """Base class
@@ -98,14 +94,15 @@ class Consumer(Base):
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, dbus_name = BASE_DBUS_NAME,
+                 *args, **kwargs):
         self.con = None
         self._wants_start = False
+        self.DBUS_NAME = dbus_name
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
         dbusable_name = get_dbusable_name(name)
-        dbus_name = DBUS_NAME_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
-        Gio.bus_watch_name(BUS_TYPE, dbus_name,
+        Gio.bus_watch_name(BUS_TYPE, self.DBUS_NAME,
                            Gio.BusNameWatcherFlags.AUTO_START,
                            self._name_appeared_cb,
                            self._name_vanished_cb)
@@ -136,9 +133,8 @@ class Consumer(Base):
         dbusable_name = get_dbusable_name(interest)
 
         dbus_path = build_dbus_path(dbusable_name)
-        dbus_name = build_dbus_name(dbusable_name)
 
-        self._dbus_express_interest(interest, dbus_path, dbus_name)
+        self._dbus_express_interest(interest, dbus_path, self.DBUS_NAME)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
         args = GLib.Variant('(s)', (str(interest),))
@@ -164,11 +160,15 @@ class Producer(Base):
     }
 
 
-    def __init__(self, name, iface_template=IFACE_TEMPLATE,
+    def __init__(self, name, dbus_name=BASE_DBUS_NAME,
+                 iface_template=IFACE_TEMPLATE,
                  *args, **kwargs):
         self.IFACE_TEMPLATE = iface_template
+        self.DBUS_NAME = dbus_name
         self.registered = False
         self._workers = dict()
+
+        logger.info("name: %s, iface template: %s", name, self.IFACE_TEMPLATE)
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
@@ -190,16 +190,16 @@ class Producer(Base):
         dbusable_name = get_dbusable_name(self.name)
 
         dbus_path = build_dbus_path (dbusable_name)
-        dbus_name = build_dbus_name (dbusable_name)
-        iface_str = self.IFACE_TEMPLATE % (BASE_DBUS_NAME, dbusable_name)
-        iface_info= Gio.DBusNodeInfo.new_for_xml(iface_str).interfaces[0]
+        iface_info= Gio.DBusNodeInfo.new_for_xml(
+            self.IFACE_TEMPLATE
+        ).interfaces[0]
 
         if self.registered:
             console.error('already registered')
             return
 
         Gio.bus_own_name_on_connection(
-            self.con, dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
+            self.con, self.DBUS_NAME, Gio.BusNameOwnerFlags.NONE, None, None)
 
         registered = self.con.register_object(
             object_path=dbus_path,
@@ -207,11 +207,12 @@ class Producer(Base):
 
         if not registered:
             logger.error('got error: %s, %s, %s, %s',
-                         registered, dbus_name, dbus_path, iface_str)
+                         registered, self.DBUS_NAME, dbus_path,
+                         self.IFACE_TEMPLATE)
             self.emit('register-failed', registered)
 
         logger.info('registred: %s, %s, %s',
-                    dbus_name, dbus_path, iface_str)
+                    self.DBUS_NAME, dbus_path, self.IFACE_TEMPLATE)
 
         self.registered = True
 

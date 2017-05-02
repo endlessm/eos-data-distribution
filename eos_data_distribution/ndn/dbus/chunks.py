@@ -35,8 +35,9 @@ from . import base
 
 logger = logging.getLogger(__name__)
 
+CHUNKS_DBUS_NAME = 'com.endlessm.NDNHackBridge.chunks'
 IFACE_TEMPLATE = '''<node>
-<interface name='%s.%s'>
+<interface name='%s'>
 <method name='RequestInterest'>
     <arg type='s' direction='in'  name='name' />
     <arg type='h' direction='in'  name='fd' />
@@ -49,7 +50,7 @@ IFACE_TEMPLATE = '''<node>
     <arg type='i' direction='out' name='last_segment' />
 </signal>
 </interface>
-</node>'''
+</node>''' % (CHUNKS_DBUS_NAME)
 
 # signals -> property notification
 # kill temporal signal
@@ -100,7 +101,10 @@ class Consumer(base.Consumer):
         self._qualified_name = None
         self._emitted_complete = False
 
-        super(Consumer, self).__init__(name=name, *args, **kwargs)
+        super(Consumer, self).__init__(name=name,
+                                       dbus_name=CHUNKS_DBUS_NAME,
+                                       *args, **kwargs)
+
         logger.info('init DBUS chunks.Consumer: %s', name)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
@@ -166,6 +170,7 @@ class Consumer(base.Consumer):
 class Producer(base.Producer):
     def __init__(self, name, *args, **kwargs):
         super(Producer, self).__init__(name=name,
+                                       dbus_name=CHUNKS_DBUS_NAME,
                                        iface_template=IFACE_TEMPLATE,
                                        *args, **kwargs)
 
