@@ -26,11 +26,12 @@ from os import path
 import gi
 from gi.repository import GObject
 
-from . import defaults, ndn
+from . import defaults
 from .names import Name, SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
 from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
+from .ndn.dbus import base as ndn
 
 logger = logging.getLogger(__name__)
 
