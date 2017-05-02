@@ -36,6 +36,15 @@ class Name(list):
         self.extend(subname.split('/'))
         return self
 
+    def size(self):
+        return len(self)
+
+    def getSubName(self, size):
+        return Name(self[size:])
+
+    def get(self, e):
+        return self[e]
+
     def __repr__(self):
         return '/' + '/'.join(self)
 
