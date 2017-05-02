@@ -79,6 +79,9 @@ class Interest(str):
     def __init__(self, name=None):
         super(Interest, self).__init__(name)
 
+    def size(self):
+        return self.count('/')
+
     def getName(self):
         return self
 
