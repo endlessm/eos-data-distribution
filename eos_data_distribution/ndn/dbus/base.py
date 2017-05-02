@@ -83,7 +83,7 @@ class Interest(str):
         return self.count('/')
 
     def getName(self):
-        return self
+        return Name(self)
 
 class Consumer(Base):
     """Base DBus-NDN consumer
