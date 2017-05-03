@@ -52,7 +52,7 @@ def get_dbusable_name(base):
         return 'custom'
 
 def build_dbus_path(name):
-    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.replace('-', '_'))
+    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.replace('-', '_').strip('/'))
 
 class Base(GObject.GObject):
     """Base class
