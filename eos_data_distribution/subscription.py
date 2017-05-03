@@ -23,18 +23,15 @@ import os
 import urllib
 from os import path
 
-from pyndn import Name, Data
-
 import gi
 from gi.repository import GObject
 
 from . import defaults, ndn
-from .names import SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
+from .names import Name, SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
 from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -107,7 +104,7 @@ class Fetcher(GObject.GObject):
 class Producer(object):
 
     """
-    The Producer listens for intents to /endless/installed/foo,
+    The Producer listens for interests to /endless/installed/foo,
     downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
     and then generates a "signalling response" for them.
     """

@@ -27,10 +27,8 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-from pyndn import Name, Face, Interest
-
-from eos_data_distribution.ndn import Consumer
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
+from eos_data_distribution.ndn.dbus.base import Consumer, Interest
+from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

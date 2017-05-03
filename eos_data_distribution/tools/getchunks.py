@@ -18,24 +18,19 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import argparse
-import sys
-import time
-
-from pyndn import Name
 
 from gi.repository import GLib
 
 from eos_data_distribution.ndn.file import FileConsumer
-from eos_data_distribution.tools import util
+from eos_data_distribution import utils
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("name")
     parser.add_argument("filename")
     parser.add_argument("-l", "--limit", type=int, default=0)
 
-    args = util.process_args(parser)
+    args = utils.parse_args(parser=parser)
 
     consumer = FileConsumer(args.name, args.filename)
 

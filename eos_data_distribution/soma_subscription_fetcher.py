@@ -22,15 +22,12 @@ import os
 import json
 import logging
 
-import gi
-gi.require_version('Soup', '2.4')
-
 from gi.repository import GLib
-from gi.repository import Soup
 
 from .names import SUBSCRIPTIONS_SOMA
-from .ndn import http, Producer, manifest
+from .ndn import http, manifest
 from .ndn.dbus import chunks
+from .ndn.dbus.base import Producer
 
 logger = logging.getLogger(__name__)
 

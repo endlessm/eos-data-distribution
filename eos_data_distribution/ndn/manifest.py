@@ -18,13 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import argparse
 import logging
-
-from pyndn import Name
 
 from . import http
 from .dbus import chunks
-from .. import defaults
+from .. import defaults, utils
+from ..names import Name
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +60,13 @@ class Producer(chunks.Producer):
 
 if __name__ == '__main__':
     import re
-    from tests import utils
+    from .tests import utils as testutils
 
-    parser = utils.process_args()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--cost", default=10)
     parser.add_argument("-o", "--output")
     parser.add_argument("url")
-    args = parser.parse_args()
+    args = utils.parse_args(parser=parser)
 
     if args.name:
         name = args.name
@@ -74,4 +74,4 @@ if __name__ == '__main__':
         name = re.sub('https?://', '', args.url)
 
     producer = Producer(name=name, url=args.url)
-    utils.run_producer_test(producer, name, args)
+    testutils.run_producer_test(producer, name, args)

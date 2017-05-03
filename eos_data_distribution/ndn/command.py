@@ -17,6 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import argparse
 import logging
 
 from pyndn.control_parameters import ControlParameters
@@ -24,6 +25,8 @@ from pyndn.control_response import ControlResponse
 from pyndn.encoding.tlv_wire_format import TlvWireFormat
 from pyndn.util.command_interest_generator import CommandInterestGenerator
 from pyndn import Interest, Name
+
+from eos_data_distribution import utils
 
 logger = logging.getLogger(__name__)
 
@@ -160,11 +163,8 @@ def makeInterest(cmd, local=True, controlParameters={}, interestLifeTime=None,
 def main():
     from gi.repository import GLib
     from . import base
-    from tests import utils
 
-    logging.basicConfig(level=logging.DEBUG)
-
-    parser = utils.process_args(description='Command Interest Tests')
+    parser = argparse.ArgumentParser(description='Command Interest Tests')
     parser.add_argument("--faceid", "-i", type=int)
     parser.add_argument("--uri", "-u")
     parser.add_argument("--local-control-feature", "-l")
@@ -175,7 +175,7 @@ def main():
     parser.add_argument("--expiration-period", "-e", type=int)
     parser.add_argument("command")
 
-    args = parser.parse_args()
+    args = utils.parse_args(parser=parser)
 
     controlParameters = ControlParameters()
 

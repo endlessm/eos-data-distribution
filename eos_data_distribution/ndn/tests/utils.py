@@ -19,43 +19,6 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 from gi.repository import GLib
-import argparse
-
-import logging
-logger = logging.getLogger(__name__)
-
-
-class ArgParseWrapper(object):
-
-    """
-    all this because we can't call parse_args twice...
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.parser = argparse.ArgumentParser(*args, **kwargs)
-
-    def add_argument(self, *args, **kwargs):
-        self.parser.add_argument(*args, **kwargs)
-
-    def parse_args(self, *args, **kwargs):
-        args = self.parser.parse_args()
-        if args.v > 1:
-            logging.basicConfig(level=logging.DEBUG)
-        elif args.v == 1:
-            logging.basicConfig(level=logging.INFO)
-        else:
-            # We use the default WARNING level if -v was not specified
-            pass
-
-        return args
-
-
-def process_args(description=None, *args, **kwargs):
-    parser = ArgParseWrapper(description)
-    parser.add_argument("-n", "--name")
-    parser.add_argument("-v", action="count")
-
-    return parser
 
 
 def run_producer_test(producer, name, args):

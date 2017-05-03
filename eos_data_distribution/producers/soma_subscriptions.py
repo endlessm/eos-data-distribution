@@ -18,18 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import logging
-
 import gi
 gi.require_version('GLib', '2.0')
 
 from gi.repository import GLib
 
+from eos_data_distribution import utils
 from eos_data_distribution.soma_subscription_fetcher import Fetcher
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
+    utils.parse_args(include_name=False)
     fetcher = Fetcher()
     loop = GLib.MainLoop()
     loop.run()

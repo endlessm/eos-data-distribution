@@ -122,7 +122,7 @@ class Consumer(Base):
 
     def expressInterest(self, interest=None, try_again=False):
         if not interest:
-            interest = self.name
+            interest = str(self.name)
 
         self.interest = interest
         if not self.con:
@@ -227,12 +227,3 @@ class Producer(Base):
         name, = parameters.unpack()
         self.invocation = invocation
         self.emit('interest', name, Interest(name), None, None, None)
-
-#        self._workers[name] = worker = ProducerWorker(name, invocation)
-
-class ProducerWorker():
-    def __init__(self, name, invocation):
-        self.name = name
-        self.invocation = invocation
-
-        self._on_interest(None, name, name, None, None, None)

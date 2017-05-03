@@ -17,11 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import errno
-import json
 import logging
 import os
-from shutil import copyfile
 from os import path
 
 import gi
@@ -32,6 +29,7 @@ from gi.repository import GLib
 from gi.repository import Gio
 
 from . import base
+from eos_data_distribution import utils
 
 logger = logging.getLogger(__name__)
 
@@ -220,14 +218,14 @@ class ProducerWorker():
 
 if __name__ == '__main__':
     import re
-    from .tests import utils
+    from .tests import utils as testutils
     from . import http
 
-    parser = utils.process_args()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--cost", default=10)
     parser.add_argument("-o", "--output", default='test.shard')
     parser.add_argument("url")
-    args = parser.parse_args()
+    args = utils.parse_args(parser=parser)
 
     if args.name:
         name = args.name
@@ -235,4 +233,4 @@ if __name__ == '__main__':
         name = re.sub('https?://', '', args.url)
 
     consumer = http.Consumer(name=name, url=args.url)
-    utils.run_consumer_test(consumer, name, args)
+    testutils.run_consumer_test(consumer, name, args)
