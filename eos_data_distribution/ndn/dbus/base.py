@@ -133,9 +133,7 @@ class Consumer(Base):
             self._wants_start = True
             return
 
-        dbusable_name = get_dbusable_name(interest)
-
-        dbus_path = build_dbus_path(dbusable_name)
+        dbus_path = build_dbus_path(str(interest))
 
         self._dbus_express_interest(interest, dbus_path, self.DBUS_NAME)
 
@@ -149,6 +147,62 @@ class Consumer(Base):
         interest, data = self.con.call_finish(res).unpack()
         self.emit('data', interest, data)
         self.emit('complete')
+
+dbus_instances = dict()
+
+class DbusInstance():
+    def __init__(self, name, iface_template):
+        self._cb_registery = dict()
+        self._obj_registery = dict()
+        self.DBUS_NAME = name
+        self.IFACE_TEMPLATE = iface_template
+        self.con = Gio.bus_get_sync(BUS_TYPE, None)
+
+        self.iface_info = Gio.DBusNodeInfo.new_for_xml(
+            self.IFACE_TEMPLATE
+        ).interfaces[0]
+
+        Gio.bus_own_name_on_connection(
+            self.con, self.DBUS_NAME, Gio.BusNameOwnerFlags.NONE, None, None)
+
+    def register_path_for_name(self, name, cb):
+        dbus_path = build_dbus_path(name)
+
+        logger.debug('registering path: %s', dbus_path)
+        registered = self.con.register_object(
+            object_path=dbus_path,
+            interface_info=self.iface_info, method_call_closure=self._on_method_call)
+
+        if not registered:
+            return logger.error('got error: %s, %s, %s, %s',
+                         registered, self.DBUS_NAME, dbus_path,
+                         self.IFACE_TEMPLATE)
+
+
+        self._cb_registery[name] = cb
+        logger.info('registered: %s, %s, %s',
+                    self.DBUS_NAME, dbus_path, self.IFACE_TEMPLATE)
+        return registered
+
+    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
+        # Dispatch.
+        getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
+
+    def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
+        name, = parameters.unpack()
+        logger.debug('GOT RequestInterest: %s, %s', name, self)
+
+        self._obj_registery[name] = (sender, object_path, interface_name, method_name, parameters, invocation)
+        self._cb_registery[name](name)
+
+
+    def return_value(self, name, variant):
+        print 'obj reg', self._obj_registery
+
+        sender, object_path, interface_name, method_name, parameters, invocation = self._obj_registery[name]
+        logger.debug('returning value for %s on %s', name, invocation)
+        invocation.return_value(variant)
+
 
 class Producer(Base):
     """Base DBus-NDN producer
@@ -166,19 +220,16 @@ class Producer(Base):
     def __init__(self, name, dbus_name=BASE_DBUS_NAME,
                  iface_template=IFACE_TEMPLATE,
                  *args, **kwargs):
-        self.IFACE_TEMPLATE = iface_template
-        self.DBUS_NAME = dbus_name
         self.registered = False
         self._workers = dict()
 
-        logger.info("name: %s, iface template: %s", name, self.IFACE_TEMPLATE)
+        logger.debug("registering producer on name: %s, %s", name, dbus_name)
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
-        self.con = Gio.bus_get_sync(BUS_TYPE, None)
-
-    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        # Dispatch.
-        getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
+        try:
+            self._dbus = dbus_instances[dbus_name]
+        except KeyError:
+            self._dbus = dbus_instances[dbus_name] = DbusInstance(dbus_name, iface_template)
 
     def start(self):
         self.registerPrefix()
@@ -190,43 +241,24 @@ class Producer(Base):
             logger.error("We don't support prefix registeration")
             raise NotImplementedError()
 
-        dbusable_name = get_dbusable_name(self.name)
-
-        dbus_path = build_dbus_path (dbusable_name)
-        iface_info= Gio.DBusNodeInfo.new_for_xml(
-            self.IFACE_TEMPLATE
-        ).interfaces[0]
-
         if self.registered:
             console.error('already registered')
             return
 
-        Gio.bus_own_name_on_connection(
-            self.con, self.DBUS_NAME, Gio.BusNameOwnerFlags.NONE, None, None)
-
-        registered = self.con.register_object(
-            object_path=dbus_path,
-            interface_info=iface_info, method_call_closure=self._on_method_call)
-
-        if not registered:
-            logger.error('got error: %s, %s, %s, %s',
-                         registered, self.DBUS_NAME, dbus_path,
-                         self.IFACE_TEMPLATE)
-            self.emit('register-failed', registered)
-
-        logger.info('registred: %s, %s, %s',
-                    self.DBUS_NAME, dbus_path, self.IFACE_TEMPLATE)
-
-        self.registered = True
+        self.registred = self._dbus.register_path_for_name(self.name, self._on_interest)
+        if not self.registred: self.emit('register-failed', self.registered)
 
     def send(self, name, data, flags = {}):
-        self.invocation.return_value(GLib.Variant('(ss)', (str(name), data)))
+        logger.debug('producer: sending on name %s, %s', name, data)
+        self._dbus.return_value(name, GLib.Variant('(ss)', (str(name), data)))
 
     def sendFinish(self, data):
-        self.invocation.return_value(GLib.Variant('(ss)', (str(self.name), data)))
+        self._dbus.return_value(name, GLib.Variant('(ss)', (str(self.name), data)))
 
-    def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        logger.debug('GOT RequestInterest')
-        name, = parameters.unpack()
-        self.invocation = invocation
+    def _on_interest(self, name):
+        logger.debug('producer: got interest for name %s, %s', name, self)
         self.emit('interest', name, Interest(name), None, None, None)
+
+
+
+
