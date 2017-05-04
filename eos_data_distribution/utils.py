@@ -30,10 +30,11 @@ def parse_args(parser=None, include_name=True):
     parser.add_argument('-v', action='count',
                         help='verbosity level')
     args = parser.parse_args()
+    v = args.v or 0
 
-    if args.v > 1:
+    if v > 1:
         logging.basicConfig(level=logging.DEBUG)
-    elif args.v == 1:
+    elif v == 1:
         logging.basicConfig(level=logging.INFO)
     else:
         # We use the default WARNING level if -v was not specified

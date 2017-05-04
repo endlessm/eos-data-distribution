@@ -254,7 +254,7 @@ if __name__ == '__main__':
     loop = GLib.MainLoop()
 
     def dump(*a):
-        print a
+        print(a)
 
     def on_complete(i, *a):
         del(consumers[consumers.index(i)])
