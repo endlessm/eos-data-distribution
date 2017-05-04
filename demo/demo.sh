@@ -10,13 +10,13 @@ title="printf '\033]2;%s\033\\'"
 flamegraph () {
         n=$1
         shift 1
-        echo "python -m flamegraph -o $n.log $n.py $@"
+        echo "python -m flamegraph -o $n.log $n.py -vvv $@"
 }
 
 cprofile ()  {
         n=$1
         shift 1
-        echo "python -m cProfile -o $(basename $n).cprof $n.py $@"
+        echo "python -m cProfile -o $(basename $n).cprof $n.py -vvv $@"
 }
 
 run () {
