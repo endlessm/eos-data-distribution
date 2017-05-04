@@ -45,7 +45,6 @@ def get_chunkless_name(name):
         chunkless_name = name
     return chunkless_name
 
-
 class Producer(base.Producer):
 
     """

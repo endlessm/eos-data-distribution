@@ -172,11 +172,10 @@ class Producer(base.Producer):
                                        skeleton=EosDataDistributionDbus.ChunksProducerSkeleton(),
                                        *args, **kwargs)
 
-    def _on_request_interest(self, skeleton, invocation, name, fd_variant, first_segment):
+    def _on_request_interest(self, name, skeleton, fd_variant, first_segment):
         fd = fd_variant.get_handle()
         logger.debug('RequestInterest: name=%s, fd=%d, first_segment=%d',
                      name, fd, first_segment)
-
         # do we start on chunk 0 ? full file ? do we start on another chunk
         # ? we need to seek the file, subsequent calls to get the same
         # chunks have to be handled in the consumer part and folded into
@@ -188,7 +187,7 @@ class Producer(base.Producer):
 
         self._workers[name] = worker = ProducerWorker(fd, first_segment, final_segment,
                                                       self._send_chunk)
-        skeleton.complete_request_interest(invocation, final_segment)
+        self._dbus.return_value(name, final_segment)
 
         # XXX: is this racy ?
         GLib.timeout_add_seconds(5,

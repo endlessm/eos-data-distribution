@@ -44,7 +44,11 @@ def get_dbusable_name(base):
         return 'custom'
 
 def build_dbus_path(name):
-    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, str(name).replace('-', '_').strip('/'))
+    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, str(name)
+                                 .replace(':', '_')
+                                 .replace('-', '_')
+                                 .replace('.', '_')
+                                 .strip('/'))
 
 class Base(GObject.GObject):
     """Base class
@@ -145,8 +149,8 @@ class Consumer(Base):
 
 dbus_instances = dict()
 
-class DbusInstance():
-    def __init__(self, name, skeleton=EosDataDistributionDbus.BaseProducerSkeleton()):
+class DBusInstance():
+    def __init__(self, name, skeleton):
         self._cb_registery = dict()
         self._obj_registery = dict()
         self.DBUS_NAME = name
@@ -154,10 +158,6 @@ class DbusInstance():
         self._skeleton.connect('handle-request-interest', self._on_request_interest)
 
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
-
-        self.iface_info = Gio.DBusNodeInfo.new_for_xml(
-            self.IFACE_TEMPLATE
-        ).interfaces[0]
 
         Gio.bus_own_name_on_connection(
             self.con, self.DBUS_NAME, Gio.BusNameOwnerFlags.NONE, None, None)
@@ -178,19 +178,17 @@ class DbusInstance():
                     self.DBUS_NAME, dbus_path, iface_str)
         return registered
 
-    def _on_request_interest(self, skeleton, invocation, name):
+    def _on_request_interest(self, skeleton, invocation, name, *args, **kwargs):
         logger.debug('RequestInterest: name=%s', name)
 
-        self._obj_registery[str(name)] = invocation
-        self._cb_registery[str(name)](name)
+        self._obj_registery[str(name)] = (skeleton, invocation)
+        self._cb_registery[str(name)](name, skeleton,  *args, **kwargs)
         return True
 
-    def return_value(self, name, variant):
-        print 'obj reg', self._obj_registery
-
-        sender, object_path, interface_name, method_name, parameters, invocation = self._obj_registery[str(name)]
+    def return_value(self, name, *args, **kwargs):
+        skeleton, invocation = self._obj_registery[str(name)]
         logger.debug('returning value for %s on %s', name, invocation)
-        invocation.return_value(variant)
+        skeleton.complete_request_interest(invocation, *args, **kwargs)
 
 
 class Producer(Base):
@@ -207,7 +205,7 @@ class Producer(Base):
 
 
     def __init__(self, name, dbus_name=BASE_DBUS_NAME,
-                 iface_template=IFACE_TEMPLATE,
+                 skeleton=EosDataDistributionDbus.BaseProducerSkeleton(),
                  *args, **kwargs):
         self.registered = False
         self._workers = dict()
@@ -218,7 +216,7 @@ class Producer(Base):
         try:
             self._dbus = dbus_instances[dbus_name]
         except KeyError:
-            self._dbus = dbus_instances[dbus_name] = DbusInstance(dbus_name, iface_template)
+            self._dbus = dbus_instances[dbus_name] = DBusInstance(dbus_name, skeleton)
 
     def start(self):
         self.registerPrefix()
@@ -234,17 +232,17 @@ class Producer(Base):
             console.error('already registered')
             return
 
-        self.registred = self._dbus.register_path_for_name(self.name, self._on_interest)
+        self.registred = self._dbus.register_path_for_name(self.name, self._on_request_interest)
         if not self.registred: self.emit('register-failed', self.registered)
 
     def send(self, name, data, flags = {}):
         logger.debug('producer: sending on name %s, %s', name, data)
-        self._dbus.return_value(name, GLib.Variant('(ss)', (str(name), data)))
+        self._dbus.return_value(name, str(name), data)
 
     def sendFinish(self, data):
-        self._dbus.return_value(name, GLib.Variant('(ss)', (str(self.name), data)))
+        self._dbus.return_value(name, str(self.name), data)
 
-    def _on_interest(self, name):
+    def _on_request_interest(self, name, skeleton):
         logger.debug('producer: got interest for name %s, %s', name, self)
         self.emit('interest', name, Interest(name), None, None, None)
 
