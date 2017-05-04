@@ -52,7 +52,7 @@ def get_dbusable_name(base):
         return 'custom'
 
 def build_dbus_path(name):
-    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.replace('-', '_').strip('/'))
+    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, str(name).replace('-', '_').strip('/'))
 
 class Base(GObject.GObject):
     """Base class
@@ -179,7 +179,7 @@ class DbusInstance():
                          self.IFACE_TEMPLATE)
 
 
-        self._cb_registery[name] = cb
+        self._cb_registery[str(name)] = cb
         logger.info('registered: %s, %s, %s',
                     self.DBUS_NAME, dbus_path, self.IFACE_TEMPLATE)
         return registered
@@ -192,14 +192,14 @@ class DbusInstance():
         name, = parameters.unpack()
         logger.debug('GOT RequestInterest: %s, %s', name, self)
 
-        self._obj_registery[name] = (sender, object_path, interface_name, method_name, parameters, invocation)
-        self._cb_registery[name](name)
+        self._obj_registery[str(name)] = (sender, object_path, interface_name, method_name, parameters, invocation)
+        self._cb_registery[str(name)](name)
 
 
     def return_value(self, name, variant):
         print 'obj reg', self._obj_registery
 
-        sender, object_path, interface_name, method_name, parameters, invocation = self._obj_registery[name]
+        sender, object_path, interface_name, method_name, parameters, invocation = self._obj_registery[str(name)]
         logger.debug('returning value for %s on %s', name, invocation)
         invocation.return_value(variant)
 
