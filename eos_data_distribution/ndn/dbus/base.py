@@ -19,6 +19,8 @@
 
 import logging
 
+from gi.repository import EosDataDistributionDbus
+
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
@@ -34,16 +36,6 @@ BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge.base'
 BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
 DBUS_PATH_TEMPLATE = '%s/%s'
-
-IFACE_TEMPLATE = '''<node>
-<interface name='%s'>
-<method name='RequestInterest'>
-    <arg type='s' direction='in'  name='name' />
-    <arg type='s' direction='out' name='name' />
-    <arg type='s' direction='out' name='data' />
-</method>
-</interface>
-</node>''' % (BASE_DBUS_NAME)
 
 def get_dbusable_name(base):
     if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
@@ -138,24 +130,29 @@ class Consumer(Base):
         self._dbus_express_interest(interest, dbus_path, self.DBUS_NAME)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        args = GLib.Variant('(s)', (str(interest),))
-        self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
-                      args, None, Gio.DBusCallFlags.NONE, -1, None,
-                      self._on_call_complete)
+        EosDataDistributionDbus.BaseProducerProxy.new(
+            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
+            self._on_proxy_ready)
 
-    def _on_call_complete(self, source, res):
-        interest, data = self.con.call_finish(res).unpack()
+    def _on_proxy_ready(self, proxy, res):
+        self._proxy = EosDataDistributionDbus.BaseProducerProxy.new_finish(res)
+        self._proxy.call_request_interest(self.interest, None, self._on_call_complete)
+
+    def _on_call_complete(self, proxy, res):
+        interest, data = proxy.call_request_interest_finish(res)
         self.emit('data', interest, data)
         self.emit('complete')
 
 dbus_instances = dict()
 
 class DbusInstance():
-    def __init__(self, name, iface_template):
+    def __init__(self, name, skeleton=EosDataDistributionDbus.BaseProducerSkeleton()):
         self._cb_registery = dict()
         self._obj_registery = dict()
         self.DBUS_NAME = name
-        self.IFACE_TEMPLATE = iface_template
+        self._skeleton = skeleton
+        self._skeleton.connect('handle-request-interest', self._on_request_interest)
+
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
 
         self.iface_info = Gio.DBusNodeInfo.new_for_xml(
@@ -169,32 +166,24 @@ class DbusInstance():
         dbus_path = build_dbus_path(name)
 
         logger.debug('registering path: %s', dbus_path)
-        registered = self.con.register_object(
-            object_path=dbus_path,
-            interface_info=self.iface_info, method_call_closure=self._on_method_call)
-
+        registered = self._skeleton.export(self.con, dbus_path)
+        iface_str = self._skeleton.get_info().name
         if not registered:
             return logger.error('got error: %s, %s, %s, %s',
                          registered, self.DBUS_NAME, dbus_path,
-                         self.IFACE_TEMPLATE)
-
+                                iface_str)
 
         self._cb_registery[str(name)] = cb
         logger.info('registered: %s, %s, %s',
-                    self.DBUS_NAME, dbus_path, self.IFACE_TEMPLATE)
+                    self.DBUS_NAME, dbus_path, iface_str)
         return registered
 
-    def _on_method_call(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        # Dispatch.
-        getattr(self, 'impl_%s' % (method_name, ))(connection, sender, object_path, interface_name, method_name, parameters, invocation)
+    def _on_request_interest(self, skeleton, invocation, name):
+        logger.debug('RequestInterest: name=%s', name)
 
-    def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        name, = parameters.unpack()
-        logger.debug('GOT RequestInterest: %s, %s', name, self)
-
-        self._obj_registery[str(name)] = (sender, object_path, interface_name, method_name, parameters, invocation)
+        self._obj_registery[str(name)] = invocation
         self._cb_registery[str(name)](name)
-
+        return True
 
     def return_value(self, name, variant):
         print 'obj reg', self._obj_registery

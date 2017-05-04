@@ -22,8 +22,10 @@ import os
 from os import path
 
 import gi
+gi.require_version('EosDataDistributionDbus', '0')
 gi.require_version('GLib', '2.0')
 
+from gi.repository import EosDataDistributionDbus
 from gi.repository import GObject
 from gi.repository import GLib
 from gi.repository import Gio
@@ -34,21 +36,6 @@ from eos_data_distribution import utils
 logger = logging.getLogger(__name__)
 
 CHUNKS_DBUS_NAME = 'com.endlessm.NDNHackBridge.chunks'
-IFACE_TEMPLATE = '''<node>
-<interface name='%s'>
-<method name='RequestInterest'>
-    <arg type='s' direction='in'  name='name' />
-    <arg type='h' direction='in'  name='fd' />
-    <arg type='i' direction='in'  name='first_segment' />
-    <arg type='i' direction='out' name='final_segment' />
-</method>
-<signal name='progress'>
-    <arg type='s' direction='out' name='name' />
-    <arg type='i' direction='out' name='first_segment' />
-    <arg type='i' direction='out' name='last_segment' />
-</signal>
-</interface>
-</node>''' % (CHUNKS_DBUS_NAME)
 
 # signals -> property notification
 # kill temporal signal
@@ -125,17 +112,22 @@ class Consumer(base.Consumer):
 
         logger.info('calling on; %s %s', dbus_path, dbus_name)
 
-        args = GLib.Variant('(shi)', (interest, self.fd.fileno(), self.first_segment))
-        self.con.call(dbus_name, dbus_path, dbus_name, 'RequestInterest',
-                      args, None, Gio.DBusCallFlags.NONE, -1, None,
-                      self._on_call_complete)
-        self.con.signal_subscribe(None, dbus_name, 'progress', dbus_path, None, Gio.DBusSignalFlags.NO_MATCH_RULE, self._on_progress)
+        EosDataDistributionDbus.ChunksProducerProxy.new(
+            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
+            self._on_proxy_ready)
+
+    def _on_proxy_ready(self, proxy, res):
+        self._proxy = EosDataDistributionDbus.ChunksProducerProxy.new_finish(res)
+        self._proxy.connect('progress', self._on_progress)
+        self._proxy.call_request_interest(self.interest,
+                                          GLib.Variant('h', self.fd.fileno()),
+                                          self.first_segment,
+                                          None, self._on_call_complete)
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
 
-    def _on_progress(self, con, sender, path, interface, signal_name, parameters):
-        name, first_segment, last_segment = parameters.unpack()
+    def _on_progress(self, proxy, name, first_segment, last_segment):
         logger.info('got progress, (%s) %s → %s', self.fd,  self.current_segment, last_segment)
 
         assert(self._final_segment)
@@ -160,8 +152,10 @@ class Consumer(base.Consumer):
         # XXX this would be self._check_for_complete()
         self._on_complete()
 
-    def _on_call_complete(self, source, res):
-        self._final_segment, = self.con.call_finish(res).unpack()
+    def _on_call_complete(self, proxy, res):
+        self._final_segment = proxy.call_request_interest_finish(res)
+        logger.info('request interest complete: %s', self._final_segment)
+
 
     def _on_complete(self):
         logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
@@ -175,11 +169,13 @@ class Producer(base.Producer):
     def __init__(self, name, *args, **kwargs):
         super(Producer, self).__init__(name=name,
                                        dbus_name=CHUNKS_DBUS_NAME,
-                                       iface_template=IFACE_TEMPLATE,
+                                       skeleton=EosDataDistributionDbus.ChunksProducerSkeleton(),
                                        *args, **kwargs)
 
-    def impl_RequestInterest(self, connection, sender, object_path, interface_name, method_name, parameters, invocation):
-        name, fd, first = parameters.unpack()
+    def _on_request_interest(self, skeleton, invocation, name, fd_variant, first_segment):
+        fd = fd_variant.get_handle()
+        logger.debug('RequestInterest: name=%s, fd=%d, first_segment=%d',
+                     name, fd, first_segment)
 
         # do we start on chunk 0 ? full file ? do we start on another chunk
         # ? we need to seek the file, subsequent calls to get the same
@@ -190,14 +186,16 @@ class Producer(base.Producer):
         if not final_segment:
             raise NotImplementedError()
 
-        self._workers[name] = worker = ProducerWorker(fd, first, final_segment, self._send_chunk)
-        invocation.return_value(GLib.Variant('(i)', (final_segment,)))
+        self._workers[name] = worker = ProducerWorker(fd, first_segment, final_segment,
+                                                      self._send_chunk)
+        skeleton.complete_request_interest(invocation, final_segment)
 
         # XXX: is this racy ?
         GLib.timeout_add_seconds(5,
-            lambda: self.con.emit_signal(sender, object_path,
-                                        interface_name, 'progress',
-                                        GLib.Variant('(sii)', (name, worker.first_segment, worker.data.n))) or True)
+            lambda: skeleton.emit_progress(name, worker.first_segment,
+                                           worker.data.n) or True)
+
+        return True
 
     def sendFinish(self, data):
         # we don't need to do anything here because we write the file in
