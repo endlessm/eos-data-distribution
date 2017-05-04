@@ -259,6 +259,28 @@ class Producer(Base):
         logger.debug('producer: got interest for name %s, %s', name, self)
         self.emit('interest', name, Interest(name), None, None, None)
 
+if __name__ == '__main__':
+    import argparse
+    from ..tests import utils as testutils
+    from ... import utils
+
+    loop = GLib.MainLoop()
+
+    def dump(*a):
+        print a
+
+    def on_complete(i, *a):
+        del(consumers[consumers.index(i)])
+        len(consumers) or loop.quit()
 
 
+    parser = argparse.ArgumentParser()
+    args = utils.parse_args(parser=parser)
+    producers = [Producer('/endlessm/%s'%(i)) for i in range(10)]
+    consumers = [Consumer('/endlessm/%s'%(i)) for i in range(3)]
+    [p.start() for p in producers]
+    [p.connect('interest', lambda i, n, *a: p.send(n, n)) for p in producers]
+    [c.start() for c in consumers]
+    [c.connect('complete', on_complete) for c in consumers]
 
+    loop.run()
