@@ -154,20 +154,27 @@ class DBusInstance():
         self._cb_registery = dict()
         self._obj_registery = dict()
         self.DBUS_NAME = name
-        self._skeleton = skeleton
-        self._skeleton.connect('handle-request-interest', self._on_request_interest)
+        self._interface_skeleton = skeleton
+        self._interface_skeleton.connect('handle-request-interest', self._on_request_interest)
 
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
+
+        self._object_manager = Gio.DBusObjectManagerServer(object_path=BASE_DBUS_PATH)
+        self._object_manager.set_connection(self.con)
 
         Gio.bus_own_name_on_connection(
             self.con, self.DBUS_NAME, Gio.BusNameOwnerFlags.NONE, None, None)
 
     def register_path_for_name(self, name, cb):
         dbus_path = build_dbus_path(name)
+        object_skeleton = Gio.DBusObjectSkeleton()
+        object_skeleton.add_interface(self._interface_skeleton)
+        object_skeleton.set_object_path(dbus_path)
 
         logger.debug('registering path: %s', dbus_path)
-        registered = self._skeleton.export(self.con, dbus_path)
-        iface_str = self._skeleton.get_info().name
+        registered = self._object_manager.export(object_skeleton) or True
+        iface_str = self._interface_skeleton.get_info().name
+
         if not registered:
             return logger.error('got error: %s, %s, %s, %s',
                          registered, self.DBUS_NAME, dbus_path,
