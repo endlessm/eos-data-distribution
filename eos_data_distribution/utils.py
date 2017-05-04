@@ -37,6 +37,6 @@ def parse_args(parser=None, include_name=True):
         logging.basicConfig(level=logging.INFO)
     else:
         # We use the default WARNING level if -v was not specified
-        pass
+        logging.basicConfig(level=logging.WARNING)
 
     return args
