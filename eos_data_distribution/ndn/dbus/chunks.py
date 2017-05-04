@@ -69,8 +69,6 @@ class Data(object):
         assert(cur_pos/base.CHUNK_SIZE == n)
 
         # write directly to the fd, sendFinish is a NOP
-        logger.debug('write data START: %d, fd: %d, buf: %d',
-                     n, cur_pos, len(buf))
         ret = self.fd.write(buf)
         self.fd.flush()
         logger.debug('write data END: %d, fd: %d', n, self.fd.tell())
