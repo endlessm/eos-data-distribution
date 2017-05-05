@@ -154,7 +154,6 @@ class Consumer(base.Consumer):
         self._final_segment = proxy.call_request_interest_finish(res)
         logger.info('request interest complete: %s', self._final_segment)
 
-
     def _on_complete(self):
         logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
         assert (self.current_segment == self._final_segment)

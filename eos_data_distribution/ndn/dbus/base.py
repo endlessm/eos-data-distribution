@@ -94,27 +94,30 @@ class Consumer(Base):
     }
 
     def __init__(self, name, dbus_name = BASE_DBUS_NAME,
+                 object_path=BASE_DBUS_PATH,
                  *args, **kwargs):
-        self.con = None
+        self._object_manager = None
         self._wants_start = False
         self.DBUS_NAME = dbus_name
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
-        dbusable_name = get_dbusable_name(name)
-        Gio.bus_watch_name(BUS_TYPE, self.DBUS_NAME,
-                           Gio.BusNameWatcherFlags.AUTO_START,
-                           self._name_appeared_cb,
-                           self._name_vanished_cb)
 
-    def _name_appeared_cb(self, con, name, owner):
-        logger.info('name: %s, appeared, owned by %s', name, owner)
-        self.con = con
+        Gio.DBusObjectManagerClient.new_for_bus(
+            BUS_TYPE, Gio.DBusObjectManagerClientFlags.NONE, dbus_name, object_path,
+            None, None, None,
+            self._on_manager_ready)
+
+    def _on_manager_ready(self, proxy, res):
+        self._object_manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)
+
         if self._wants_start:
             self.expressInterest(self.interest, try_again=True)
             self._wants_start = False
 
-    def _name_vanished_cb(self, con, name):
-        self.con = None
+#        Gio.bus_watch_name(BUS_TYPE, self.DBUS_NAME,
+#                           Gio.BusNameWatcherFlags.AUTO_START,
+#                           self._name_appeared_cb,
+#                           self._name_vanished_cb)
 
     def start(self):
         self.expressInterest(try_again=True)
@@ -124,7 +127,7 @@ class Consumer(Base):
             interest = str(self.name)
 
         self.interest = interest
-        if not self.con:
+        if not self._object_manager:
             # come back when you have someone to talk too
             self._wants_start = True
             return
@@ -134,13 +137,14 @@ class Consumer(Base):
         self._dbus_express_interest(interest, dbus_path, self.DBUS_NAME)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        EosDataDistributionDbus.BaseProducerProxy.new(
-            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
-            self._on_proxy_ready)
+        proxy = self._object_manager.get_object(dbus_path)
+        iproxy = proxy.get_interfaces()[0]
+        logger.info('looking for proxy for: %s ↔ %s', dbus_path, iproxy.get_name())
+        iproxy.call_request_interest(self.interest, None, self._on_call_complete)
 
-    def _on_proxy_ready(self, proxy, res):
-        self._proxy = EosDataDistributionDbus.BaseProducerProxy.new_finish(res)
-        self._proxy.call_request_interest(self.interest, None, self._on_call_complete)
+#        EosDataDistributionDbus.BaseProducerProxy.new(
+#            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
+#            self._on_proxy_ready)
 
     def _on_call_complete(self, proxy, res):
         interest, data = proxy.call_request_interest_finish(res)
@@ -150,16 +154,17 @@ class Consumer(Base):
 dbus_instances = dict()
 
 class DBusInstance():
-    def __init__(self, name, skeleton):
+    def __init__(self, name, skeleton, object_manager = Gio.DBusObjectManagerServer(object_path=BASE_DBUS_PATH)):
         self._cb_registery = dict()
         self._obj_registery = dict()
         self.DBUS_NAME = name
         self._interface_skeleton = skeleton
-        self._interface_skeleton.connect('handle-request-interest', self._on_request_interest)
+        self._interface_skeleton.connect('handle-request-interest',
+                                         self._on_request_interest)
 
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
 
-        self._object_manager = Gio.DBusObjectManagerServer(object_path=BASE_DBUS_PATH)
+        self._object_manager = object_manager
         self._object_manager.set_connection(self.con)
 
         Gio.bus_own_name_on_connection(
@@ -168,10 +173,11 @@ class DBusInstance():
     def register_path_for_name(self, name, cb):
         dbus_path = build_dbus_path(name)
         object_skeleton = Gio.DBusObjectSkeleton()
-        object_skeleton.add_interface(self._interface_skeleton)
         object_skeleton.set_object_path(dbus_path)
+        object_skeleton.add_interface(self._interface_skeleton)
 
-        logger.debug('registering path: %s', dbus_path)
+        logger.debug('registering path: %s ↔ %s', dbus_path,
+                     self._interface_skeleton.get_object_path())
         registered = self._object_manager.export(object_skeleton) or True
         iface_str = self._interface_skeleton.get_info().name
 
@@ -270,7 +276,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     args = utils.parse_args(parser=parser)
-    producers = [Producer('/endlessm/%s'%(i)) for i in range(10)]
+    producers = [Producer('/endlessm/%s'%(i)) for i in range(1)]
     consumers = [Consumer('/endlessm/%s'%(i)) for i in range(3)]
     [p.start() for p in producers]
     [p.connect('interest', lambda i, n, *a: p.send(n, n)) for p in producers]
