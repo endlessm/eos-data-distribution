@@ -18,7 +18,9 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import logging
+import gi
 
+gi.require_version('EosDataDistributionDbus', '0')
 from gi.repository import EosDataDistributionDbus
 
 from gi.repository import GObject
