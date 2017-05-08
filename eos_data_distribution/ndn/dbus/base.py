@@ -98,30 +98,44 @@ class Consumer(Base):
     }
 
     def __init__(self, name, dbus_name = BASE_DBUS_NAME,
-                 object_path=BASE_DBUS_PATH,
                  *args, **kwargs):
-        self._object_manager = None
         self._wants_start = False
-        self.DBUS_NAME = dbus_name
+        self._pending_interests = dict()
+        self._object_manager = None
+        self._dbus_name = dbus_name + '.' + name[-1]
+        dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
+        logger.debug('spawning ObjectManager on %s %s %s', name, self._dbus_name, dbus_path)
         Gio.DBusObjectManagerClient.new_for_bus(
-            BUS_TYPE, Gio.DBusObjectManagerClientFlags.NONE, dbus_name, object_path,
+            BUS_TYPE, Gio.DBusObjectManagerClientFlags.NONE,
+            self._dbus_name, dbus_path,
             None, None, None,
             self._on_manager_ready)
 
     def _on_manager_ready(self, proxy, res):
         self._object_manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)
+        self._object_manager.connect('object-added', self._flush_pending_interests)
+        self._object_manager.connect('interface-added', lambda *a: logger.debug('interace added: %s', a))
+        self._object_manager.connect('interface-removed', lambda *a: logger.debug('interace removed: %s', a))
+        self._object_manager.connect('notify', lambda *a: logger.debug('notify: %s', a))
 
         if self._wants_start:
             self.expressInterest(self.interest, try_again=True)
             self._wants_start = False
 
-#        Gio.bus_watch_name(BUS_TYPE, self.DBUS_NAME,
+#        Gio.bus_watch_name(BUS_TYPE, self._dbus_name,
 #                           Gio.BusNameWatcherFlags.AUTO_START,
 #                           self._name_appeared_cb,
 #                           self._name_vanished_cb)
+
+    def _flush_pending_interests(self, manager, obj, d=None):
+        logger.debug('processing pending interests: %s', self._pending_interests)
+        for i in self._pending_interests:
+             interest, dbus_path, dbus_name = i
+             if self._dbus_express_interest(interest, dbus_path, dbus_name):
+                del self._pending_interests[interest]
 
     def start(self):
         self.expressInterest(try_again=True)
@@ -137,21 +151,41 @@ class Consumer(Base):
             return
 
         dbus_path = build_dbus_path(str(interest))
-
-        self._dbus_express_interest(interest, dbus_path, self.DBUS_NAME)
+        found = self._dbus_express_interest(interest, dbus_path, self._dbus_name)
+        if not found and try_again:
+            try:
+                return self._pending_interests[interest]
+            except KeyError:
+                self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        proxy = self._object_manager.get_object(dbus_path)
-        iproxy = proxy.get_interfaces()[0]
-        logger.info('looking for proxy for: %s ↔ %s', dbus_path, iproxy.get_name())
-        iproxy.call_request_interest(self.interest, None, self._on_call_complete)
+        logger.debug('looking for %s in %s (%s)', dbus_path, [p.get_object_path() for p in self._object_manager.get_objects()], self._object_manager)
+        prefix = interest
+        while len(prefix):
+            object_path = BASE_DBUS_PATH + prefix
+            proxy = self._object_manager.get_object(object_path)
+            if proxy:
+                break
 
+            logger.debug("couldn't find %s on bus", object_path)
+            prefix = '/'.join(prefix.split('/')[:-1])
+
+        if not len(prefix):
+            logger.debug("failed to find a dbus object for %s %s %s", interest, dbus_name, dbus_path)
+            return None
+
+        iproxy = proxy.get_interfaces()[0]
+        logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, iproxy.get_name(), iproxy)
+        iproxy.RequestInterest('(s)', interest, result_handler=self._on_call_complete)
+
+        return iproxy
 #        EosDataDistributionDbus.BaseProducerProxy.new(
 #            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
 #            self._on_proxy_ready)
 
-    def _on_call_complete(self, proxy, res):
-        interest, data = proxy.call_request_interest_finish(res)
+    def _on_call_complete(self, proxy, res, *a):
+        logger.info('call complete, %s', res)
+        interest, data = res
         self.emit('data', interest, data)
         self.emit('complete')
 
