@@ -153,44 +153,48 @@ class Consumer(Base):
         self.emit('data', interest, data)
         self.emit('complete')
 
-dbus_instances = dict()
-
-class DBusInstance():
-    def __init__(self, name, skeleton, object_manager = Gio.DBusObjectManagerServer(object_path=BASE_DBUS_PATH)):
+class DBusProducerSingleton():
+    def __init__(self, name, dbus_name, skeleton):
         self._cb_registery = dict()
         self._obj_registery = dict()
-        self.DBUS_NAME = name
-        self._interface_skeleton = skeleton
-        self._interface_skeleton.connect('handle-request-interest',
-                                         self._on_request_interest)
+        self._dbus_name = dbus_name + '.' + name[-1]
+        self._interface_skeleton_object = skeleton
 
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
 
-        self._object_manager = object_manager
+        dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
+
+        logger.debug('Producer ObjectManager dbus path: %s', dbus_path)
+        self._object_manager = Gio.DBusObjectManagerServer(object_path=dbus_path)
         self._object_manager.set_connection(self.con)
 
         Gio.bus_own_name_on_connection(
-            self.con, self.DBUS_NAME, Gio.BusNameOwnerFlags.NONE, None, None)
+            self.con, self._dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
 
     def register_path_for_name(self, name, cb):
+        iskel = self._interface_skeleton_object()
+        iskel.connect('handle-request-interest',
+                       self._on_request_interest)
+
         dbus_path = build_dbus_path(name)
+        logger.debug('Producer Object dbus path: %s', dbus_path)
         object_skeleton = Gio.DBusObjectSkeleton()
         object_skeleton.set_object_path(dbus_path)
-        object_skeleton.add_interface(self._interface_skeleton)
+        object_skeleton.add_interface(iskel)
 
         logger.debug('registering path: %s ↔ %s', dbus_path,
-                     self._interface_skeleton.get_object_path())
+                     iskel.get_object_path())
         registered = self._object_manager.export(object_skeleton) or True
-        iface_str = self._interface_skeleton.get_info().name
+        iface_str = iskel.get_info().name
 
         if not registered:
             return logger.error('got error: %s, %s, %s, %s',
-                         registered, self.DBUS_NAME, dbus_path,
+                         registered, self._dbus_name, dbus_path,
                                 iface_str)
 
         self._cb_registery[str(name)] = cb
         logger.info('registered: %s, %s, %s',
-                    self.DBUS_NAME, dbus_path, iface_str)
+                    self._dbus_name, dbus_path, iface_str)
         return registered
 
     def _on_request_interest(self, skeleton, invocation, name, *args, **kwargs):
@@ -220,18 +224,16 @@ class Producer(Base):
 
 
     def __init__(self, name, dbus_name=BASE_DBUS_NAME,
-                 skeleton=EosDataDistributionDbus.BaseProducerSkeleton(),
+                 skeleton=EosDataDistributionDbus.BaseProducerSkeleton,
                  *args, **kwargs):
         self.registered = False
         self._workers = dict()
 
-        logger.debug("registering producer on name: %s, %s", name, dbus_name)
-
         super(Producer, self).__init__(name=name, *args, **kwargs)
         try:
-            self._dbus = dbus_instances[dbus_name]
+            self._dbus = dbus_producer_instances[dbus_name]
         except KeyError:
-            self._dbus = dbus_instances[dbus_name] = DBusInstance(dbus_name, skeleton)
+            self._dbus = dbus_producer_instances[dbus_name] = DBusProducerSingleton(name, dbus_name, skeleton)
 
     def start(self):
         self.registerPrefix()
