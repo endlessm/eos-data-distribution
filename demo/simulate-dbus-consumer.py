@@ -28,7 +28,7 @@ from gi.repository import GObject
 from gi.repository import GLib
 
 from eos_data_distribution.ndn.dbus.base import Consumer, Interest
-from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
+from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--target", default='./tmp')
-    parser.add_argument("-n", "--name", default=SUBSCRIPTIONS_SOMA)
+    parser.add_argument("-n", "--name", default=SUBSCRIPTIONS_INSTALLED)
     parser.add_argument("appids", nargs='+')
 
     args = utils.parse_args(parser=parser, include_name=False)
