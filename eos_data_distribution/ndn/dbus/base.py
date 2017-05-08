@@ -39,6 +39,8 @@ BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
 DBUS_PATH_TEMPLATE = '%s/%s'
 
+dbus_producer_instances = dict()
+
 def get_dbusable_name(base):
     if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
         return SUBSCRIPTIONS_BASE[-1]
