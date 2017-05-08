@@ -102,7 +102,7 @@ class Consumer(Base):
         self._wants_start = False
         self._pending_interests = dict()
         self._object_manager = None
-        self._dbus_name = dbus_name + '.' + name[-1]
+        self._dbus_name = dbus_name
         dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
@@ -193,7 +193,7 @@ class DBusProducerSingleton():
     def __init__(self, name, dbus_name, skeleton):
         self._cb_registery = dict()
         self._obj_registery = dict()
-        self._dbus_name = dbus_name + '.' + name[-1]
+        self._dbus_name = dbus_name
         self._interface_skeleton_object = skeleton
 
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
