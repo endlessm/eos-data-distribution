@@ -277,14 +277,19 @@ if __name__ == '__main__':
         del(consumers[consumers.index(i)])
         len(consumers) or loop.quit()
 
-
     parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--consumers", default=3)
+    parser.add_argument("-p", "--producers", default=10)
     args = utils.parse_args(parser=parser)
-    producers = [Producer('/endlessm/%s'%(i)) for i in range(1)]
-    consumers = [Consumer('/endlessm/%s'%(i)) for i in range(3)]
-    [p.start() for p in producers]
+
+    producers = [Producer(Name('/endlessm/name%s'%(i)))
+                 for i in range(int(args.producers))]
+    consumers = [Consumer(Name('/endlessm/name%s'%(i)))
+                 for i in range(int(args.consumers))]
     [p.connect('interest', lambda i, n, *a: p.send(n, n)) for p in producers]
-    [c.start() for c in consumers]
+    [p.start() for p in producers]
+
     [c.connect('complete', on_complete) for c in consumers]
+    [c.start() for c in consumers]
 
     loop.run()
