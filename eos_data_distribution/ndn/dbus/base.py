@@ -107,7 +107,7 @@ class Consumer(Base):
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
-        logger.debug('spawning ObjectManager on %s %s %s', name, self._dbus_name, dbus_path)
+        logger.debug('spawning ObjectManagerClient on %s %s %s', name, self._dbus_name, dbus_path)
         Gio.DBusObjectManagerClient.new_for_bus(
             BUS_TYPE, Gio.DBusObjectManagerClientFlags.NONE,
             self._dbus_name, dbus_path,
@@ -159,6 +159,7 @@ class Consumer(Base):
                 self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
+        logger.debug('NAME OWNER: %s', self._object_manager.get_properties('name-owner', 'name'))
         logger.debug('looking for %s in %s (%s)', dbus_path, [p.get_object_path() for p in self._object_manager.get_objects()], self._object_manager)
         prefix = interest
         while len(prefix):
@@ -200,7 +201,7 @@ class DBusProducerSingleton():
 
         dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
 
-        logger.debug('Producer ObjectManager dbus path: %s', dbus_path)
+        logger.debug('Producer ObjectManagerServer dbus: %s, %s', dbus_path, self._dbus_name)
         self._object_manager = Gio.DBusObjectManagerServer(object_path=dbus_path)
         self._object_manager.set_connection(self.con)
 
