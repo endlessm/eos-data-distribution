@@ -96,7 +96,7 @@ class Consumer(base.Consumer):
 
         logger.info('init DBUS chunks.Consumer: %s', name)
 
-    def _dbus_express_interest(self, interest, dbus_path, dbus_name):
+    def _do_express_interest(self, proxy, interface, interest):
         # XXX parse interest to see if we're requesting the first chunk
         self.first_segment = 0
         self.interest = interest
@@ -108,19 +108,9 @@ class Consumer(base.Consumer):
         self.filename = '.edd-file-cache-' + interest.replace('/', '%')
         self.fd = open(self.filename, 'w+b')
 
-        logger.info('calling on; %s %s', dbus_path, dbus_name)
-
-        EosDataDistributionDbus.ChunksProducerProxy.new(
-            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
-            self._on_proxy_ready)
-
-    def _on_proxy_ready(self, proxy, res):
-        self._proxy = EosDataDistributionDbus.ChunksProducerProxy.new_finish(res)
-        self._proxy.connect('progress', self._on_progress)
-        self._proxy.call_request_interest(self.interest,
-                                          GLib.Variant('h', self.fd.fileno()),
-                                          self.first_segment,
-                                          None, self._on_call_complete)
+        interface.RequestInterest('(shi)', interest, self.fd.fileno(), self.first_segment,
+                            result_handler=self._on_call_complete)
+        interface.connect('progress', lambda *a: logger.debug('got progress from consumer: %s', a))
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
@@ -150,8 +140,8 @@ class Consumer(base.Consumer):
         # XXX this would be self._check_for_complete()
         self._on_complete()
 
-    def _on_call_complete(self, proxy, res):
-        self._final_segment = proxy.call_request_interest_finish(res)
+    def _on_call_complete(self, proxy, final_segment, data=None):
+        self._final_segment = final_segment
         logger.info('request interest complete: %s', self._final_segment)
 
     def _on_complete(self):
@@ -166,7 +156,7 @@ class Producer(base.Producer):
     def __init__(self, name, *args, **kwargs):
         super(Producer, self).__init__(name=name,
                                        dbus_name=CHUNKS_DBUS_NAME,
-                                       skeleton=EosDataDistributionDbus.ChunksProducerSkeleton(),
+                                       skeleton=EosDataDistributionDbus.ChunksProducerSkeleton,
                                        *args, **kwargs)
 
     def _on_request_interest(self, name, skeleton, fd_variant, first_segment):

@@ -174,11 +174,14 @@ class Consumer(Base):
             logger.debug("failed to find a dbus object for %s %s %s", interest, dbus_name, dbus_path)
             return None
 
-        iproxy = proxy.get_interfaces()[0]
-        logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, iproxy.get_name(), iproxy)
-        iproxy.RequestInterest('(s)', interest, result_handler=self._on_call_complete)
+        interface = proxy.get_interfaces()[0]
+        logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, interface.get_name(), interface)
 
-        return iproxy
+        return self._do_express_interest(proxy, interface, interest)
+
+    def _do_express_interest(self,  proxy, interface, interest):
+        return interface.RequestInterest('(s)', interest, result_handler=self._on_call_complete)
+
 #        EosDataDistributionDbus.BaseProducerProxy.new(
 #            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
 #            self._on_proxy_ready)
