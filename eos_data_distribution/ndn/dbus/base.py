@@ -47,12 +47,20 @@ def get_dbusable_name(base):
     else:
         return 'custom'
 
+def sanitize_dbus_path(path):
+    return (path.replace(':', '_')
+               .replace('-', '_')
+               .replace('.', '_'))
+
 def build_dbus_path(name):
-    return DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, str(name)
-                                 .replace(':', '_')
-                                 .replace('-', '_')
-                                 .replace('.', '_')
-                                 .strip('/'))
+    return sanitize_dbus_path(DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, str(name).strip('/')))
+
+def build_dbus_name(base, name):
+    last_component = name[-1]
+
+    if last_component == 'soma' or last_component == 'installed':
+        return base + '.' + last_component
+    return base
 
 class Base(GObject.GObject):
     """Base class
