@@ -240,7 +240,17 @@ class DBusProducerSingleton():
         logger.debug('RequestInterest: name=%s', name)
 
         self._obj_registery[str(name)] = (skeleton, invocation)
-        self._cb_registery[str(name)](name, skeleton,  *args, **kwargs)
+
+        prefix = str(name)
+        while len(prefix):
+            try:
+                cb = self._cb_registery[prefix]
+                break
+            except KeyError:
+                logger.debug("couldn't find handler for %s", prefix)
+                prefix = '/'.join(prefix.split('/')[:-1])
+
+        cb(name, skeleton,  *args, **kwargs)
         return True
 
     def return_value(self, name, *args, **kwargs):
