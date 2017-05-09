@@ -124,19 +124,10 @@ class Consumer(Base):
 
     def _on_manager_ready(self, proxy, res):
         self._object_manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)
-        self._object_manager.connect('object-added', self._flush_pending_interests)
-        self._object_manager.connect('interface-added', lambda *a: logger.debug('interace added: %s', a))
-        self._object_manager.connect('interface-removed', lambda *a: logger.debug('interace removed: %s', a))
-        self._object_manager.connect('notify', lambda *a: logger.debug('notify: %s', a))
 
         if self._wants_start:
             self.expressInterest(self.interest, try_again=True)
             self._wants_start = False
-
-#        Gio.bus_watch_name(BUS_TYPE, self._dbus_name,
-#                           Gio.BusNameWatcherFlags.AUTO_START,
-#                           self._name_appeared_cb,
-#                           self._name_vanished_cb)
 
     def _flush_pending_interests(self, manager, obj, d=None):
         logger.debug('processing pending interests: %s', self._pending_interests)
