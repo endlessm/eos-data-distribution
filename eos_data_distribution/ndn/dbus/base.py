@@ -158,7 +158,6 @@ class Consumer(Base):
                 self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        logger.debug('NAME OWNER: %s', self._object_manager.get_properties('name-owner', 'name'))
         logger.debug('looking for %s in %s (%s)', dbus_path, [p.get_object_path() for p in self._object_manager.get_objects()], self._object_manager)
         prefix = interest
         while len(prefix):
