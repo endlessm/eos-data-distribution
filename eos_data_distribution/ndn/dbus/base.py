@@ -110,7 +110,7 @@ class Consumer(Base):
         self._wants_start = False
         self._pending_interests = dict()
         self._object_manager = None
-        self._dbus_name = dbus_name
+        self._dbus_name = build_dbus_name(dbus_name, name)
         dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
@@ -162,7 +162,7 @@ class Consumer(Base):
         logger.debug('looking for %s in %s (%s)', dbus_path, [p.get_object_path() for p in self._object_manager.get_objects()], self._object_manager)
         prefix = interest
         while len(prefix):
-            object_path = BASE_DBUS_PATH + prefix
+            object_path = build_dbus_path(prefix)
             proxy = self._object_manager.get_object(object_path)
             if proxy:
                 break
@@ -193,7 +193,7 @@ class DBusProducerSingleton():
     def __init__(self, name, dbus_name, skeleton):
         self._cb_registery = dict()
         self._obj_registery = dict()
-        self._dbus_name = dbus_name
+        self._dbus_name = build_dbus_name(dbus_name, name)
         self._interface_skeleton_object = skeleton
 
         self.con = Gio.bus_get_sync(BUS_TYPE, None)
