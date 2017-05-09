@@ -106,6 +106,7 @@ class Consumer(Base):
     }
 
     def __init__(self, name, dbus_name = BASE_DBUS_NAME,
+                 object_manager_class=EosDataDistributionDbus.ObjectManagerClient,
                  *args, **kwargs):
         self._wants_start = False
         self._pending_interests = dict()
@@ -116,11 +117,10 @@ class Consumer(Base):
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
         logger.debug('spawning ObjectManagerClient on %s %s %s', name, self._dbus_name, dbus_path)
-        Gio.DBusObjectManagerClient.new_for_bus(
+        object_manager_class.new_for_bus(
             BUS_TYPE, Gio.DBusObjectManagerClientFlags.NONE,
             self._dbus_name, dbus_path,
-            None, None, None,
-            self._on_manager_ready)
+            callback=self._on_manager_ready)
 
     def _on_manager_ready(self, proxy, res):
         self._object_manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)

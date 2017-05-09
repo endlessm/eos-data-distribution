@@ -92,6 +92,7 @@ class Consumer(base.Consumer):
 
         super(Consumer, self).__init__(name=name,
                                        dbus_name=CHUNKS_DBUS_NAME,
+                                       object_manager_class=EosDataDistributionDbus.ChunksObjectManagerClient,
                                        *args, **kwargs)
 
         logger.info('init DBUS chunks.Consumer: %s', name)
@@ -110,7 +111,7 @@ class Consumer(base.Consumer):
 
         interface.RequestInterest('(shi)', interest, self.fd.fileno(), self.first_segment,
                             result_handler=self._on_call_complete)
-        interface.connect('progress', lambda *a: logger.debug('got progress from consumer: %s', a))
+        interface.connect('progress', self._on_progress)
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
@@ -156,7 +157,7 @@ class Producer(base.Producer):
     def __init__(self, name, *args, **kwargs):
         super(Producer, self).__init__(name=name,
                                        dbus_name=CHUNKS_DBUS_NAME,
-                                       skeleton=EosDataDistributionDbus.ChunksProducerSkeleton,
+                                       skeleton=EosDataDistributionDbus.ChunksChunksProducerSkeleton,
                                        *args, **kwargs)
 
     def _on_request_interest(self, name, skeleton, fd_variant, first_segment):
