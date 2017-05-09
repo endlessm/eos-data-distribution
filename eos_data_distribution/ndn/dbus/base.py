@@ -210,20 +210,21 @@ class DBusProducerSingleton():
             self.con, self._dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
 
     def register_path_for_name(self, name, cb):
-        iskel = self._interface_skeleton_object()
-        iskel.connect('handle-request-interest',
+
+        interface_skeleton = self._interface_skeleton_object()
+        interface_skeleton.connect('handle-request-interest',
                        self._on_request_interest)
 
         dbus_path = build_dbus_path(name)
         logger.debug('Producer Object dbus path: %s', dbus_path)
         object_skeleton = Gio.DBusObjectSkeleton()
         object_skeleton.set_object_path(dbus_path)
-        object_skeleton.add_interface(iskel)
+        object_skeleton.add_interface(interface_skeleton)
 
         logger.debug('registering path: %s ↔ %s', dbus_path,
-                     iskel.get_object_path())
+                     interface_skeleton.get_object_path())
         registered = self._object_manager.export(object_skeleton) or True
-        iface_str = iskel.get_info().name
+        iface_str = interface_skeleton.get_info().name
 
         if not registered:
             return logger.error('got error: %s, %s, %s, %s',
