@@ -41,9 +41,9 @@ DBUS_PATH_TEMPLATE = '%s/%s'
 
 dbus_producer_instances = dict()
 
-def get_dbusable_name(base):
+def get_route_component(base):
     if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
-        return SUBSCRIPTIONS_BASE[-1]
+        return base[len(SUBSCRIPTIONS_BASE)]
     else:
         return 'custom'
 
@@ -56,10 +56,10 @@ def build_dbus_path(name):
     return sanitize_dbus_path(DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, str(name).strip('/')))
 
 def build_dbus_name(base, name):
-    last_component = name[-1]
+    component = get_route_component(name)
 
-    if last_component == 'soma' or last_component == 'installed':
-        return base + '.' + last_component
+    if component in ['soma', 'installed']:
+        return base + '.' + component
     return base
 
 class Base(GObject.GObject):
