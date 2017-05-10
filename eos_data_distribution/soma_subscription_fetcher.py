@@ -79,8 +79,8 @@ class Fetcher(object):
         component = str(route.get(0))
 
         if component == 'subscription':
-            subscription_id = route.get(1).getValue().toRawStr()
-            filename = route.get(2).getValue().toRawStr()
+            subscription_id = str(route.get(1))
+            filename = str(route.get(2))
             assert filename == 'manifest.json'
             self._subproducers[key] = manifest.Producer(
                 chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face)
