@@ -71,7 +71,8 @@ class Base(GObject.GObject):
     """
     def __init__(self, name,
                  chunk_size=CHUNK_SIZE,
-                 cost=RouteCost.DEFAULT):
+                 cost=RouteCost.DEFAULT,
+                 face=None):
         GObject.GObject.__init__(self)
         self.chunk_size = chunk_size
         self.cost = cost
