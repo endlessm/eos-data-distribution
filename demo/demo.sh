@@ -25,9 +25,9 @@ run () {
         echo "$title '$t'; $(cprofile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log; sleep infinity"
 }
 
-run_router="sleep 1 && $(run router eos_data_distribution/producers/soma_subscriptions)"
-run_store="sleep 2 && $(run store eos_data_distribution/store/ostree_store -t ${TEMP_DIR})"
-run_dbus_consumer="sleep 3 && $(run dbus demo/simulate-dbus-consumer $APPIDS)"
+run_router="$(run router eos_data_distribution/producers/soma_subscriptions)"
+run_store="sleep 1 && $(run store eos_data_distribution/store/ostree_store -t ${TEMP_DIR})"
+run_dbus_consumer="sleep 2 && $(run dbus demo/simulate-dbus-consumer $APPIDS)"
 run_usb_mock="$(run usb demo/mock-usb-producer ${BASE_PATH}/DL)"
 
 killall tmux;
