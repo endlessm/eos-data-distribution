@@ -36,6 +36,9 @@ class Name(list):
         self.extend(subname.split('/'))
         return self
 
+    def appendSegment(self, segment):
+        return self.append(str(segment))
+
     def size(self):
         return len(self)
 
