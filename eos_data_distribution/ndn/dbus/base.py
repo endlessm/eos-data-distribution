@@ -255,6 +255,10 @@ class DBusProducerSingleton():
         logger.debug('returning value for %s on %s', name, invocation)
         skeleton.complete_request_interest(invocation, *args, **kwargs)
 
+    def return_error(self, name, error):
+        skeleton, invocation = self._obj_registery[str(name)]
+        logger.debug('returning ERROR %s for %s on %s', error, name, invocation)
+        invocation.return_gerror(GLib.GError(error))
 
 class Producer(Base):
     """Base DBus-NDN producer
