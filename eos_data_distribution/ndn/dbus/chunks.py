@@ -192,12 +192,12 @@ class Producer(base.Producer):
 
 class ProducerWorker():
     def __init__(self, fd, first_segment, final_segment, send_chunk):
+        logger.info('Spawning NEW ProducerWorker: %s, %s, %s | %s', fd, first_segment, final_segment, send_chunk)
         self.first_segment = first_segment
         self.current_segment = first_segment
         self.fd = os.fdopen(fd, 'w+b')
         self.data = Data(self.fd, first_segment)
 
-        logger.info('start segments: %s, %s', self.current_segment, final_segment)
         while(True):
             send_chunk(self.data, self.current_segment)
             if self.current_segment < final_segment:

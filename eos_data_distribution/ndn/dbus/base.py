@@ -175,7 +175,7 @@ class Consumer(Base):
             return None
 
         interface = proxy.get_interfaces()[0]
-        logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, interface.get_name(), interface)
+        logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, object_path, interface)
 
         return self._do_express_interest(proxy, interface, interest)
 
@@ -238,7 +238,7 @@ class DBusProducerSingleton():
         return registered
 
     def _on_request_interest(self, skeleton, invocation, name, *args, **kwargs):
-        logger.debug('RequestInterest: name=%s', name)
+        logger.debug('RequestInterest: name=%s, cb_registery=%s', name, self._cb_registery)
 
         self._obj_registery[str(name)] = (skeleton, invocation)
 
