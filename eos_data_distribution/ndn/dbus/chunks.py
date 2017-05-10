@@ -31,7 +31,9 @@ from gi.repository import GLib
 from gi.repository import Gio
 
 from . import base
+from base import Interest
 from eos_data_distribution import utils
+from eos_data_distribution.names import Name
 
 logger = logging.getLogger(__name__)
 
@@ -102,16 +104,20 @@ class Consumer(base.Consumer):
         self.first_segment = 0
         self.interest = interest
 
-        assert(not self.filename)
-        assert(not self.fd)
-
         # we prepare the file where we're going to write the data
-        self.filename = '.edd-file-cache-' + interest.replace('/', '%')
-        self.fd = open(self.filename, 'w+b')
+        if not self.filename:
+            self.filename = '.edd-file-cache-' + interest.replace('/', '%')
+            self.fd = open(self.filename, 'w+b')
 
-        interface.RequestInterest('(shi)', interest, self.fd.fileno(), self.first_segment,
-                            result_handler=self._on_call_complete)
+        assert(self.filename)
+        assert(self.fd)
+
         interface.connect('progress', self._on_progress)
+        interface.call_request_interest(interest,
+                                        GLib.Variant('h', self.fd.fileno()),
+                                        self.first_segment,
+                                        callback=self._on_call_complete,
+                                        user_data=interest)
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
@@ -141,9 +147,15 @@ class Consumer(base.Consumer):
         # XXX this would be self._check_for_complete()
         self._on_complete()
 
-    def _on_call_complete(self, proxy, final_segment, data=None):
-        self._final_segment = final_segment
-        logger.info('request interest complete: %s', self._final_segment)
+    def _on_call_complete(self, interface, res, interest):
+        logger.info('request interest complete: %s, %s, %s', interface, res, interest)
+
+        try:
+            self._final_segment = interface.call_request_interest_finish(res)
+        except GLib.Error as error:
+            # XXX actual error handeling !
+            # assuming TryAgain
+            return self.expressInterest(interest)
 
     def _on_complete(self):
         logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
@@ -160,7 +172,11 @@ class Producer(base.Producer):
                                        skeleton=EosDataDistributionDbus.ChunksChunksProducerSkeleton,
                                        *args, **kwargs)
 
+    def _get_final_segment(self):
+        raise NotImplementedError
+
     def _on_request_interest(self, name, skeleton, fd_variant, first_segment):
+        self.emit('interest', Name(name), Interest(name), None, None, None)
         fd = fd_variant.get_handle()
         logger.debug('RequestInterest: name=%s, fd=%d, first_segment=%d',
                      name, fd, first_segment)
@@ -169,9 +185,20 @@ class Producer(base.Producer):
         # chunks have to be handled in the consumer part and folded into
         # answering to only one dbus call
 
-        final_segment = self._get_final_segment()
-        if not final_segment:
-            raise NotImplementedError()
+        try:
+            final_segment = self._get_final_segment()
+        except NotImplementedError:
+            # we can't handle this, let another producer come in and do it.
+            self._dbus.return_error(name, 'TryAgain')
+            return False
+
+        try:
+            worker = self._workers[name]
+            logger.debug('already got a worker for name %s', name)
+            # self._dbus.return_error(name, 'ETOOMANY')
+            return
+        except KeyError:
+            pass
 
         self._workers[name] = worker = ProducerWorker(fd, first_segment, final_segment,
                                                       self._send_chunk)
