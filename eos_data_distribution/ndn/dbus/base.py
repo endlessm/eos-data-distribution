@@ -182,10 +182,6 @@ class Consumer(Base):
     def _do_express_interest(self,  proxy, interface, interest):
         return interface.RequestInterest('(s)', interest, result_handler=self._on_call_complete)
 
-#        EosDataDistributionDbus.BaseProducerProxy.new(
-#            self.con, Gio.DBusProxyFlags.NONE, dbus_name, dbus_path, None,
-#            self._on_proxy_ready)
-
     def _on_call_complete(self, proxy, res, *a):
         logger.info('call complete, %s', res)
         interest, data = res
