@@ -51,10 +51,10 @@ class Producer(chunks.Producer):
     def _send_chunk(self, data, n):
         qualified_name = Name(self._qualified_name).appendSegment(n)
         data.setName(qualified_name)
-        self._getter.soup_get(data, n)
+        self._getter.queue_request(data, n)
 
     def _send_finish(self, data):
-        data.getMetaInfo().setFreshnessPeriod(defaults.FRESHNESS_PERIOD)
+        data.setMetaInfo({'freshnessPeriod': defaults.FRESHNESS_PERIOD})
 
         self.sendFinish(data)
 
