@@ -37,12 +37,13 @@ BUS_TYPE = Gio.BusType.SESSION
 BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge.base'
 BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
-DBUS_PATH_TEMPLATE = '%s/%s'
+DBUS_PATH_TEMPLATE = '%s%s'
 
 dbus_producer_instances = dict()
 
 def get_route_component(base):
-    if str(base).startswith(str(SUBSCRIPTIONS_BASE)):
+    base = Name(base)
+    if base.toString().startswith(SUBSCRIPTIONS_BASE.toString()):
         return base[len(SUBSCRIPTIONS_BASE)]
     else:
         return 'custom'
@@ -53,7 +54,8 @@ def sanitize_dbus_path(path):
                .replace('.', '_'))
 
 def build_dbus_path(name):
-    return sanitize_dbus_path(DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, str(name).strip('/')))
+    name = Name(name)
+    return sanitize_dbus_path(DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.toString()))
 
 def build_dbus_name(base, name):
     component = get_route_component(name)
@@ -76,7 +78,7 @@ class Base(GObject.GObject):
         GObject.GObject.__init__(self)
         self.chunk_size = chunk_size
         self.cost = cost
-        self.name = name
+        self.name = Name(name)
 
 class Interest(str):
     """Fake Interest Class
@@ -142,7 +144,7 @@ class Consumer(Base):
 
     def expressInterest(self, interest=None, try_again=False):
         if not interest:
-            interest = str(self.name)
+            interest = self.name.toString()
 
         self.interest = interest
         if not self._object_manager:
@@ -150,7 +152,7 @@ class Consumer(Base):
             self._wants_start = True
             return
 
-        dbus_path = build_dbus_path(str(interest))
+        dbus_path = build_dbus_path(interest)
         found = self._dbus_express_interest(interest, dbus_path, self._dbus_name)
         if not found and try_again:
             try:
@@ -207,7 +209,7 @@ class DBusProducerSingleton():
             self.con, self._dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
 
     def register_path_for_name(self, name, cb):
-
+        name = Name(name)
         interface_skeleton = self._interface_skeleton_object()
         interface_skeleton.connect('handle-request-interest',
                        self._on_request_interest)
@@ -228,7 +230,7 @@ class DBusProducerSingleton():
                          registered, self._dbus_name, dbus_path,
                                 iface_str)
 
-        self._cb_registery[str(name)] = cb
+        self._cb_registery[name.toString()] = cb
         logger.info('registered: %s, %s, %s',
                     self._dbus_name, dbus_path, iface_str)
         return registered
@@ -236,9 +238,10 @@ class DBusProducerSingleton():
     def _on_request_interest(self, skeleton, invocation, name, *args, **kwargs):
         logger.debug('RequestInterest: name=%s, cb_registery=%s', name, self._cb_registery)
 
-        self._obj_registery[str(name)] = (skeleton, invocation)
+        name = Name(name)
+        self._obj_registery[name.toString()] = (skeleton, invocation)
 
-        prefix = str(name)
+        prefix = name.toString()
         while len(prefix):
             try:
                 cb = self._cb_registery[prefix]
@@ -251,12 +254,12 @@ class DBusProducerSingleton():
         return True
 
     def return_value(self, name, *args, **kwargs):
-        skeleton, invocation = self._obj_registery[str(name)]
+        skeleton, invocation = self._obj_registery[name.toString()]
         logger.debug('returning value for %s on %s', name, invocation)
         skeleton.complete_request_interest(invocation, *args, **kwargs)
 
     def return_error(self, name, error):
-        skeleton, invocation = self._obj_registery[str(name)]
+        skeleton, invocation = self._obj_registery[name.toString()]
         logger.debug('returning ERROR %s for %s on %s', error, name, invocation)
         invocation.return_gerror(GLib.GError(error))
 
@@ -304,10 +307,10 @@ class Producer(Base):
 
     def send(self, name, data, flags = {}):
         logger.debug('producer: sending on name %s, %s', name, data)
-        self._dbus.return_value(name, str(name), data)
+        self._dbus.return_value(name, name.toString(), data)
 
     def sendFinish(self, data):
-        self._dbus.return_value(name, str(self.name), data)
+        self._dbus.return_value(name, self.name.toString(), data)
 
     def _on_request_interest(self, name, skeleton):
         logger.debug('producer: got interest for name %s, %s', name, self)

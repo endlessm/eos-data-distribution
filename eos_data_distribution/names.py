@@ -48,6 +48,9 @@ class Name(list):
     def get(self, e):
         return self[e]
 
+    def toString(self):
+        return self.__repr__()
+
     def __repr__(self):
         return '/' + '/'.join(self)
 

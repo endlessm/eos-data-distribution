@@ -200,15 +200,16 @@ class Producer(base.Producer):
             self._dbus.return_error(name, 'TryAgain')
             return False
 
+        key = name.toString()
         try:
-            worker = self._workers[name]
+            worker = self._workers[key]
             logger.debug('already got a worker for name %s', name)
             # self._dbus.return_error(name, 'ETOOMANY')
             return
         except KeyError:
             pass
 
-        self._workers[name] = worker = ProducerWorker(fd, first_segment, final_segment,
+        self._workers[key] = worker = ProducerWorker(fd, first_segment, final_segment,
                                                       self._send_chunk)
         self._dbus.return_value(name, final_segment)
 
