@@ -68,6 +68,10 @@ class Data(object):
         # we have nothing to see here
         pass
 
+    def setMetaInfo(self, info):
+        # we don't implement this
+        pass
+
     def setContent(self, buf):
         cur_pos = self.fd.tell()
         n = self.n + 1
