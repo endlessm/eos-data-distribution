@@ -27,7 +27,7 @@ from gi.repository import GLib
 from .names import SUBSCRIPTIONS_SOMA
 from .ndn import http, manifest
 from .ndn.dbus import chunks
-from .ndn.dbus.base import Producer
+from .ndn.dbus.chunks import Producer
 
 logger = logging.getLogger(__name__)
 
