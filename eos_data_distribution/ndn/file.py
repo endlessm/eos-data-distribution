@@ -424,11 +424,17 @@ class DirConsumer(Consumer):
 
 
 if __name__ == '__main__':
+    from gi.repository import GLib
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output")
     args = utils.parse_args(parser=parser)
 
-    name = args.name or args.filename
+    name = args.name or args.output
 
-    producer = Producer(name=name, file=args.filename)
-    util.run_producer_test(producer, name, args)
+    loop = GLib.MainLoop()
+    consumer = FileConsumer(name, args.output)
+    consumer.connect('complete', lambda *a: loop.quit())
+    consumer.start()
+
+    loop.run()
