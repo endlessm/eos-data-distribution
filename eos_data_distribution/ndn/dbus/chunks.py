@@ -112,18 +112,29 @@ class Consumer(base.Consumer):
         self.first_segment = 0
         self.interest = interest
 
+
+        if self.filename:
+            # did we already have an open file descriptor for this ? if yes,
+            # we'd better close it here and reopen so that we're sure we get
+            # a fresh fd.
+            self.fd.close()
+
         # we prepare the file where we're going to write the data
-        if not self.filename:
-            self.filename = '.edd-file-cache-' + interest.replace('/', '%')
-            self.fd = open(self.filename, 'w+b')
+        self.filename = '.edd-file-cache-' + interest.replace('/', '%')
+        self.fd = open(self.filename, 'w+b')
+
+        logger.debug('opened fd: %s', self.fd)
+
+        fd_list = Gio.UnixFDList()
+        fd_id = fd_list.append(self.fd.fileno())
 
         assert(self.filename)
         assert(self.fd)
 
         interface.connect('progress', self._on_progress)
         interface.call_request_interest(interest,
-                                        GLib.Variant('h', self.fd.fileno()),
-                                        self.first_segment,
+                                        GLib.Variant('h', fd_id),
+                                        self.first_segment, fd_list=fd_list,
                                         callback=self._on_call_complete,
                                         user_data=interest)
 
@@ -159,7 +170,7 @@ class Consumer(base.Consumer):
         logger.info('request interest complete: %s, %s, %s', interface, res, interest)
 
         try:
-            self._final_segment = interface.call_request_interest_finish(res)
+            self._final_segment, fd_list = interface.call_request_interest_finish(res)
         except GLib.Error as error:
             # XXX actual error handeling !
             # assuming TryAgain
@@ -183,11 +194,11 @@ class Producer(base.Producer):
     def _get_final_segment(self):
         raise NotImplementedError
 
-    def _on_request_interest(self, name, skeleton, fd_variant, first_segment):
+    def _on_request_interest(self, name, skeleton, fd_list, fd_variant, first_segment):
         self.emit('interest', Name(name), Interest(name), None, None, None)
-        fd = fd_variant.get_handle()
-        logger.debug('RequestInterest: name=%s, fd=%d, first_segment=%d',
-                     name, fd, first_segment)
+        fd = fd_list.get(fd_variant.get_handle())
+        logger.debug('RequestInterest Handler: name=%s, self.name=%s, fd=%d, first_segment=%d',
+                     name, self.name, fd, first_segment)
         # do we start on chunk 0 ? full file ? do we start on another chunk
         # ? we need to seek the file, subsequent calls to get the same
         # chunks have to be handled in the consumer part and folded into
@@ -215,7 +226,7 @@ class Producer(base.Producer):
 
         # XXX: is this racy ?
         GLib.timeout_add_seconds(5,
-            lambda: skeleton.emit_progress(name, worker.first_segment,
+            lambda: skeleton.emit_progress(key, worker.first_segment,
                                            worker.data.n) or True)
 
         return True

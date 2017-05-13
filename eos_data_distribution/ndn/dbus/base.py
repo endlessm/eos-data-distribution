@@ -235,11 +235,11 @@ class DBusProducerSingleton():
                     self._dbus_name, dbus_path, iface_str)
         return registered
 
-    def _on_request_interest(self, skeleton, invocation, name, *args, **kwargs):
-        logger.debug('RequestInterest: name=%s, cb_registery=%s', name, self._cb_registery)
+    def _on_request_interest(self, skeleton, invocation, fd_list, name, *args, **kwargs):
+        logger.debug('RequestInterest: %s, %s, for name=%s, cb_registery=%s', skeleton, invocation, name, self._cb_registery)
 
         name = Name(name)
-        self._obj_registery[name.toString()] = (skeleton, invocation)
+        self._obj_registery[name.toString()] = (skeleton, invocation, fd_list)
 
         prefix = name.toString()
         while len(prefix):
@@ -250,16 +250,22 @@ class DBusProducerSingleton():
                 logger.debug("couldn't find handler for %s", prefix)
                 prefix = '/'.join(prefix.split('/')[:-1])
 
-        cb(name, skeleton,  *args, **kwargs)
+        if not len(prefix):
+            logger.debug("FOUND NO handler for %s", name)
+            return False
+
+        logger.debug("FOUND handler for %s", prefix)
+
+        cb(name, skeleton, fd_list,  *args, **kwargs)
         return True
 
     def return_value(self, name, *args, **kwargs):
-        skeleton, invocation = self._obj_registery[name.toString()]
+        skeleton, invocation, fd_list = self._obj_registery[name.toString()]
         logger.debug('returning value for %s on %s', name, invocation)
-        skeleton.complete_request_interest(invocation, *args, **kwargs)
+        skeleton.complete_request_interest(invocation, fd_list, *args, **kwargs)
 
     def return_error(self, name, error):
-        skeleton, invocation = self._obj_registery[name.toString()]
+        skeleton, invocation, fd_list = self._obj_registery[name.toString()]
         logger.debug('returning ERROR %s for %s on %s', error, name, invocation)
         invocation.return_gerror(GLib.GError(error))
 
