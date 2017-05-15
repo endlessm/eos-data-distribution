@@ -50,8 +50,9 @@ def get_route_component(base):
 
 def sanitize_dbus_path(path):
     return (path.replace(':', '_')
-               .replace('-', '_')
-               .replace('.', '_'))
+            .replace('-', '_')
+            .replace('.', '_')
+            .replace('%', '_'))
 
 def build_dbus_path(name):
     name = Name(name)
