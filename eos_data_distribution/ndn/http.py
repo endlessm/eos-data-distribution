@@ -33,6 +33,7 @@ from .. import defaults, utils
 
 logger = logging.getLogger(__name__)
 
+MAX_IN_FLIGHT = 16
 
 def make_soup_session():
     session = Soup.Session()
@@ -111,12 +112,12 @@ class Getter(object):
         buf = msg.get_property('response-body-data').get_data()
         bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
         [self._got_buf(b, n + i) for i, b in enumerate(bufs)]
+        self._consume_queue()
 
     def _got_buf(self, buf, index):
         data = self._data[index]
         data.setContent(buf)
         self.onData(data)
-        self._consume_queue()
 
     def queue_request(self, data, n):
         self._data[n] = data
@@ -137,7 +138,7 @@ class Getter(object):
             return self.soup_get(n)
 
         # we are now sure to have more than 1 element
-        simil = [e for i, e in enumerate(self._queue) if e == n + i]
+        simil = [e for i, e in enumerate(self._queue) if e == n + i and e < n + MAX_IN_FLIGHT]
         size = len(simil)
         del self._queue[:size]
         self._in_flight = len(self._queue)
