@@ -346,7 +346,8 @@ if __name__ == '__main__':
                  for i in range(int(args.producers))]
     consumers = [Consumer(Name('/endlessm/name%s'%(i)))
                  for i in range(int(args.consumers))]
-    [p.connect('interest', lambda i, n, *a: p.send(n, n)) for p in producers]
+
+    [p.connect('interest', lambda i, n, *a: p.send(n, n.toString())) for p in producers]
     [p.start() for p in producers]
 
     [c.connect('complete', on_complete) for c in consumers]

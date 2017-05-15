@@ -144,7 +144,7 @@ class Consumer(base.Consumer):
     def _on_progress(self, proxy, name, first_segment, last_segment):
         logger.info('got progress, (%s) %s → %s', self.fd,  self.current_segment, last_segment)
 
-        assert(self._final_segment)
+        assert(self._final_segment != None)
         assert(first_segment <= self.current_segment)
 
         self.current_segment = max(self.current_segment, self.first_segment)
