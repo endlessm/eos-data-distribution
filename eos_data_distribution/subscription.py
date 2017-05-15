@@ -74,9 +74,10 @@ class Fetcher(GObject.GObject):
 
         consumers = []
         for shard in manifest['shards']:
-            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append(
-                'shard').append(shard['download_uri'])
             escaped_filename = urllib.quote(shard['download_uri'], safe='')
+            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append(
+                'shard').append(escaped_filename)
+
 
             shard_filename = path.realpath(
                 path.join(self._store_dir, 'shard', escaped_filename))

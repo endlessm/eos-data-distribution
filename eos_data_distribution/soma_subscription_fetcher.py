@@ -21,6 +21,7 @@
 import os
 import json
 import logging
+import urllib
 
 from gi.repository import GLib
 
@@ -86,7 +87,7 @@ class Fetcher(object):
                 chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face)
             self._subproducers[key].start()
         elif component == 'shard':
-            shard_url = route.get(1).getValue().toRawStr()
+            shard_url = urllib.unquote(str(route.get(1)))
             self._subproducers[key] = http.Producer(
                 chunkless_name, shard_url, face=face)
             self._subproducers[key].start()
