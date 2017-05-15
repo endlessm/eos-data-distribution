@@ -169,13 +169,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--cost", default=10)
     parser.add_argument("-o", "--output")
-    parser.add_argument("url")
+    parser.add_argument("urls", nargs='+')
     args = utils.parse_args(parser=parser)
 
-    if args.name:
-        name = args.name
-    else:
-        name = re.sub('https?://', '', args.url)
-
-    producer = Producer(name=name, url=args.url)
-    testutils.run_producer_test(producer, name, args)
+    producers = [Producer(name=re.sub('https?://', '', url), url=url) for url in args.urls]
+    names = [re.sub('https?://', '', url) for url in args.urls]
+    testutils.run_producers_test(producers, names, args)

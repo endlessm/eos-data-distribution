@@ -31,3 +31,22 @@ def run_producer_test(producer, name, args):
         consumer.connect('complete', lambda *a: loop.quit())
         consumer.start()
     loop.run()
+
+def run_producers_test(producers, names, args):
+    loop = GLib.MainLoop()
+
+    [producer.start() for producer in producers]
+    producer.start()
+
+
+    if args.output:
+        from ..file import FileConsumer
+        consumers = [FileConsumer(n, filename="%s-%s"%(args.output, o)) for o,n in enumerate(names)]
+
+        def check_complete(*a):
+            if all([c._emitted_complete for c in consumers]):
+                loop.quit()
+
+        [consumer.connect('complete', check_complete) for consumer in consumers]
+        [consumer.start() for consumer in consumers]
+    loop.run()
