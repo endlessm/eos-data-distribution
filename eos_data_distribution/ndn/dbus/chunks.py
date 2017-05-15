@@ -135,7 +135,7 @@ class Consumer(base.Consumer):
         interface.call_request_interest(interest,
                                         GLib.Variant('h', fd_id),
                                         self.first_segment, fd_list=fd_list,
-                                        callback=self._on_call_complete,
+                                        callback=self._on_request_interest_complete,
                                         user_data=interest)
 
     def _save_chunk(self, n, data):
@@ -164,10 +164,10 @@ class Consumer(base.Consumer):
 
         self.current_segment -= 1
         if self._check_for_complete():
-            self._on_complete()
+            proxy.call_complete(name, callback=self._on_complete)
 
-    def _on_call_complete(self, interface, res, interest):
-        logger.info('request interest complete: %s, %s, %s', interface, res, interest)
+    def _on_request_interest_complete(self, interface, res, interest):
+        logger.info('Consumer: request interest complete: %s, %s, %s', interface, res, interest)
 
         try:
             self._final_segment, fd_list = interface.call_request_interest_finish(res)
@@ -227,11 +227,17 @@ class Producer(base.Producer):
                                                       self._send_chunk)
         self._dbus.return_value(name, final_segment)
 
+        last_emited = first_segment - 1
         # XXX: is this racy ?
         GLib.timeout_add_seconds(5,
-            lambda: skeleton.emit_progress(key, worker.first_segment,
-                                           worker.data.n) or True)
+            lambda: (worker.data.n > last_emited and
+                                 skeleton.emit_progress(key, worker.first_segment,
+                                                        worker.data.n)) or worker.working)
+        return True
 
+    def _on_complete(self, name, skeleton):
+        logger.debug('PRODUCER on_complete: %s', name)
+        self._workers[name.toString()].working = False
         return True
 
     def sendFinish(self, data):
@@ -243,6 +249,7 @@ class Producer(base.Producer):
 class ProducerWorker():
     def __init__(self, fd, first_segment, final_segment, send_chunk):
         logger.info('Spawning NEW ProducerWorker: %s, %s, %s | %s', fd, first_segment, final_segment, send_chunk)
+        self.working = True
         self.first_segment = self.current_segment = first_segment
         self.final_segment = final_segment
         self.fd = os.fdopen(fd, 'w+b')

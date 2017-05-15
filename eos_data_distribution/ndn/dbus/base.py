@@ -218,6 +218,11 @@ class DBusProducerSingleton():
         interface_skeleton = self._interface_skeleton_object()
         interface_skeleton.connect('handle-request-interest',
                        self._on_request_interest)
+        try:
+            interface_skeleton.connect('handle-complete',
+                                    self._on_complete)
+        except TypeError:
+            pass
 
         dbus_path = build_dbus_path(name)
         logger.debug('Producer Object dbus path: %s', dbus_path)
@@ -240,6 +245,8 @@ class DBusProducerSingleton():
                     self._dbus_name, dbus_path, iface_str)
         return registered
 
+    def _on_complete(self, *args, **kwargs):
+        return self._find_handler_and_call('complete', *args, **kwargs)
 
     def _on_request_interest(self, *args, **kwargs):
         return self._find_handler_and_call('request-interest', *args, **kwargs)

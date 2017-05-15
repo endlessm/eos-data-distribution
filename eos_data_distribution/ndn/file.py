@@ -270,7 +270,7 @@ class Consumer(chunks.Consumer):
         elif mode == 1:
             write_mode1()
 
-    def _on_complete(self):
+    def _on_complete(self, *args, **kwargs):
         os.close(self._part_fd)
         self._part_fd = -1
 
@@ -287,7 +287,7 @@ class Consumer(chunks.Consumer):
 
         os.unlink(self._sgt_filename)
 
-        super(Consumer, self)._on_complete()
+        super(Consumer, self)._on_complete(*args, **kwargs)
 
     def _create_files(self, filename):
         # XXX this is racy
