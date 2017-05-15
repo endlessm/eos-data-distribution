@@ -146,6 +146,7 @@ class Consumer(base.Consumer):
 
         assert(self._final_segment != None)
         assert(first_segment <= self.current_segment)
+        assert(not self._emitted_complete)
 
         self.current_segment = max(self.current_segment, self.first_segment)
         self.fd.seek(self.current_segment * self.chunk_size)
@@ -163,7 +164,8 @@ class Consumer(base.Consumer):
             self.current_segment += 1
 
         self.current_segment -= 1
-        if self._check_for_complete():
+        if not self._emitted_complete and self._check_for_complete():
+            self._emitted_complete = True
             proxy.call_complete(name, callback=self._on_complete)
 
     def _on_request_interest_complete(self, interface, res, interest):
