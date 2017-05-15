@@ -319,7 +319,7 @@ class Producer(Base):
     def sendFinish(self, data):
         self._dbus.return_value(name, self.name.toString(), data)
 
-    def _on_request_interest(self, name, skeleton):
+    def _on_request_interest(self, name, skeleton, fd_list):
         logger.debug('producer: got interest for name %s, %s', name, self)
         self.emit('interest', name, Interest(name), None, None, None)
 
