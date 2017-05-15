@@ -31,7 +31,7 @@ from gi.repository import GLib
 from gi.repository import Gio
 
 from . import base
-from base import Interest
+from .base import Interest
 from eos_data_distribution import utils
 from eos_data_distribution.names import Name
 
