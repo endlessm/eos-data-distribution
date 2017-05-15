@@ -349,11 +349,12 @@ class Producer(Base):
         self._dbus.return_value(name, name.toString(), data)
 
     def sendFinish(self, data):
-        self._dbus.return_value(name, self.name.toString(), data)
+        self._dbus.return_value(name, name.toString(), data)
 
     def _on_request_interest(self, name, skeleton):
         logger.debug('producer: got interest for name %s', name)
         self.emit('interest', name, Interest(name), None, None, None)
+        return True
 
     def _on_complete(self, name, skeleton):
         raise NotImplemented
