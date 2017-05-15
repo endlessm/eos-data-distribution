@@ -163,8 +163,8 @@ class Consumer(base.Consumer):
             self.current_segment += 1
 
         self.current_segment -= 1
-        # XXX this would be self._check_for_complete()
-        self._on_complete()
+        if self._check_for_complete():
+            self._on_complete()
 
     def _on_call_complete(self, interface, res, interest):
         logger.info('request interest complete: %s, %s, %s', interface, res, interest)
@@ -175,6 +175,9 @@ class Consumer(base.Consumer):
             # XXX actual error handeling !
             # assuming TryAgain
             return self.expressInterest(interest)
+
+    def _check_for_complete(self):
+        return self.current_segment == self._final_segment
 
     def _on_complete(self):
         logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
@@ -240,8 +243,8 @@ class Producer(base.Producer):
 class ProducerWorker():
     def __init__(self, fd, first_segment, final_segment, send_chunk):
         logger.info('Spawning NEW ProducerWorker: %s, %s, %s | %s', fd, first_segment, final_segment, send_chunk)
-        self.first_segment = first_segment
-        self.current_segment = first_segment
+        self.first_segment = self.current_segment = first_segment
+        self.final_segment = final_segment
         self.fd = os.fdopen(fd, 'w+b')
         self.data = Data(self.fd, first_segment)
 
