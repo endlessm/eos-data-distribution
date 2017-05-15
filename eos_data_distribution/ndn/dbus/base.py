@@ -41,6 +41,10 @@ DBUS_PATH_TEMPLATE = '%s%s'
 
 dbus_producer_instances = dict()
 
+def extend(a, b):
+    a.extend(b)
+    return a
+
 def get_route_component(base):
     base = Name(base)
     if base.toString().startswith(SUBSCRIPTIONS_BASE.toString()):
@@ -209,7 +213,7 @@ class DBusProducerSingleton():
         Gio.bus_own_name_on_connection(
             self.con, self._dbus_name, Gio.BusNameOwnerFlags.NONE, None, None)
 
-    def register_path_for_name(self, name, cb):
+    def register_path_for_name(self, name, callbacks):
         name = Name(name)
         interface_skeleton = self._interface_skeleton_object()
         interface_skeleton.connect('handle-request-interest',
@@ -231,21 +235,39 @@ class DBusProducerSingleton():
                          registered, self._dbus_name, dbus_path,
                                 iface_str)
 
-        self._cb_registery[name.toString()] = cb
+        self._cb_registery[name.toString()] = callbacks
         logger.info('registered: %s, %s, %s',
                     self._dbus_name, dbus_path, iface_str)
         return registered
 
-    def _on_request_interest(self, skeleton, invocation, fd_list, name, *args, **kwargs):
-        logger.debug('RequestInterest: %s, %s, for name=%s, cb_registery=%s', skeleton, invocation, name, self._cb_registery)
 
-        name = Name(name)
-        self._obj_registery[name.toString()] = (skeleton, invocation, fd_list)
+    def _on_request_interest(self, *args, **kwargs):
+        return self._find_handler_and_call('request-interest', *args, **kwargs)
 
-        prefix = name.toString()
+    def _find_handler_and_call(self, handler_name, skeleton, invocation,  *args, **kwargs):
+        # this is where the dbus interface is completely stupid, *if*
+        # fd_list is present, it's going to come in first…
+
+        if type(args[0]) is str:
+            name = args[0]
+            fd_list = None
+            args = args[1:]
+
+        else:
+            name = args[1]
+            fd_list = args[0]
+            args = extend([fd_list], args[2:])
+
+        self._obj_registery[name] = (skeleton, invocation, fd_list)
+
+        logger.debug('handeling call %s for name=%s, args=%s, kwargs=%s',
+                     handler_name, name, args, kwargs)
+
+        prefix = name
+
         while len(prefix):
             try:
-                cb = self._cb_registery[prefix]
+                callback = self._cb_registery[prefix][handler_name]
                 break
             except KeyError:
                 logger.debug("couldn't find handler for %s", prefix)
@@ -256,14 +278,14 @@ class DBusProducerSingleton():
             return False
 
         logger.debug("FOUND handler for %s", prefix)
-
-        cb(name, skeleton, fd_list,  *args, **kwargs)
-        return True
+        return callback(Name(name), skeleton, *args, **kwargs)
 
     def return_value(self, name, *args, **kwargs):
         skeleton, invocation, fd_list = self._obj_registery[name.toString()]
-        logger.debug('returning value for %s on %s', name, invocation)
-        skeleton.complete_request_interest(invocation, fd_list, *args, **kwargs)
+        logger.debug('returning value for %s on %s: %s', name, invocation, args)
+        if fd_list: # this looks ridiculous, but fd_list handeling is absolutely borken
+            args = extend([fd_list], args)
+        skeleton.complete_request_interest(invocation, *args, **kwargs)
 
     def return_error(self, name, error):
         skeleton, invocation, fd_list = self._obj_registery[name.toString()]
@@ -309,7 +331,10 @@ class Producer(Base):
             console.error('already registered')
             return
 
-        self.registred = self._dbus.register_path_for_name(self.name, self._on_request_interest)
+        self.registred = self._dbus.register_path_for_name(self.name, {
+            'request-interest': self._on_request_interest,
+            'complete': self._on_complete
+        })
         if not self.registred: self.emit('register-failed', self.registered)
 
     def send(self, name, data, flags = {}):
@@ -319,9 +344,12 @@ class Producer(Base):
     def sendFinish(self, data):
         self._dbus.return_value(name, self.name.toString(), data)
 
-    def _on_request_interest(self, name, skeleton, fd_list):
-        logger.debug('producer: got interest for name %s, %s', name, self)
+    def _on_request_interest(self, name, skeleton):
+        logger.debug('producer: got interest for name %s', name)
         self.emit('interest', name, Interest(name), None, None, None)
+
+    def _on_complete(self, name, skeleton):
+        raise NotImplemented
 
 if __name__ == '__main__':
     import argparse
