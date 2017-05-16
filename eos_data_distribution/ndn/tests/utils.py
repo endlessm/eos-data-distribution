@@ -45,6 +45,7 @@ def run_producers_test(producers, names, args):
 
         def check_complete(*a):
             if all([c._emitted_complete for c in consumers]):
+                print("ALL RETRIEVED")
                 loop.quit()
 
         [consumer.connect('complete', check_complete) for consumer in consumers]

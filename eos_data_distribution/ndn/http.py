@@ -171,7 +171,11 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output")
     parser.add_argument("urls", nargs='+')
     args = utils.parse_args(parser=parser)
+    if args.name:
+        names = ["%s-%s"%(args.name, i) for i, u in enumerate(args.urls)]
+    else:
+        names = [re.sub('https?://', '', url) for url in args.urls]
 
-    producers = [Producer(name=re.sub('https?://', '', url), url=url) for url in args.urls]
-    names = [re.sub('https?://', '', url) for url in args.urls]
+    producers = [Producer(name=names[i], url=url) for i, url in enumerate(args.urls)]
+
     testutils.run_producers_test(producers, names, args)
