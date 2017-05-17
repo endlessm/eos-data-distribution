@@ -38,8 +38,10 @@ MAX_IN_FLIGHT = 16
 def make_soup_session():
     session = Soup.Session()
     session.props.ssl_strict = False
-    session.props.max_conns = 100
+    session.props.max_conns = 1000
     session.props.max_conns_per_host = 100
+    session.props.idle_timeout = 10
+    session.props.timeout = 60
     return session
 
 
