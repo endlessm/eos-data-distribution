@@ -41,6 +41,8 @@ DBUS_PATH_TEMPLATE = '%s%s'
 
 dbus_producer_instances = dict()
 
+GObject.threads_init()
+
 def extend(a, b):
     a.extend(b)
     return a
