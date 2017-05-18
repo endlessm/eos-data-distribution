@@ -150,7 +150,9 @@ class Consumer(base.Consumer):
 
         assert(self._final_segment != None)
         assert(first_segment <= self.current_segment)
-        assert(not self._emitted_complete)
+        if self._emitted_complete:
+            logger.debug('COMPLETE already emitted for %s', name)
+            return
 
         self.current_segment = max(self.current_segment, self.first_segment)
         self.fd.seek(self.current_segment * self.chunk_size)
