@@ -211,7 +211,7 @@ class Consumer(base.Consumer):
     def _check_for_complete(self):
         return self.current_segment == self._final_segment
 
-    def _on_complete(self):
+    def _on_complete(self, *args, **kwargs):
         logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
         assert (self.current_segment == self._final_segment)
         self.emit('complete')
