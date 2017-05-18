@@ -64,6 +64,7 @@ class Data(object):
 
         self.fd = fd
         self.n = n - 1
+        self.fd.seek(n*base.CHUNK_SIZE)
 
     def setName(self, name):
         # we have nothing to see here
@@ -112,7 +113,7 @@ class Consumer(base.Consumer):
         # XXX parse interest to see if we're requesting the first chunk
         self.first_segment = 0
         if (self._segments):
-            self.first_segment = self._segments.index(defaults.SegmentState.UNSENT) or 0
+            self.current_segment = self.first_segment = self._segments.index(defaults.SegmentState.UNSENT) or 0
             logger.debug('STARTING AT %s', self.first_segment)
         self.interest = interest
 
@@ -282,7 +283,7 @@ class ProducerWorker():
         self.first_segment = self.current_segment = first_segment
         self.final_segment = final_segment
         self.fd = os.fdopen(fd, 'w+b')
-        self.data = Data(self.fd, first_segment)
+        self.data = Data(self.fd, first_segment, name)
 
         while(True):
             send_chunk(self.data, self.current_segment)

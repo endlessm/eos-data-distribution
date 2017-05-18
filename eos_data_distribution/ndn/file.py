@@ -12,6 +12,7 @@ from gi.repository import Gio
 from . import fallocate
 from .dbus import chunks
 from .. import utils
+from .segments import File as SegmentsFile
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +71,6 @@ class Consumer(chunks.Consumer):
         self._completion_monitor = None
         self._completion_monitor_id = -1
 
-        # If we have an existing download to resume, use that. Otherwise,
-        # request the first segment to bootstrap us.
-
-        try:
-            self._segments = self._segments_file.read()
-        except ValueError as e:
-            pass
 
     def _open_files(self):
         raise NotImplementedError()
@@ -115,7 +109,7 @@ class Consumer(chunks.Consumer):
             self._part_filename, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK, 0o600)
 
         try:
-            self._segments_file = Segments(filename)
+            self._segments_file.lock()
         except IOError as e:
             # Clean up.
             os.close(self._part_fd)
@@ -197,6 +191,14 @@ class FileConsumer(Consumer):
     def __init__(self, name, filename, *args, **kwargs):
         self._filename = filename
         super(FileConsumer, self).__init__(name, *args, **kwargs)
+
+        # If we have an existing download to resume, use that. Otherwise,
+        # request the first segment to bootstrap us.
+        try:
+            self._segments_file = SegmentsFile(self._filename)
+            self._segments = self._segments_file.read()
+        except ValueError as e:
+            pass
 
     def _open_files(self):
         return self._create_files(self._filename)
