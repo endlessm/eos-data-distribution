@@ -31,6 +31,7 @@ from gi.repository import GLib
 from gi.repository import Gio
 
 from . import base
+from ... import defaults
 from .base import Interest
 from eos_data_distribution import utils
 from eos_data_distribution.names import Name
@@ -110,8 +111,10 @@ class Consumer(base.Consumer):
     def _do_express_interest(self, proxy, interface, interest):
         # XXX parse interest to see if we're requesting the first chunk
         self.first_segment = 0
+        if (self._segments):
+            self.first_segment = self._segments.index(defaults.SegmentState.UNSENT) or 0
+            logger.debug('STARTING AT %s', self.first_segment)
         self.interest = interest
-
 
         if self.filename:
             # did we already have an open file descriptor for this ? if yes,
@@ -150,6 +153,11 @@ class Consumer(base.Consumer):
 
         self.current_segment = max(self.current_segment, self.first_segment)
         self.fd.seek(self.current_segment * self.chunk_size)
+
+        for n in xrange(self.current_segment, last_segment):
+            self._segments[n] = defaults.SegmentState.OUTGOING
+
+
         while (self.current_segment <= last_segment):
             progress = (float(self.current_segment) / (self._final_segment or 1)) * 100
             self.emit('progress', progress)
@@ -161,6 +169,7 @@ class Consumer(base.Consumer):
                 return
 
             self._save_chunk(self.current_segment, buf)
+            self._segments[self.current_segment] = defaults.SegmentState.COMPLETE
             self.current_segment += 1
 
         self.current_segment -= 1
@@ -172,11 +181,29 @@ class Consumer(base.Consumer):
         logger.info('Consumer: request interest complete: %s, %s, %s', interface, res, interest)
 
         try:
-            self._final_segment, fd_list = interface.call_request_interest_finish(res)
+            final_segment, fd_list = interface.call_request_interest_finish(res)
+            self._set_final_segment(final_segment)
         except GLib.Error as error:
             # XXX actual error handeling !
             # assuming TryAgain
             return self.expressInterest(interest)
+
+    def _set_final_segment(self, n):
+        self._final_segment = n
+        self._num_segments = self._final_segment + 1
+        self._size = self.chunk_size * self._num_segments
+
+        if self._segments is None:
+            self._segments = [defaults.SegmentState.UNSENT] * self._num_segments
+
+    def _check_final_segment(self, n):
+        if self._final_segment is not None:
+            if n == self._final_segment:
+                return
+            else:
+                raise ValueError("Could not read final segment")
+        else:
+            self._set_final_segment(n)
 
     def _check_for_complete(self):
         return self.current_segment == self._final_segment
