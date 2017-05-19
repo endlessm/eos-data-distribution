@@ -95,7 +95,7 @@ class Consumer(chunks.Consumer):
         os.rename(self._part_filename, self._filename)
         os.chmod(self._filename, 0o644)
 
-        self._segments_file.close()
+        self._segments_file.close(unlink=True)
         super(Consumer, self)._on_complete(*args, **kwargs)
 
     def _create_files(self, filename):
