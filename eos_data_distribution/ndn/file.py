@@ -253,8 +253,10 @@ if __name__ == '__main__':
         consumers = [FileConsumer("%s-%s"%(args.name, i), "%s-%s"%(args.output, i))
                      for i in range(args.count)]
 
-        def check_complete(*a):
-            if all([c._emitted_complete for c in consumers]):
+        def check_complete(c):
+            del consumers[consumers.index(c)]
+
+            if not len(consumers):
                 print("ALL RETRIEVED")
                 loop.quit()
 
