@@ -74,7 +74,8 @@ def bitmap_to_num(bitmap):
     return n
 
 class File:
-    def __init__(self, filename):
+    def __init__(self, filename, mode=0):
+        self.mode = mode
         self._filename = '%s.sgt' % (filename, )
         self._fd = os.open(
             self._filename, os.O_CREAT | os.O_RDWR, 0o600)
@@ -179,8 +180,9 @@ class File:
         bio.write(SEGMENT_TABLE_MAGIC)
 
         # Flags.
-        mode = 0
+        mode = self.mode
         flags = 0 | mode
+
         write8(mode)
         write8(len(segments))
 
@@ -231,6 +233,8 @@ if __name__ == '__main__':
     from .. import utils
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--mode", default=0, type=int)
+
     args = utils.parse_args(parser=parser, include_name=False)
 
     segments =      [SegmentState.COMPLETE]*50
@@ -238,7 +242,7 @@ if __name__ == '__main__':
     segments.extend([SegmentState.UNSENT]*10)
 
 
-    s = File('test-segments')
+    s = File('test-segments', mode=args.mode)
     s.write(segments)
     s.close()
 
