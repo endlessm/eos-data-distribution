@@ -103,7 +103,7 @@ class Getter(object):
         msg.request_headers.append('Range', _bytes)
         self._session.queue_message(
             msg, lambda session, msg: self._got_reply(msg, (n, count)))
-        logger.debug('getter: soup_get: %d', n)
+        logger.debug('getter: soup_get: queued %d', n)
 
     def _got_reply(self, msg, args):
         n, count = args
@@ -149,7 +149,8 @@ class Getter(object):
         simil = [e for i, e in enumerate(self._queue) if e == n + i and e < n + MAX_IN_FLIGHT]
         size = len(simil)
         del self._queue[:size]
-        self._in_flight = len(self._queue)
+        self._in_flight = size
+        logger.debug('consuming queue have %s in queue, %s in flight', len(self._queue), size)
         self.soup_get(n, size)
 
 class Producer(chunks.Producer):
