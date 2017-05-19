@@ -237,18 +237,18 @@ if __name__ == '__main__':
 
     args = utils.parse_args(parser=parser, include_name=False)
 
-    segments =      [SegmentState.COMPLETE]*50
-    segments.extend([SegmentState.OUTGOING]*10)
-    segments.extend([SegmentState.UNSENT]*10)
+    segments =      [SegmentState.COMPLETE]*500
+    segments.extend([SegmentState.OUTGOING]*500)
+    segments.extend([SegmentState.UNSENT]*500)
 
 
     s = File('test-segments', mode=args.mode)
     s.write(segments)
     s.close()
 
-    logger.debug('segments: %s', dump_segments(segments))
+    logger.debug('segments: (%s) %s', len(segments), dump_segments(segments))
 
     s = File('test-segments')
     segments = s.read()
-    logger.debug('segments: %s', dump_segments(segments))
+    logger.debug('segments: (%s) %s', len(segments), dump_segments(segments))
 
