@@ -182,10 +182,9 @@ class File:
         mode = 0
         flags = 0 | mode
         write8(mode)
+        write8(len(segments))
 
         def write_mode0(segments):
-            write8(len(segments))
-
             for i in xrange(0, len(segments), 8):
                 section = segments[i:i + 8]
                 bitmap = [
@@ -197,8 +196,6 @@ class File:
 
 
         def write_mode1(segments):
-            write8(len(segments))
-
             try:
                 first_unsent_index = segments.index(SegmentState.UNSENT)
             except ValueError as e:
