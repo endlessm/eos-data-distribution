@@ -195,6 +195,8 @@ class FileConsumer(Consumer):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
         try:
+            # we need to make the dir early, so that the sgt file can be created
+            mkdir_p(os.path.dirname(filename))
             self._segments_file = SegmentsFile(self._filename)
             self._segments = self._segments_file.read()
         except ValueError as e:
