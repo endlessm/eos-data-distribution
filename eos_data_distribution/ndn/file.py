@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import argparse
 import errno
 import gi
 import logging
@@ -11,7 +10,6 @@ from gi.repository import Gio
 
 from . import fallocate
 from .dbus import chunks
-from .. import utils
 from .segments import File as SegmentsFile
 
 logger = logging.getLogger(__name__)
@@ -234,6 +232,8 @@ class DirConsumer(Consumer):
 
 
 if __name__ == '__main__':
+    import argparse
+    from .. import utils
     from gi.repository import GLib
 
     parser = argparse.ArgumentParser()
