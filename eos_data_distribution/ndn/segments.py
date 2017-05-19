@@ -4,6 +4,8 @@ import struct
 import fcntl
 import os
 
+from io import BytesIO
+
 from ..defaults import SegmentState
 
 logger = logging.getLogger(__name__)
@@ -166,17 +168,15 @@ class File:
         if segments is None:
             return
 
+        bio = BytesIO(b"")
+
         def write8(value):
-            return os.write(self._fd, struct.pack('<Q', value))
+            return bio.write(struct.pack('<Q', value))
 
         def write1(value):
-            return os.write(self._fd, struct.pack('<B', value))
+            return bio.write(struct.pack('<B', value))
 
-
-        # Truncate the file so it contains nothing.
-        os.ftruncate(self._fd, 0)
-        os.lseek(self._fd, 0, os.SEEK_SET)
-        os.write(self._fd, SEGMENT_TABLE_MAGIC)
+        bio.write(SEGMENT_TABLE_MAGIC)
 
         # Flags.
         mode = 0
@@ -221,8 +221,13 @@ class File:
             for hole_index in hole_indexes:
                 write8(hole_index)
 
-        write = [write_mode0, write_mode1]
-        return write[mode](segments)
+        [write_mode0, write_mode1][mode](segments)
+
+        bio.seek(0)
+        # Truncate the file so it contains nothing.
+        os.ftruncate(self._fd, 0)
+        os.lseek(self._fd, 0, os.SEEK_SET)
+        os.write(self._fd, bio.read())
 
 if __name__ == '__main__':
     import argparse
