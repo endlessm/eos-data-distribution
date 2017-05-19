@@ -108,8 +108,11 @@ class Getter(object):
     def _got_reply(self, msg, args):
         n, count = args
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
-            logger.info('got error in soup_get: %s', msg.status_code)
-            return
+            logger.info('got error in soup_get: %s(%s) for %s+%s',
+                        msg.status_code, Soup.status_get_phrase(msg.status_code),
+                        n, count)
+            [self._queue_request(n + i) for i in xrange(count)]
+            return self._consume_queue()
 
         buf = msg.get_property('response-body-data').get_data()
         bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
@@ -123,11 +126,13 @@ class Getter(object):
 
     def queue_request(self, data, n):
         self._data[n] = data
-        if not self._in_flight:
-            self._in_flight = 1
-            return self.soup_get(n)
+        return self._queue_request(n)
 
+    def _queue_request(self, n):
         bisect.insort(self._queue, n)
+
+        if not self._in_flight:
+            self._consume_queue()
 
     def _consume_queue(self):
         if len(self._queue) == 0:
@@ -137,6 +142,7 @@ class Getter(object):
         n = self._queue[0]
         if len(self._queue) == 1:
             self._in_flight = 1
+            self._queue = []
             return self.soup_get(n)
 
         # we are now sure to have more than 1 element
