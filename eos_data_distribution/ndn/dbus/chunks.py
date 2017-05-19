@@ -269,7 +269,9 @@ class Producer(base.Producer):
 
     def _on_complete(self, name, skeleton):
         logger.debug('PRODUCER on_complete: %s', name)
-        self._workers[name.toString()].working = False
+        key = name.toString()
+        self._workers[key].working = False
+        del self._workers[key]
         return True
 
     def sendFinish(self, data):
