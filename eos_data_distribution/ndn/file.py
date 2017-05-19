@@ -238,29 +238,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output")
-    parser.add_argument("-c", "--count", default=0, type=int)
     args = utils.parse_args(parser=parser)
 
     loop = GLib.MainLoop()
 
-    if not args.count:
-        name = args.name or args.output
 
-        consumer = FileConsumer(name, args.output)
-        consumer.connect('complete', lambda *a: loop.quit())
-        consumer.start()
-    else:
-        consumers = [FileConsumer("%s-%s"%(args.name, i), "%s-%s"%(args.output, i))
-                     for i in range(args.count)]
+    name = args.name or args.output
 
-        def check_complete(c):
-            del consumers[consumers.index(c)]
-
-            if not len(consumers):
-                print("ALL RETRIEVED")
-                loop.quit()
-
-        [c.connect('complete', check_complete) for c in consumers]
-        [c.start() for c in consumers]
-
+    consumer = FileConsumer(name, args.output)
+    consumer.connect('complete', lambda *a: loop.quit())
+    consumer.start()
     loop.run()
