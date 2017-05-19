@@ -139,7 +139,9 @@ class File:
             completed_segments = []
 
             for i in range(0, num_segments, 8):
-                byte = ord(os.read(self._fd, 1))
+                char = os.read(self._fd, 1)
+                #logger.debug('read pos: %s/%s -> %s', i, num_segments, char)
+                byte = ord(char)
                 completed_segments += num_to_bitmap(byte)
 
             segments = completed_segments[:num_segments]
@@ -193,7 +195,7 @@ class File:
                     1 if state == SegmentState.COMPLETE else 0 for state in section]
                 bitmap = (bitmap + [0] * 8)[:8]
                 byte = bitmap_to_num(bitmap)
-                logger.debug('write %s -> %s', i, byte)
+                #logger.debug('write %s -> %s', i, byte)
                 write1(byte)
 
 
