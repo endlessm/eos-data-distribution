@@ -129,6 +129,7 @@ class Consumer(chunks.Consumer):
 
         # XXX hack
         return True
+
         # Reserve space for the full file and truncate any existing content to
         # the start of the final chunk (because it might be smaller than the
         # chunk size).
