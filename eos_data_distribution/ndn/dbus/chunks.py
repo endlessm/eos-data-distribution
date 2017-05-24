@@ -293,7 +293,7 @@ class ProducerWorker():
         self.first_segment = self.current_segment = first_segment
         self.final_segment = final_segment
         self.fd = os.fdopen(fd, 'w+b')
-        self.data = Data(self.fd, first_segment, name)
+        self.data = Data(self.fd, first_segment)
 
         while(True):
             send_chunk(self.data, self.current_segment)
