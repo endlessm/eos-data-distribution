@@ -118,7 +118,7 @@ class Getter(object):
         buf = msg.get_property('response-body-data').get_data()
         bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
         [self._got_buf(b, n + i) for i, b in enumerate(bufs)]
-        self._consume_queue()
+        return self._consume_queue()
 
     def _got_buf(self, buf, index):
         data = self._data[index]
