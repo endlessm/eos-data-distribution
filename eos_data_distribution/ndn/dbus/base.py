@@ -189,11 +189,18 @@ class Consumer(Base):
         return self._do_express_interest(proxy, interface, interest)
 
     def _do_express_interest(self,  proxy, interface, interest):
-        return interface.RequestInterest('(s)', interest, result_handler=self._on_call_complete)
+        return interface.call_request_interest(interest,
+                                               callback=self._on_request_interest_complete, user_data=interest)
 
-    def _on_call_complete(self, proxy, res, *a):
+    def _on_request_interest_complete(self, interface, res, interest):
         logger.info('call complete, %s', res)
-        interest, data = res
+        try:
+            name, data = interface.call_request_interest_finish(res)
+        except GLib.Error as error:
+            # XXX actual error handeling !
+            # assuming TryAgain
+            return self.expressInterest(interest)
+
         self.emit('data', interest, data)
         self.emit('complete')
 
