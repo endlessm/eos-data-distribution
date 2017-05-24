@@ -125,12 +125,14 @@ class Consumer(base.Consumer):
 
         # we prepare the file where we're going to write the data
         self.filename = '.edd-file-cache-' + interest.replace('/', '%')
-        self.fd = open(self.filename, 'w+b')
+        sendout_fd = open(self.filename, 'w+b')
+        self.fd = open(self.filename, 'r+b')
+
 
         logger.debug('opened fd: %s', self.fd)
 
         fd_list = Gio.UnixFDList()
-        fd_id = fd_list.append(self.fd.fileno())
+        fd_id = fd_list.append(sendout_fd.fileno())
 
         assert(self.filename)
         assert(self.fd)
@@ -269,8 +271,12 @@ class Producer(base.Producer):
 
     def _on_complete(self, name, skeleton):
         logger.debug('PRODUCER on_complete: %s', name)
+        # remove worker from hash so it gets freed, we close here too as we
+        # get another fd from the consumer
         key = name.toString()
-        self._workers[key].working = False
+        worker = self._workers[key]
+        worker.working = False
+        worker.fd.close()
         del self._workers[key]
         return True
 
