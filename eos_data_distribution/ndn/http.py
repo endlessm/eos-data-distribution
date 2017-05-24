@@ -114,6 +114,7 @@ class Getter(object):
             [self._queue_request(n + i) for i in xrange(count)]
             return self._consume_queue()
 
+        self._in_flight = 0
         buf = msg.get_property('response-body-data').get_data()
         bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
         [self._got_buf(b, n + i) for i, b in enumerate(bufs)]
