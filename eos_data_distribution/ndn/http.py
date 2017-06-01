@@ -156,9 +156,10 @@ class Getter(object):
 
 class Producer(chunks.Producer):
 
-    def __init__(self, name, url, session=None, *args, **kwargs):
-        self._getter = Getter(url, session=session,
+    def __init__(self, name, url, getter=None, session=None, *args, **kwargs):
+        getter = getter or Getter(url, session=session,
                               onData=lambda d: self.sendFinish(d))
+        self._getter = getter
         super(Producer, self).__init__(
             name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
 
