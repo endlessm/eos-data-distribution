@@ -279,7 +279,14 @@ class DBusProducerSingleton():
                          registered, self._dbus_name, dbus_path,
                                 iface_str)
 
-        self._cb_registery[name.toString()] = callbacks
+        key = name.toString()
+        for cb in callbacks.keys():
+            try:
+                self._cb_registery[cb]
+            except KeyError:
+                self._cb_registery[cb] = dict()
+
+            self._cb_registery[cb][key] = callbacks[cb]
         logger.info('registered: %s, %s, %s',
                     self._dbus_name, dbus_path, iface_str)
         return registered
