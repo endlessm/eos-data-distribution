@@ -99,7 +99,7 @@ class Consumer(base.Consumer):
         self.current_segment = 0
         self._final_segment = None
         self._num_segments = None
-        self._segments = None
+        self._segments = []
         self._qualified_name = None
         self._emitted_complete = False
 
@@ -151,20 +151,32 @@ class Consumer(base.Consumer):
         raise NotImplementedError()
 
     def _on_progress(self, proxy, name, first_segment, last_segment):
-        logger.info('got progress, (%s) %s → %s', self.fd,  self.current_segment, last_segment)
+        segment_table_size = len(self._segments)
+        logger.info('got progress, %s → %s (%s:%s)',
+                     self.current_segment, last_segment, self._final_segment, segment_table_size)
+
+        self.current_segment = max(self.current_segment, self.first_segment)
+        if self._final_segment < last_segment:
+            logger.info('We got a new size ! expanding segments !')
+            self._final_segment = last_segment
+            self._segments = self._segments[:self.current_segment]
+            self._segments.extend(
+                [defaults.SegmentState.OUTGOING]*(self._final_segment - self.current_segment))
+            logger.info('new size: %s', len(self._segments))
+
+        else:
+            for n in xrange(self.current_segment, last_segment):
+                self._segments[n] = defaults.SegmentState.OUTGOING
 
         assert(self._final_segment != None)
         assert(first_segment <= self.current_segment)
+        assert(last_segment <= self._final_segment)
+
         if self._emitted_complete:
             logger.debug('COMPLETE already emitted for %s', name)
             return
 
-        self.current_segment = max(self.current_segment, self.first_segment)
         self.fd.seek(self.current_segment * self.chunk_size)
-
-        for n in xrange(self.current_segment, last_segment):
-            self._segments[n] = defaults.SegmentState.OUTGOING
-
 
         while (self.current_segment <= last_segment):
             progress = (float(self.current_segment) / (self._final_segment or 1)) * 100
@@ -201,7 +213,7 @@ class Consumer(base.Consumer):
         self._num_segments = self._final_segment + 1
         self._size = self.chunk_size * self._num_segments
 
-        if self._segments is None:
+        if len(self._segments) == 0:
             self._segments = [defaults.SegmentState.UNSENT] * self._num_segments
 
     def _check_final_segment(self, n):
