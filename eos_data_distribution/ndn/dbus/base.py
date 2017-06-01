@@ -386,7 +386,7 @@ class Producer(Base):
         logger.debug('producer: sending on name %s, %s', name, data)
         self._dbus.return_value(name, name.toString(), data)
 
-    def sendFinish(self, data):
+    def sendFinish(self, name, data):
         self._dbus.return_value(name, name.toString(), data)
 
     def _on_request_interest(self, name, skeleton):

@@ -247,7 +247,7 @@ class Producer(base.Producer):
         raise NotImplementedError
 
     def _on_request_interest(self, name, skeleton, fd_list, fd_variant, first_segment):
-        self.emit('interest', Name(name), Interest(name), None, None, None)
+        self.emit('interest', self.name, Interest(name), None, None, None)
         fd = fd_list.get(fd_variant.get_handle())
         logger.debug('RequestInterest Handler: name=%s, self.name=%s, fd=%d, first_segment=%d',
                      name, self.name, fd, first_segment)
@@ -274,7 +274,7 @@ class Producer(base.Producer):
 
         self._workers[key] = worker = ProducerWorker(fd, first_segment, final_segment,
                                                       self._send_chunk)
-        self._dbus.return_value(name, final_segment)
+        self._dbus.return_value(name, self.name.toString(), final_segment)
 
         last_emited = first_segment - 1
         # XXX: is this racy ?
