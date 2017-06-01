@@ -186,20 +186,70 @@ class Consumer(chunks.Consumer):
 
 
 class FileConsumer(Consumer):
+    """FileConsumer
 
-    def __init__(self, name, filename, *args, **kwargs):
-        self._filename = filename
+    this is a simple API to the write chunks data to a file, the original
+    version had a filename argument (kept for testing support) but the main
+    API entry point should be the dirname, this allows to make things like
+    versions to work.
+
+    We give it a directory and deduce the filename from the name (that can be
+    updated from the producer) having a bit of understanding about version
+    numbers and so on.
+
+    This is a bit tricky because we need to find a segment file to know what
+    first_segment to ask for but at the same time we can only get the name
+    back from the producer once we do a RequestInterest.
+
+    so it goes like that:
+     - (start) look for a segment for the name provided on call
+     - then chunks will do a RequestInterest call with the first_segment set for the segment file we found
+     - if we get a new name (i.e. with a version component) from the RequestInterest call via setName
+        - goto (start, with new name)
+
+    essentially this works like a TryAgain.
+
+    """
+
+    def __init__(self, name, filename=None, dirname='./', *args, **kwargs):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
+
+        self.dirname = dirname
+        self._filename = filename
+        self._segments_file = None
 
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
         try:
-            # we need to make the dir early, so that the sgt file can be created
-            mkdir_p(os.path.dirname(filename))
-            self._segments_file = SegmentsFile(self._filename)
-            self._segments = self._segments_file.read()
+            self._read_segments_from_file(name)
         except ValueError as e:
             pass
+
+    def setName(self, name):
+        logger.debug('set name: %s ↔ %s', name, self.name)
+        if str(name) == str(self.name):
+            return
+
+        super(FileConsumer, self).setName(name)
+
+        # If we have an existing download to resume, use that. Otherwise,
+        # request the first segment to bootstrap us.
+        try:
+            self._read_segments_from_file(name)
+        except ValueError as e:
+            pass
+
+    def _read_segments_from_file(self, name):
+        if not self._filename:
+            self._filename = os.path.join(self.dirname, str(name).split('/')[-1])
+
+        if self._segments_file:
+            self._segments_file.close(unlink=True)
+
+        # we need to make the dir early, so that the sgt file can be created
+        mkdir_p(os.path.dirname(self._filename))
+        self._segments_file = SegmentsFile(self._filename)
+        self._segments = self._segments_file.read()
 
     def _open_files(self):
         return self._create_files(self._filename)
