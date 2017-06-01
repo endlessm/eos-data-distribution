@@ -18,6 +18,7 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 import logging
+import operator
 import gi
 
 gi.require_version('EosDataDistributionDbus', '0')
@@ -42,6 +43,11 @@ DBUS_PATH_TEMPLATE = '%s%s'
 dbus_producer_instances = dict()
 
 GObject.threads_init()
+
+def identity(*args):
+    if len(args) == 1:
+        return args[0]
+    return args
 
 def extend(a, b):
     a.extend(b)
@@ -70,6 +76,37 @@ def build_dbus_name(base, name):
     if component in ['soma', 'installed']:
         return base + '.' + component
     return base
+
+def find_longest_prefix_in_list(name, l, transform=identity):
+    found = None
+    prefix = name
+
+    def look_up(prefix, compare):
+        t = transform(prefix)
+        logger.debug("looking for %s in %s, with %s", t, l, compare)
+        try:
+            found = [k for k in l if compare(k, t)][0]
+            logger.debug("FOUND handler for %s ↔ %s", found, t)
+            return found
+        except IndexError:
+            logger.debug("Couldn't find handler for %s", t)
+
+        return False
+
+    found = look_up(prefix, str.startswith)
+    if found:
+        return found
+
+    prefix = '/'.join(prefix.split('/')[:-1])
+    while len(prefix):
+        found = look_up(prefix, operator.eq)
+        if found:
+            return found
+
+        prefix = '/'.join(prefix.split('/')[:-1])
+
+    logger.debug("FOUND NO handler for %s", name)
+    return None
 
 class Base(GObject.GObject):
     """Base class
@@ -168,21 +205,14 @@ class Consumer(Base):
                 self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
 
     def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        logger.debug('looking for %s in %s (%s)', dbus_path, [p.get_object_path() for p in self._object_manager.get_objects()], self._object_manager)
-        prefix = interest
-        while len(prefix):
-            object_path = build_dbus_path(prefix)
-            proxy = self._object_manager.get_object(object_path)
-            if proxy:
-                break
+        object_paths = [p.get_object_path() for p in self._object_manager.get_objects()]
 
-            logger.debug("couldn't find %s on bus", object_path)
-            prefix = '/'.join(prefix.split('/')[:-1])
-
-        if not len(prefix):
+        object_path = find_longest_prefix_in_list(interest, object_paths, transform=build_dbus_path)
+        if object_path == None:
             logger.debug("failed to find a dbus object for %s %s %s", interest, dbus_name, dbus_path)
             return None
 
+        proxy = self._object_manager.get_object(object_path)
         interface = proxy.get_interfaces()[0]
         logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, object_path, interface)
 
@@ -279,22 +309,10 @@ class DBusProducerSingleton():
         logger.debug('handeling call %s for name=%s, args=%s, kwargs=%s',
                      handler_name, name, args, kwargs)
 
-        prefix = name
-
-        while len(prefix):
-            try:
-                callback = self._cb_registery[prefix][handler_name]
-                break
-            except KeyError:
-                logger.debug("couldn't find handler for %s", prefix)
-                prefix = '/'.join(prefix.split('/')[:-1])
-
-        if not len(prefix):
-            logger.debug("FOUND NO handler for %s", name)
-            return False
-
-        logger.debug("FOUND handler for %s", prefix)
-        return callback(Name(name), skeleton, *args, **kwargs)
+        prefix = find_longest_prefix_in_list(name, self._cb_registery[handler_name].keys())
+        if prefix:
+            callback = self._cb_registery[handler_name][prefix]
+            return callback(Name(name), skeleton, *args, **kwargs)
 
     def return_value(self, name, *args, **kwargs):
         key = name.toString()
