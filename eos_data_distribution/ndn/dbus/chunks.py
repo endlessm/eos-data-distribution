@@ -93,6 +93,7 @@ class Consumer(base.Consumer):
     def __init__(self, name, *args, **kwargs):
         self.filename = None
         self.fd = None
+        self.sendout_fd = None
 
         self.first_segment = 0
         self.current_segment = 0
@@ -122,17 +123,19 @@ class Consumer(base.Consumer):
             # we'd better close it here and reopen so that we're sure we get
             # a fresh fd.
             self.fd.close()
+            if self.sendout_fd:
+                self.sendout_fd.close()
 
         # we prepare the file where we're going to write the data
         self.filename = '.edd-file-cache-' + interest.replace('/', '%')
-        sendout_fd = open(self.filename, 'w+b')
+        self.sendout_fd = open(self.filename, 'w+b')
         self.fd = open(self.filename, 'r+b')
 
 
         logger.debug('opened fd: %s', self.fd)
 
         fd_list = Gio.UnixFDList()
-        fd_id = fd_list.append(sendout_fd.fileno())
+        fd_id = fd_list.append(self.sendout_fd.fileno())
 
         assert(self.filename)
         assert(self.fd)
