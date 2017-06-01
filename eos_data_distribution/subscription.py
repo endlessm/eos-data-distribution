@@ -50,9 +50,9 @@ class Fetcher(GObject.GObject):
         self._face = face
         self._store_dir = store_dir
 
-        self._manifest_suffix = 'subscription/%s/manifest.json' % (
+        self._manifest_suffix = 'subscription/%s' % (
             self.subscription_id)
-        self._manifest_filename = path.join(
+        self._manifest_dirname = path.join(
             self._store_dir, self._manifest_suffix)
         self._shard_entries = []
 
@@ -62,14 +62,15 @@ class Fetcher(GObject.GObject):
 
     def _fetch_manifest(self):
         manifest_ndn_name = Name(
-            '%s/%s' % (SUBSCRIPTIONS_SOMA, self._manifest_suffix))
+            '%s/%s/%s' % (SUBSCRIPTIONS_SOMA, self._manifest_suffix, 'manifest.json'))
         manifest_consumer = FileConsumer(
-            manifest_ndn_name, self._manifest_filename)
+            manifest_ndn_name, dirname=self._manifest_dirname)
         manifest_consumer.connect('complete', self._fetch_manifest_complete)
         manifest_consumer.start()
 
     def _fetch_manifest_complete(self, consumer):
-        with open(self._manifest_filename, 'r') as f:
+        # we can't know the filename in advance, as it's timestamped
+        with open(consumer._filename, 'r') as f:
             manifest = json.load(f)
 
         consumers = []
@@ -95,7 +96,7 @@ class Fetcher(GObject.GObject):
     def _on_shards_complete(self, parallel_consumer):
         response = {
             "subscription_id": self.subscription_id,
-            "manifest_path": self._manifest_filename,
+            "manifest_path": self._manifest_consumer._filename,
             "shards": self._shard_entries,
         }
 
