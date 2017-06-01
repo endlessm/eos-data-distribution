@@ -202,6 +202,7 @@ class Consumer(base.Consumer):
 
         try:
             name, final_segment, fd_list = interface.call_request_interest_finish(res)
+            self.setName(name)
             self._set_final_segment(final_segment)
         except GLib.Error as error:
             # XXX actual error handeling !

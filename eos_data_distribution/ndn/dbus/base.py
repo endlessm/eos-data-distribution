@@ -115,6 +115,11 @@ class Base(GObject.GObject):
     our clases behave like the real chunks
 
     """
+
+    __gsignals__ = {
+        'name-changed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+    }
+
     def __init__(self, name,
                  chunk_size=CHUNK_SIZE,
                  cost=RouteCost.DEFAULT,
@@ -123,6 +128,10 @@ class Base(GObject.GObject):
         self.chunk_size = chunk_size
         self.cost = cost
         self.name = Name(name)
+
+    def setName(self, name):
+        self.name = Name(name)
+        self.emit('name-changed', self.name.toString())
 
 class Interest(str):
     """Fake Interest Class
