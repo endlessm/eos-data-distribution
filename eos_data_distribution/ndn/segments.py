@@ -77,6 +77,9 @@ class File:
     def __init__(self, filename, mode=0):
         self.mode = mode
         self._filename = '%s.sgt' % (filename, )
+        return self._open_file()
+
+    def _open_file(self):
         self._fd = os.open(
             self._filename, os.O_CREAT | os.O_RDWR, 0o600)
 
