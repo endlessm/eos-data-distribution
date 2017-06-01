@@ -58,14 +58,24 @@ if __name__ == '__main__':
     from ndn.file import FileConsumer
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--output")
+    parser.add_argument("-o", "--output", default=None)
+    parser.add_argument("-d", "--directory", default=None)
     parser.add_argument("-c", "--count", default=10, type=int)
     args = utils.parse_args(parser=parser)
 
     loop = GLib.MainLoop()
 
-    consumers = [FileConsumer("%s-%s"%(args.name, i), "%s-%s"%(args.output, i))
-                 for i in range(args.count)]
+    if args.output:
+        consumers = [FileConsumer(name="%s-%s"%(args.name, i),
+                                  filename="%s-%s"%(args.output, i))
+                     for i in range(args.count)]
+    elif args.directory:
+        consumers = [FileConsumer(name="%s-%s"%(args.name, i),
+                                  dirname=args.directory)
+                     for i in range(args.count)]
+    else:
+        consumers = [FileConsumer(name="%s-%s"%(args.name, i))
+                     for i in range(args.count)]
     batch = Batch(workers=consumers)
     batch.connect('complete', lambda *a: loop.quit())
     batch.start()
