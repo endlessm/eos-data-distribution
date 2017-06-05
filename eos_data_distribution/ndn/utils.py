@@ -1,7 +1,7 @@
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2014-2016 Regents of the University of California.
-# Author: Jeff Thompson <jefft0@remap.ucla.edu>
+# Copyright (C) 2016 Endless Mobile, Inc.
+# Author: Niv Sardi <xaiki@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,24 +17,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import argparse
+import logging
+logger = logging.getLogger(__name__)
 
-from gi.repository import GLib
+def singleton(f):
+    instance = [None]
 
-from eos_data_distribution.ndn.file import FileProducer
-from eos_data_distribution import utils
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("filename")
-    args = utils.parse_args(parser=parser)
-
-    f = open(args.filename, 'rb')
-    producer = FileProducer(args.name, f)
-    producer.start()
-    loop = GLib.MainLoop()
-    loop.run()
-
-if __name__ == '__main__':
-    main()
+    def inner():
+        if instance[0] is None:
+            instance[0] = f()
+        return instance[0]
+    return inner

@@ -19,39 +19,6 @@
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
 from gi.repository import GLib
-import argparse
-
-import logging
-logger = logging.getLogger(__name__)
-
-
-class ArgParseWrapper(object):
-
-    """
-    all this because we can't call parse_args twice...
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.parser = argparse.ArgumentParser(*args, **kwargs)
-
-    def add_argument(self, *args, **kwargs):
-        self.parser.add_argument(*args, **kwargs)
-
-    def parse_args(self, *args, **kwargs):
-        args = self.parser.parse_args()
-        if args.v == 0:
-            logging.basicConfig(level=logging.INFO)
-        else:
-            logging.basicConfig(level=logging.DEBUG)
-        return args
-
-
-def process_args(description=None, *args, **kwargs):
-    parser = ArgParseWrapper(description)
-    parser.add_argument("-n", "--name")
-    parser.add_argument("-v", action="count")
-
-    return parser
 
 
 def run_producer_test(producer, name, args):
@@ -59,8 +26,28 @@ def run_producer_test(producer, name, args):
 
     producer.start()
     if args.output:
-        from .. import file
-        consumer = file.FileConsumer(name, filename=args.output)
+        from ..file import FileConsumer
+        consumer = FileConsumer(name, filename=args.output)
         consumer.connect('complete', lambda *a: loop.quit())
         consumer.start()
+    loop.run()
+
+def run_producers_test(producers, names, args):
+    loop = GLib.MainLoop()
+
+    [producer.start() for producer in producers]
+    producer.start()
+
+
+    if args.output:
+        from ..file import FileConsumer
+        consumers = [FileConsumer(n, filename="%s-%s"%(args.output, o)) for o,n in enumerate(names)]
+
+        def check_complete(*a):
+            if all([c._emitted_complete for c in consumers]):
+                print("ALL RETRIEVED")
+                loop.quit()
+
+        [consumer.connect('complete', check_complete) for consumer in consumers]
+        [consumer.start() for consumer in consumers]
     loop.run()

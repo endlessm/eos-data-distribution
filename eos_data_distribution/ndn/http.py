@@ -18,7 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
+import argparse
 import logging
+import bisect
 
 import gi
 gi.require_version('Soup', '2.4')
@@ -26,35 +28,21 @@ gi.require_version('Soup', '2.4')
 from gi.repository import Soup
 from gi.repository import GObject
 
-from . import chunks
-from .. import defaults
+from .dbus import chunks
+from .. import defaults, utils
 
 logger = logging.getLogger(__name__)
 
+MAX_IN_FLIGHT = 16
 
 def make_soup_session():
     session = Soup.Session()
     session.props.ssl_strict = False
-    session.props.max_conns = 100
+    session.props.max_conns = 1000
     session.props.max_conns_per_host = 100
+    session.props.idle_timeout = 10
+    session.props.timeout = 60
     return session
-
-
-def read_from_stream_async(istream, callback, cancellable=None, chunk_size=chunks.CHUNK_SIZE):
-    chunks = []
-
-    def got_data(istream, res):
-        gbytes = istream.read_bytes_finish(res)
-        chunks.append(gbytes.get_data())
-        if gbytes.get_size() == 0:
-            callback(''.join(chunks))
-        else:
-            read_bytes_async()
-
-    def read_bytes_async():
-        istream.read_bytes_async(chunk_size, 0, cancellable, got_data)
-
-    read_bytes_async()
 
 
 def fetch_http_headers(session, url):
@@ -85,12 +73,16 @@ def get_last_modified(headers):
 
 class Getter(object):
 
-    def __init__(self, url, onData, session=None, chunk_size=chunks.CHUNK_SIZE):
+    def __init__(self, url, onData, session=None, chunk_size=defaults.CHUNK_SIZE):
         super(Getter, self).__init__()
 
         self.url = url
         self.onData = onData
         self.chunk_size = chunk_size
+
+        self._queue = list()
+        self._data = dict()
+        self._in_flight = None
 
         self._session = session
         if self._session is None:
@@ -104,30 +96,68 @@ class Getter(object):
             raise ValueError("Could not determine Content-Size for %s" % url)
         logger.debug('getter init: %s', url)
 
-    def soup_get(self, data, n, cancellable=None):
+    def soup_get(self, n, count=1, cancellable=None):
         msg = Soup.Message.new('GET', self.url)
-        msg.request_headers.append('Range', 'bytes=%d-%d' %
-                                   (n * self.chunk_size, (n + 1) * self.chunk_size - 1))
-        self._session.send_async(
-            msg, cancellable, lambda session, task: self._got_stream(msg, task, data))
-        logger.debug('getter: soup_get: %d', n)
+        _bytes = 'bytes=%d-%d' % (n * self.chunk_size, (n + count) * self.chunk_size - 1)
+        logger.debug('GET %s', _bytes)
+        msg.request_headers.append('Range', _bytes)
+        self._session.queue_message(
+            msg, lambda session, msg: self._got_reply(msg, (n, count)))
+        logger.debug('getter: soup_get: queued %d', n)
 
-    def _got_stream(self, msg, task, data):
+    def _got_reply(self, msg, args):
+        n, count = args
         if msg.status_code not in (Soup.Status.OK, Soup.Status.PARTIAL_CONTENT):
-            return
+            logger.info('got error in soup_get: %s(%s) for %s+%s',
+                        msg.status_code, Soup.status_get_phrase(msg.status_code),
+                        n, count)
+            [self._queue_request(n + i) for i in xrange(count)]
+            return self._consume_queue()
 
-        istream = self._session.send_finish(task)
-        read_from_stream_async(istream, lambda buf: self._got_buf(data, buf))
+        self._in_flight = 0
+        buf = msg.get_property('response-body-data').get_data()
+        bufs = [buf[i*self.chunk_size:(i+1)*self.chunk_size]for i in xrange(count)]
+        [self._got_buf(b, n + i) for i, b in enumerate(bufs)]
+        return self._consume_queue()
 
-    def _got_buf(self, data, buf):
+    def _got_buf(self, buf, index):
+        data = self._data[index]
         data.setContent(buf)
         self.onData(data)
 
+    def queue_request(self, data, n):
+        self._data[n] = data
+        return self._queue_request(n)
+
+    def _queue_request(self, n):
+        bisect.insort(self._queue, n)
+
+        if not self._in_flight:
+            self._consume_queue()
+
+    def _consume_queue(self):
+        if len(self._queue) == 0:
+            self._in_flight = None
+            return
+
+        n = self._queue[0]
+        if len(self._queue) == 1:
+            self._in_flight = 1
+            self._queue = []
+            return self.soup_get(n)
+
+        # we are now sure to have more than 1 element
+        simil = [e for i, e in enumerate(self._queue) if e == n + i and e < n + MAX_IN_FLIGHT]
+        size = len(simil)
+        del self._queue[:size]
+        self._in_flight = size
+        logger.debug('consuming queue have %s in queue, %s in flight', len(self._queue), size)
+        self.soup_get(n, size)
 
 class Producer(chunks.Producer):
 
     def __init__(self, name, url, session=None, *args, **kwargs):
-        self._getter = Getter(url, session=session, chunk_size=self.chunk_size,
+        self._getter = Getter(url, session=session,
                               onData=lambda d: self.sendFinish(d))
         super(Producer, self).__init__(
             name, cost=defaults.RouteCost.HTTP, *args, **kwargs)
@@ -136,22 +166,26 @@ class Producer(chunks.Producer):
         return self._getter._size // self.chunk_size
 
     def _send_chunk(self, data, n):
-        self._getter.soup_get(data, n)
+        logger.info('HTTP send_chunk: %s', n)
+        self._getter.queue_request(data, n)
 
 if __name__ == '__main__':
     import re
-    from . import test
+    from .tests import utils as testutils
 
-    parser = test.process_args()
+    # to use this you should call the module like this from the toplevel:
+    # PYTHONPATH=. python3 -m eos_data_distribution.ndn.http "https://com-endless--cloud-soma-prod--shared-shard.s3-us-west-2.amazonaws.com/a76c961c62d543840f11719ed31b9e6f40cc7715469236c14d9c622422eac5ab.shard" -o test.shard
+
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--cost", default=10)
     parser.add_argument("-o", "--output")
-    parser.add_argument("url")
-    args = parser.parse_args()
-
+    parser.add_argument("urls", nargs='+')
+    args = utils.parse_args(parser=parser)
     if args.name:
-        name = args.name
+        names = ["%s-%s"%(args.name, i) for i, u in enumerate(args.urls)]
     else:
-        name = re.sub('https?://', '', args.url)
+        names = [re.sub('https?://', '', url) for url in args.urls]
 
-    producer = Producer(name=name, url=args.url)
-    test.run_producer_test(producer, name, args)
+    producers = [Producer(name=names[i], url=url) for i, url in enumerate(args.urls)]
+
+    testutils.run_producers_test(producers, names, args)

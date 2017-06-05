@@ -1,8 +1,7 @@
-#!/usr/bin/python
 # -*- Mode:python; coding: utf-8; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 #
-# Copyright (C) 2016 Endless Computers, Inc.
-# Author: Niv Sardi <xaiki@endlessm.com>
+# Copyright (C) 2017 Endless Mobile, Inc.
+# Author: Cosimo Cecchi <cosimo@endlessm.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -21,14 +20,24 @@
 import argparse
 import logging
 
+def parse_args(parser=None, include_name=True):
+    if parser is None:
+        parser = argparse.ArgumentParser()
 
-def process_args(parser):
-    parser.add_argument("-v", action="count")
-
+    if include_name:
+        parser.add_argument('--name', '-n',
+                            help='name of the requested interest')
+    parser.add_argument('-v', action='count',
+                        help='verbosity level')
     args = parser.parse_args()
-    if args.v > 1:
+    v = args.v or 0
+
+    if v > 1:
         logging.basicConfig(level=logging.DEBUG)
-    else:
+    elif v == 1:
         logging.basicConfig(level=logging.INFO)
+    else:
+        # We use the default WARNING level if -v was not specified
+        logging.basicConfig(level=logging.WARNING)
 
     return args

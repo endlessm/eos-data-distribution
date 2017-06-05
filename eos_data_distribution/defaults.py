@@ -20,9 +20,16 @@
 ENDLESS_NDN_CACHE_PATH = ".endless-NDN-DATA"
 
 FRESHNESS_PERIOD = 1000  # ms
+CHUNK_SIZE = 4096
 
 
 class RouteCost(object):
+    DEFAULT = 1000
     HTTP = 100
     LOCAL_NETWORK = 20
     USB = 10
+
+class SegmentState(object):
+    UNSENT = 0
+    OUTGOING = 1
+    COMPLETE = 2

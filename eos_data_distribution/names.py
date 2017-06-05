@@ -17,7 +17,42 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-from pyndn import Name
+import re
+
+# from pyndn import Name
+# we replace this with a hack for this rewrite
+
+class Name(list):
+    def __init__(self, name):
+        super(Name, self).__init__()
+        if isinstance(name, str):
+            self.append(name)
+        else:
+            self.extend(name)
+
+    def append(self, subname):
+        subname = re.sub(r'^\/+', '', subname)
+        subname = re.sub(r'\/+$', '', subname)
+        self.extend(subname.split('/'))
+        return self
+
+    def appendSegment(self, segment):
+        return self.append(str(segment))
+
+    def size(self):
+        return len(self)
+
+    def getSubName(self, size):
+        return Name(self[size:])
+
+    def get(self, e):
+        return self[e]
+
+    def toString(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return '/' + '/'.join(self)
 
 # Why isn't our name com.endlessm ?
 
@@ -32,5 +67,6 @@ from pyndn import Name
 # once a /com authority exists.
 
 
-SUBSCRIPTIONS_INSTALLED = Name('/endlessm/subscriptions/installed')
-SUBSCRIPTIONS_SOMA = Name('/endlessm/subscriptions/soma')
+SUBSCRIPTIONS_BASE = Name('/endlessm/subscriptions/')
+SUBSCRIPTIONS_INSTALLED = Name(SUBSCRIPTIONS_BASE).append('/installed')
+SUBSCRIPTIONS_SOMA = Name(SUBSCRIPTIONS_BASE).append('/soma')

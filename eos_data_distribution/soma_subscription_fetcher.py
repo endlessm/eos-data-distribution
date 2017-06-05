@@ -21,15 +21,14 @@
 import os
 import json
 import logging
-
-import gi
-gi.require_version('Soup', '2.4')
+import urllib
 
 from gi.repository import GLib
-from gi.repository import Soup
 
 from .names import SUBSCRIPTIONS_SOMA
-from .ndn import chunks, http, Producer, manifest
+from .ndn import http, manifest
+from .ndn.dbus import chunks
+from .ndn.dbus.chunks import Producer
 
 logger = logging.getLogger(__name__)
 
@@ -78,17 +77,17 @@ class Fetcher(object):
             return
 
         route = chunkless_name.getSubName(SUBSCRIPTIONS_SOMA.size())
-        component = route.get(0).getValue().toRawStr()
+        component = str(route.get(0))
 
         if component == 'subscription':
-            subscription_id = route.get(1).getValue().toRawStr()
-            filename = route.get(2).getValue().toRawStr()
+            subscription_id = str(route.get(1))
+            filename = str(route.get(2))
             assert filename == 'manifest.json'
             self._subproducers[key] = manifest.Producer(
                 chunkless_name, "%s/v1/%s/manifest.json" % (get_soma_server(), subscription_id), face=face)
             self._subproducers[key].start()
         elif component == 'shard':
-            shard_url = route.get(1).getValue().toRawStr()
+            shard_url = urllib.unquote(str(route.get(1)))
             self._subproducers[key] = http.Producer(
                 chunkless_name, shard_url, face=face)
             self._subproducers[key].start()

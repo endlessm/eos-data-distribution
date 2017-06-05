@@ -27,18 +27,14 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GObject
 from gi.repository import GLib
 
-from pyndn import Name, Face, Interest
+from eos_data_distribution.ndn.dbus.base import Consumer, Interest
+from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED
 
-from eos_data_distribution.ndn import Consumer
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED, SUBSCRIPTIONS_SOMA
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 class DbusConsumer(Consumer):
 
-    def __init__(self, name, target, appids, *args, **kwargs):
+    def __init__(self, name, target, appids, v=None, *args, **kwargs):
         Consumer.__init__(self, name=name, *args, **kwargs)
 
         self.target = target
@@ -54,12 +50,14 @@ class DbusConsumer(Consumer):
 if __name__ == "__main__":
     import sys
     import argparse
+    from eos_data_distribution import utils
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--target", default='./tmp')
-    parser.add_argument("-n", "--name", default=SUBSCRIPTIONS_SOMA)
+    parser.add_argument("-n", "--name", default=SUBSCRIPTIONS_INSTALLED)
     parser.add_argument("appids", nargs='+')
 
-    args = parser.parse_args()
+    args = utils.parse_args(parser=parser, include_name=False)
     kwargs = args.__dict__
 
     print('spawning DbusConsumer', kwargs)

@@ -32,6 +32,7 @@ from pyndn.transport.unix_transport import UnixTransport
 from pyndn import Name, Node, Data, Face, Interest, InterestFilter, ControlParameters
 
 from . import command
+from utils import singleton
 
 logger = logging.getLogger(__name__)
 
@@ -87,17 +88,6 @@ class GLibUnixFace(Face):
         """
         return True
 
-
-def singleton(f):
-    instance = [None]
-
-    def inner():
-        if instance[0] is None:
-            instance[0] = f()
-        return instance[0]
-    return inner
-
-
 @singleton
 def get_default_face():
     return GLibUnixFace()
@@ -143,7 +133,10 @@ class Base(GObject.GObject):
 
     def expressInterest(self, interest=None, *args, **kwargs):
         if interest is None:
-            interest = Interest(self.name)
+            try:
+                interest = self.interest
+            except AttributeError:
+                interest = Interest(self.name)
         return self._expressInterest(interest, *args, **kwargs)
 
     def _expressInterest(self, interest, try_again=False,
@@ -213,9 +206,11 @@ class Producer(Base):
     def start(self):
         self.registerPrefix()
 
-    def send(self, name, content):
+    def send(self, name, content, flags = {}):
         data = Data(name)
         data.setContent(content)
+        metadata = data.getMetaInfo()
+        [getattr(metadata, 'set' + flag.capitalie())(arg) for (flag, arg) in flags]
         logger.debug('sending: %d, on %s', content.__len__(), name)
         self.sendFinish(data)
         return name

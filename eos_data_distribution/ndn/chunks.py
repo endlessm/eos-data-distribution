@@ -25,11 +25,11 @@ from gi.repository import GObject
 from pyndn import Name, Interest, Data, MetaInfo, ContentType
 
 from . import base
+from .. import defaults
 
 logger = logging.getLogger(__name__)
 
-CHUNK_SIZE = 4096
-
+CHUNK_SIZE = defaults.CHUNK_SIZE
 
 def get_chunk_component(name):
     # The chunk component of a name is the last part...
@@ -44,7 +44,6 @@ def get_chunkless_name(name):
     else:
         chunkless_name = name
     return chunkless_name
-
 
 class Producer(base.Producer):
 
@@ -112,12 +111,6 @@ class Producer(base.Producer):
         self._send_chunk(data, seg)
 
 
-class SegmentState(object):
-    UNSENT = 0
-    OUTGOING = 1
-    COMPLETE = 2
-
-
 class Consumer(base.Consumer):
     __gsignals__ = {
         'progress': (GObject.SIGNAL_RUN_FIRST, None, (int, )),
@@ -147,7 +140,7 @@ class Consumer(base.Consumer):
             # qualified request back for the first segment, with a timestamp and
             # segment number. Future requests will request the fully qualified
             # name.
-            self.expressInterest(self.interest, try_again=True)
+            self.expressInterest(try_again=True)
         else:
             self._schedule_interests()
 
@@ -159,7 +152,7 @@ class Consumer(base.Consumer):
         logger.debug('fully retrieved: %s', self.name)
 
     def _check_for_complete(self):
-        if self._segments.count(SegmentState.COMPLETE) == len(self._segments):
+        if self._segments.count(defaults.SegmentState.COMPLETE) == len(self._segments):
             if not self._emitted_complete:
                 self._emitted_complete = True
                 self._on_complete()
@@ -169,7 +162,7 @@ class Consumer(base.Consumer):
     def _schedule_interests(self):
         while self._num_outstanding_interests < self._total_interest_requests:
             try:
-                next_segment = self._segments.index(SegmentState.UNSENT)
+                next_segment = self._segments.index(defaults.SegmentState.UNSENT)
             except ValueError as e:
                 # If we have no unsent segments left, then check for
                 # completion.
@@ -183,7 +176,7 @@ class Consumer(base.Consumer):
         logger.debug('is this an interest ? %s', ndn_name)
         self.expressInterest(Interest(ndn_name), try_again=True)
         if self._segments is not None:
-            self._segments[n] = SegmentState.OUTGOING
+            self._segments[n] = defaults.SegmentState.OUTGOING
         self._num_outstanding_interests += 1
 
     def _set_final_segment(self, n):
@@ -192,7 +185,7 @@ class Consumer(base.Consumer):
         self._size = self.chunk_size * self._num_segments
 
         if self._segments is None:
-            self._segments = [SegmentState.UNSENT] * self._num_segments
+            self._segments = [defaults.SegmentState.UNSENT] * self._num_segments
 
     def _check_final_segment(self, n):
         if self._final_segment is not None:
@@ -226,7 +219,7 @@ class Consumer(base.Consumer):
         seg = get_chunk_component(name).toSegment()
 
         # Have we somehow already got this segment?
-        if self._segments[seg] == SegmentState.COMPLETE:
+        if self._segments[seg] == defaults.SegmentState.COMPLETE:
             logger.debug('Ignoring data ‘%s’ as it’s already been received',
                          name)
             self._check_for_complete()
@@ -236,9 +229,9 @@ class Consumer(base.Consumer):
         # or is being deferred.
         if not self._save_chunk(seg, data):
             return
-        self._segments[seg] = SegmentState.COMPLETE
+        self._segments[seg] = defaults.SegmentState.COMPLETE
 
-        num_complete_segments = self._segments.count(SegmentState.COMPLETE)
+        num_complete_segments = self._segments.count(defaults.SegmentState.COMPLETE)
         self.emit(
             'progress', (float(num_complete_segments) / len(self._segments)) * 100)
 

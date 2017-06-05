@@ -23,18 +23,16 @@ import os
 import urllib
 from os import path
 
-from pyndn import Name, Data
-
 import gi
 from gi.repository import GObject
 
-from . import defaults, ndn
-from .names import SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
+from . import defaults
+from .names import Name, SUBSCRIPTIONS_SOMA, SUBSCRIPTIONS_INSTALLED
 from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
+from .ndn.dbus import base as ndn
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -76,9 +74,10 @@ class Fetcher(GObject.GObject):
 
         consumers = []
         for shard in manifest['shards']:
-            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append(
-                'shard').append(shard['download_uri'])
             escaped_filename = urllib.quote(shard['download_uri'], safe='')
+            shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append(
+                'shard').append(escaped_filename)
+
 
             shard_filename = path.realpath(
                 path.join(self._store_dir, 'shard', escaped_filename))
@@ -107,7 +106,7 @@ class Fetcher(GObject.GObject):
 class Producer(object):
 
     """
-    The Producer listens for intents to /endless/installed/foo,
+    The Producer listens for interests to /endless/installed/foo,
     downloads the manifest and shards by fetching from /endless/soma/v1/foo/...,
     and then generates a "signalling response" for them.
     """
@@ -137,7 +136,4 @@ class Producer(object):
 
     def _on_subscription_response(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
-        data = Data(interest.getName())
-        data.setContent(response)
-        data.getMetaInfo().setFreshnessPeriod(defaults.FRESHNESS_PERIOD)
-        self._producer.sendFinish(data)
+        self._producer.send(interest.getName(), response, flags={'freshnessPeriod': defaults.FRESHNESS_PERIOD})

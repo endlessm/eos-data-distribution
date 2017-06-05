@@ -21,9 +21,9 @@ from collections import defaultdict
 from os import path, walk
 import logging
 
-from pyndn import Name
 from ..DirTools import Monitor
 from ..ndn.file import FileProducer
+from ..names import Name
 
 logger = logging.getLogger(__name__)
 

@@ -17,13 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import logging
-
-logging.basicConfig(level=logging.INFO)
-
 import errno
 import json
-import logging
 import os
 from shutil import copyfile
 from os import path
@@ -37,12 +32,9 @@ from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Notify
 
-from pyndn import Name, Face, Interest
-
-from eos_data_distribution.ndn import Consumer
-from eos_data_distribution.names import SUBSCRIPTIONS_INSTALLED
-
-logging.basicConfig(level=logging.INFO)
+from eos_data_distribution import utils
+from eos_data_distribution.ndn.dbus.base import Consumer, Interest
+from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
@@ -104,8 +96,7 @@ class DBusService(object):
             object_path='/com/endlessm/EknSubscriptionsDownloader',
                                  interface_info=IFACE_INFO, method_call_closure=self._on_method_call)
 
-        # We have to fill in a name here even though we never use it...
-        self._consumer = Consumer(name='dummy')
+        self._consumer = Consumer(name=SUBSCRIPTIONS_INSTALLED)
         self._consumer.connect('data', self._on_data)
 
         # FIXME: Port to GNotification instead
@@ -139,7 +130,11 @@ class DBusService(object):
 
 
 def main():
+    utils.parse_args(include_name=False)
     Notify.init("Content Updates")
 
     service = DBusService()
     GLib.MainLoop().run()
+
+if __name__ == '__main__':
+    main()

@@ -21,7 +21,6 @@ import logging
 
 from gi.repository import GObject
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -50,3 +49,25 @@ class Batch(GObject.GObject):
         self._incomplete_workers.remove(worker)
         if len(self._incomplete_workers) == 0:
             self.emit('complete')
+
+if __name__ == '__main__':
+    import argparse
+    from . import utils
+
+    from gi.repository import GLib
+    from ndn.file import FileConsumer
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", "--output")
+    parser.add_argument("-c", "--count", default=10, type=int)
+    args = utils.parse_args(parser=parser)
+
+    loop = GLib.MainLoop()
+
+    consumers = [FileConsumer("%s-%s"%(args.name, i), "%s-%s"%(args.output, i))
+                 for i in range(args.count)]
+    batch = Batch(workers=consumers)
+    batch.connect('complete', lambda *a: loop.quit())
+    batch.start()
+
+    loop.run()
