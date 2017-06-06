@@ -19,6 +19,7 @@
 
 import logging
 import operator
+import os
 import gi
 
 gi.require_version('EosDataDistributionDbus', '0')
@@ -39,6 +40,8 @@ BASE_DBUS_NAME = 'com.endlessm.NDNHackBridge.base'
 BASE_DBUS_PATH = '/com/endlessm/NDNHackBridge'
 
 DBUS_PATH_TEMPLATE = '%s%s'
+
+ENDLESS_NDN_COMPONENT_NAMES = ('store', 'router')
 
 dbus_producer_instances = dict()
 
@@ -71,6 +74,13 @@ def build_dbus_path(name):
     return sanitize_dbus_path(DBUS_PATH_TEMPLATE % (BASE_DBUS_PATH, name.toString()))
 
 def build_dbus_name(base, name):
+    ret = _build_dbus_name(base, name)
+    env = os.environ.get('ENDLESS_NDN_COMPONENT_NAME')
+    if env:
+        return ret + '.' + env
+    return ret
+
+def _build_dbus_name(base, name):
     component = get_route_component(name)
 
     if component in ['soma', 'installed']:
@@ -164,32 +174,37 @@ class Consumer(Base):
     def __init__(self, name, dbus_name = BASE_DBUS_NAME,
                  object_manager_class=EosDataDistributionDbus.ObjectManagerClient,
                  *args, **kwargs):
-        self._wants_start = False
         self._pending_interests = dict()
-        self._object_manager = None
-        self._dbus_name = build_dbus_name(dbus_name, name)
+        self._object_managers = dict()
+        self._dbus_name = _build_dbus_name(dbus_name, name)
         dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
 
         super(Consumer, self).__init__(name=name, *args, **kwargs)
 
-        logger.debug('spawning ObjectManagerClient on %s %s %s', name, self._dbus_name, dbus_path)
-        object_manager_class.new_for_bus(
-            BUS_TYPE, Gio.DBusObjectManagerClientFlags.NONE,
-            self._dbus_name, dbus_path,
-            callback=self._on_manager_ready)
+        for dest in ENDLESS_NDN_COMPONENT_NAMES:
+            dbus_name = self._dbus_name + '.' + dest
+            logger.debug('spawning ObjectManagerClient on %s %s %s', name, dbus_name, dbus_path)
+            object_manager_class.new_for_bus(
+                BUS_TYPE, Gio.DBusObjectManagerClientFlags.NONE,
+                dbus_name, dbus_path,
+                callback=self._on_manager_ready, user_data=dest)
 
-    def _on_manager_ready(self, proxy, res):
-        self._object_manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)
-
-        if self._wants_start:
-            self.expressInterest(self.interest, try_again=True)
-            self._wants_start = False
+    def _on_manager_ready(self, proxy, res, dest):
+        manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)
+        if not manager.props.name_owner:
+            logger.debug('object manager for %s has no name owner, dropping', dest)
+            return
+        logger.debug('object manager (%s) ready for %s', manager.props.name_owner, dest)
+        self._object_managers[dest] = manager
+        self.flush_pending_interests()
 
     def _flush_pending_interests(self, manager, obj, d=None):
+        self.flush_pending_interests()
+
+    def flush_pending_interests(self):
         logger.debug('processing pending interests: %s', self._pending_interests)
-        for i in self._pending_interests:
-             interest, dbus_path, dbus_name = i
-             if self._dbus_express_interest(interest, dbus_path, dbus_name):
+        for interest, dbus_path, dbus_name in self._pending_interests.values():
+             if self.dbus_express_interest(interest, dbus_path, dbus_name):
                 del self._pending_interests[interest]
 
     def start(self):
@@ -199,29 +214,40 @@ class Consumer(Base):
         if not interest:
             interest = self.name.toString()
 
-        self.interest = interest
-        if not self._object_manager:
-            # come back when you have someone to talk too
-            self._wants_start = True
-            return
-
         dbus_path = build_dbus_path(interest)
-        found = self._dbus_express_interest(interest, dbus_path, self._dbus_name)
-        if not found and try_again:
-            try:
-                return self._pending_interests[interest]
-            except KeyError:
-                self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
 
-    def _dbus_express_interest(self, interest, dbus_path, dbus_name):
-        object_paths = [p.get_object_path() for p in self._object_manager.get_objects()]
+        self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
+        if not len(self._object_managers):
+            # come back when you have someone to talk too
+            return None
+
+        found = self.dbus_express_interest(
+            interest, dbus_path, self._dbus_name)
+        if not found and try_again:
+            return self._pending_interests[interest]
+
+    def dbus_express_interest(self,
+                              *args, **kwargs):
+        for dest in self._object_managers.keys():
+            try:
+                found = self._dbus_express_interest(
+                    dest=dest, *args, **kwargs)
+            except KeyError:
+                continue
+
+            if found: return found
+
+    def _dbus_express_interest(self, interest, dbus_path, dbus_name, dest=None):
+        object_manager = self._object_managers[dest]
+        object_paths = [p.get_object_path() for p in object_manager.get_objects()]
+        logger.debug('looking for %s in %s on %s.%s', dbus_path, object_paths, dbus_name, dest)
 
         object_path = find_longest_prefix_in_list(interest, object_paths, transform=build_dbus_path)
         if object_path == None:
             logger.debug("failed to find a dbus object for %s %s %s", interest, dbus_name, dbus_path)
             return None
 
-        proxy = self._object_manager.get_object(object_path)
+        proxy = object_manager.get_object(object_path)
         interface = proxy.get_interfaces()[0]
         logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, object_path, interface)
 
@@ -239,6 +265,8 @@ class Consumer(Base):
             # XXX actual error handeling !
             # assuming TryAgain
             return self.expressInterest(interest)
+
+        del self._pending_interests[interest]
 
         self.emit('data', interest, data)
         self.emit('complete')
