@@ -340,11 +340,13 @@ class DBusProducerSingleton():
             args = extend([fd_list], args)
 
         skeleton.complete_request_interest(invocation, *args, **kwargs)
+        return True
 
     def return_error(self, name, error):
         skeleton, invocation, fd_list = self._obj_registery[name.toString()]
         logger.debug('returning ERROR %s for %s on %s', error, name, invocation)
         invocation.return_gerror(GLib.GError(error))
+        return True
 
 class Producer(Base):
     """Base DBus-NDN producer

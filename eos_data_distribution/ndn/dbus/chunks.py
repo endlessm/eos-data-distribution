@@ -261,15 +261,13 @@ class Producer(base.Producer):
             final_segment = self._get_final_segment()
         except NotImplementedError:
             # we can't handle this, let another producer come in and do it.
-            self._dbus.return_error(name, 'TryAgain')
-            return False
+            return self._dbus.return_error(name, 'TryAgain')
 
         key = name.toString()
         try:
             worker = self._workers[key]
-            logger.debug('already got a worker for name %s', name)
-            # self._dbus.return_error(name, 'ETOOMANY')
-            return
+            logger.debug('already got a worker for name %s', self.name)
+            return self._dbus.return_error(name, 'ETOOMANY')
         except KeyError:
             pass
 
