@@ -237,6 +237,7 @@ class Consumer(Base):
             name, data = interface.call_request_interest_finish(res)
         except GLib.Error as error:
             # XXX actual error handeling !
+            logger.debug('got: %s, asuming TryAgain', error)
             # assuming TryAgain
             return self.expressInterest(interest)
 
@@ -278,8 +279,7 @@ class DBusProducerSingleton():
         object_skeleton.set_object_path(dbus_path)
         object_skeleton.add_interface(interface_skeleton)
 
-        logger.debug('registering path: %s ↔ %s', dbus_path,
-                     interface_skeleton.get_object_path())
+        logger.debug('registering path: %s', dbus_path)
         registered = self._object_manager.export(object_skeleton) or True
         iface_str = interface_skeleton.get_info().name
 
@@ -324,6 +324,7 @@ class DBusProducerSingleton():
 
         logger.debug('handeling call %s for name=%s, args=%s, kwargs=%s',
                      handler_name, name, args, kwargs)
+        logger.debug('cb_registery: %s', self._cb_registery)
 
         prefix = find_longest_prefix_in_list(name, self._cb_registery[handler_name].keys())
         if prefix:
@@ -401,7 +402,7 @@ class Producer(Base):
         self._dbus.return_value(name, name.toString(), data)
 
     def _on_request_interest(self, name, skeleton):
-        logger.debug('producer: got interest for name %s', name)
+        logger.debug('producer: got interest for name %s ↔ %s', name, self.name)
         self.emit('interest', name, Interest(name), None, None, None)
         return True
 

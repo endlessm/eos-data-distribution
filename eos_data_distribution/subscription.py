@@ -124,8 +124,9 @@ class Producer(object):
 
     def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
         name = interest.getName()
-        subscription_id = str(getSubIdName(name, SUBSCRIPTIONS_INSTALLED))
+        logger.debug('got interest for: %s, %s, %s', name, prefix, interest)
 
+        subscription_id = str(getSubIdName(name, SUBSCRIPTIONS_INSTALLED))
         if subscription_id in self._fetchers:
             return
 

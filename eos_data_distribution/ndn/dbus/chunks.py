@@ -78,12 +78,13 @@ class Data(object):
         cur_pos = self.fd.tell()
         n = self.n + 1
 
+        logger.debug('write data START: %d, fd: %d', n, cur_pos)
         assert(cur_pos/base.CHUNK_SIZE == n)
 
         # write directly to the fd, sendFinish is a NOP
         ret = self.fd.write(buf)
         self.fd.flush()
-        logger.debug('write data END: %d, fd: %d', n, self.fd.tell())
+
         self.n = n
         return ret
 
@@ -122,6 +123,8 @@ class Consumer(base.Consumer):
             # did we already have an open file descriptor for this ? if yes,
             # we'd better close it here and reopen so that we're sure we get
             # a fresh fd.
+            logger.debug('already had fd %s, %s', self.fd, self.sendout_fd)
+
             self.fd.close()
             if self.sendout_fd:
                 self.sendout_fd.close()
@@ -206,6 +209,7 @@ class Consumer(base.Consumer):
             self._set_final_segment(final_segment)
         except GLib.Error as error:
             # XXX actual error handeling !
+            logger.debug('got: %s(%s), asuming TryAgain', error.code, error.message)
             # assuming TryAgain
             return self.expressInterest(interest)
 
