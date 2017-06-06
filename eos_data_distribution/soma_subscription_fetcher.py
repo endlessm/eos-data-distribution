@@ -77,6 +77,7 @@ class Fetcher(object):
             return
 
         route = chunkless_name.getSubName(SUBSCRIPTIONS_SOMA.size())
+        logger.debug('route %s', route)
         component = str(route.get(0))
 
         if component == 'subscription':
