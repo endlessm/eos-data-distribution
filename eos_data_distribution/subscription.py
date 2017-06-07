@@ -90,13 +90,13 @@ class Fetcher(GObject.GObject):
             logger.info("Starting consumer: %s", (consumer, ))
 
         parallel_consumer = Batch(consumers, 'Consumers')
-        parallel_consumer.connect('complete', self._on_shards_complete)
+        parallel_consumer.connect('complete', self._on_shards_complete, consumer._filename)
         parallel_consumer.start()
 
-    def _on_shards_complete(self, parallel_consumer):
+    def _on_shards_complete(self, parallel_consumer, manifest_filename):
         response = {
             "subscription_id": self.subscription_id,
-            "manifest_path": self._manifest_consumer._filename,
+            "manifest_path": manifest_filename,
             "shards": self._shard_entries,
         }
 
