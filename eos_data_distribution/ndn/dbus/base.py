@@ -297,10 +297,14 @@ class DBusProducerSingleton():
         return callback(Name(name), skeleton, *args, **kwargs)
 
     def return_value(self, name, *args, **kwargs):
-        skeleton, invocation, fd_list = self._obj_registery[name.toString()]
-        logger.debug('returning value for %s on %s: %s', name, invocation, args)
+        key = name.toString()
+        skeleton, invocation, fd_list = self._obj_registery[key]
+        logger.debug('returning value for %s on %s: %s — %s', name, invocation, args, fd_list)
+
+        args = extend([key], args)
         if fd_list: # this looks ridiculous, but fd_list handeling is absolutely borken
             args = extend([fd_list], args)
+
         skeleton.complete_request_interest(invocation, *args, **kwargs)
 
     def return_error(self, name, error):

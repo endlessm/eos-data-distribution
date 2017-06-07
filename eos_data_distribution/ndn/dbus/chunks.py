@@ -186,7 +186,7 @@ class Consumer(base.Consumer):
         logger.info('Consumer: request interest complete: %s, %s, %s', interface, res, interest)
 
         try:
-            final_segment, fd_list = interface.call_request_interest_finish(res)
+            name, final_segment, fd_list = interface.call_request_interest_finish(res)
             self._set_final_segment(final_segment)
         except GLib.Error as error:
             # XXX actual error handeling !
