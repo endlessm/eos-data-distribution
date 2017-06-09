@@ -38,22 +38,22 @@ logger = logging.getLogger(__name__)
 
 class Fetcher(GObject.GObject):
     __gsignals__ = {
-        'response': (GObject.SIGNAL_RUN_FIRST, None, (str, )),
+        'response': (GObject.SIGNAL_RUN_FIRST, None, (object, )),
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, store_dir, subscription_id, face=None):
+    def __init__(self, tmp_dir, subscription_id, face=None):
         super(Fetcher, self).__init__()
 
         self.subscription_id = subscription_id
 
         self._face = face
-        self._store_dir = store_dir
+        self._tmp_dir = tmp_dir
 
         self._manifest_suffix = 'subscription/%s' % (
             self.subscription_id)
         self._manifest_dirname = path.join(
-            self._store_dir, self._manifest_suffix)
+            self._tmp_dir, self._manifest_suffix)
         self._shard_entries = []
 
     def start(self):
@@ -81,7 +81,7 @@ class Fetcher(GObject.GObject):
 
 
             shard_filename = path.realpath(
-                path.join(self._store_dir, 'shard', escaped_filename))
+                path.join(self._tmp_dir, 'shard', escaped_filename))
             self._shard_entries.append(
                 {'manifest_path': shard['path'], 'cache_path': shard_filename})
             consumer = FileConsumer(
@@ -100,7 +100,7 @@ class Fetcher(GObject.GObject):
             "shards": self._shard_entries,
         }
 
-        self.emit('response', json.dumps(response))
+        self.emit('response', response)
         self.emit('complete')
 
 
@@ -112,8 +112,9 @@ class Producer(object):
     and then generates a "signalling response" for them.
     """
 
-    def __init__(self, store_dir):
+    def __init__(self, store_dir, tmp_dir):
         self._store_dir = store_dir
+        self._tmp_dir = tmp_dir
         self._fetchers = {}
 
         self._producer = ndn.Producer(SUBSCRIPTIONS_INSTALLED)
@@ -130,12 +131,25 @@ class Producer(object):
         if subscription_id in self._fetchers:
             return
 
-        fetcher = Fetcher(self._store_dir, subscription_id, face=face)
+        fetcher = Fetcher(self._tmp_dir, subscription_id, face=face)
         fetcher.connect('response', lambda fetcher, response:
                         self._on_subscription_response(fetcher, interest, response))
         self._fetchers[subscription_id] = fetcher
         fetcher.start()
 
+    def _tmp_to_store(self, tmp_path):
+        store_path = tmp_path.replace(self._tmp_dir, self._store_dir)
+        logger.info('moving %s to %s', tmp_path, store_path)
+        os.rename(tmp_path, store_path)
+        return store_path
+
     def _on_subscription_response(self, fetcher, interest, response):
         fetcher = self._fetchers.pop(fetcher.subscription_id)
-        self._producer.send(interest.getName(), response, flags={'freshnessPeriod': defaults.FRESHNESS_PERIOD})
+        response['manifest_path'] =  self._tmp_to_store(response['manifest_path'])
+        response['shards'] = [{
+            'manifest_path': shard['manifest_path'],
+            'cache_path': self._tmp_to_store(shard['cache_path'])
+        } for shard in response['shards']]
+
+        self._producer.send(interest.getName(), json.dumps(response),
+                            flags={'freshnessPeriod': defaults.FRESHNESS_PERIOD})

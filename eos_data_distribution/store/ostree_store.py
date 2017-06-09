@@ -32,7 +32,7 @@ def main():
 
     args = utils.parse_args(parser=parser, include_name=False)
 
-    subscription_producer = subscription.Producer(args.tmp_dir)
+    subscription_producer = subscription.Producer(args.store_dir, args.tmp_dir)
     subscription_producer.start()
 
     store = simple_store.Producer(
