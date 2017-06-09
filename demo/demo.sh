@@ -39,8 +39,6 @@ run_usb_mock="$(run usb demo/mock-usb-producer ${BASE_PATH}/DL)"
 
 killall tmux;
 
-rm -rf ${TEMP_DIR}/*
-
 mkdir -p ${BASE_PATH}/tmp
 mkdir -p ${BASE_PATH}/DL
 
