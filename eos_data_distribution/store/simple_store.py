@@ -48,7 +48,7 @@ class Producer(object):
     def _path_to_name(self, filename):
         assert filename.startswith(self.base)
         file_path = filename[len(self.base):].lstrip('/')
-        return Name('%s/%s' % (self.prefix.toUri(), file_path))
+        return Name('%s/%s' % (str(self.prefix), file_path))
 
     def unpublish(self, basedir):
         [self.unpublish_name(n) for n in self.dirpubs[basedir]]
