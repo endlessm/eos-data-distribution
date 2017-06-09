@@ -11,6 +11,7 @@ from gi.repository import Gio
 from . import fallocate
 from .dbus import chunks
 from .segments import File as SegmentsFile
+from ..utils import mkdir_p
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +41,6 @@ class FileProducer(chunks.Producer):
         self.f.seek(pos, os.SEEK_SET)
         return self.f.read(self.chunk_size)
 
-
-def mkdir_p(dirname):
-    if not dirname:
-        return
-
-    try:
-        os.makedirs(dirname, 0o755)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
-            pass
-        else:
-            raise
 
 
 class Consumer(chunks.Consumer):

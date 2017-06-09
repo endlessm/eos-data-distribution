@@ -32,6 +32,7 @@ from .ndn.file import FileConsumer
 from .soma_subscription_fetcher import getSubIdName
 from .parallel import Batch
 from .ndn.dbus import base as ndn
+from .utils import mkdir_p
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,7 @@ class Producer(object):
     def _tmp_to_store(self, tmp_path):
         store_path = tmp_path.replace(self._tmp_dir, self._store_dir)
         logger.info('moving %s to %s', tmp_path, store_path)
+        mkdir_p(os.path.dirname(store_path))
         os.rename(tmp_path, store_path)
         return store_path
 

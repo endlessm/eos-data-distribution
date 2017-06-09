@@ -19,6 +19,8 @@
 
 import argparse
 import logging
+import errno
+import os
 
 def parse_args(parser=None, include_name=True):
     if parser is None:
@@ -41,3 +43,15 @@ def parse_args(parser=None, include_name=True):
         logging.basicConfig(level=logging.WARNING)
 
     return args
+
+def mkdir_p(dirname):
+    if not dirname:
+        return
+
+    try:
+        os.makedirs(dirname, 0o755)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+            pass
+        else:
+            raise

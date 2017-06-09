@@ -17,7 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-import errno
 import json
 import os
 from shutil import copyfile
@@ -35,6 +34,7 @@ from gi.repository import Notify
 from eos_data_distribution import utils
 from eos_data_distribution.ndn.dbus.base import Consumer, Interest
 from eos_data_distribution.names import Name, SUBSCRIPTIONS_INSTALLED
+from eos_data_distribution.utils import mkdir_p
 
 IFACE = '''<node>
 <interface name='com.endlessm.EknSubscriptionsDownloader'>
@@ -45,16 +45,6 @@ IFACE = '''<node>
 </node>'''
 
 IFACE_INFO = Gio.DBusNodeInfo.new_for_xml(IFACE).interfaces[0]
-
-
-def mkdir_p(dirname):
-    try:
-        os.makedirs(dirname)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
-            pass
-        else:
-            raise
 
 
 def apply_subscription_update(subscription_id, src_manifest_path, shards):
