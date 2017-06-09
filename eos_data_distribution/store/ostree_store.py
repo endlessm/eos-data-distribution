@@ -27,16 +27,18 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--store-dir", required=True)
+    parser.add_argument("-d", "--store-dir", required=True)
+    parser.add_argument("-t", "--tmp-dir", required=True)
 
     args = utils.parse_args(parser=parser, include_name=False)
 
-    subscription_producer = subscription.Producer(args.store_dir)
+    subscription_producer = subscription.Producer(args.tmp_dir)
     subscription_producer.start()
 
     store = simple_store.Producer(
         base=args.store_dir, prefix=names.SUBSCRIPTIONS_SOMA)
     store.start()
+
     GLib.MainLoop().run()
 
 

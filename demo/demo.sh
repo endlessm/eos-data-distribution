@@ -3,6 +3,7 @@
 BASE_PATH=$1
 
 TEMP_DIR="${BASE_PATH}/tmp"
+STORE_DIR="${BASE_PATH}/DL"
 APPIDS="10521bb3a18b573f088f84e59c9bbb6c2e2a1a67"
 
 title="printf '\033]2;%s\033\\'"
@@ -33,7 +34,7 @@ run () {
 }
 
 run_router="$(run router eos_data_distribution/producers/soma_subscriptions)"
-run_store="sleep 1 && $(run store eos_data_distribution/store/ostree_store -t ${TEMP_DIR})"
+run_store="sleep 1 && $(run store eos_data_distribution/store/ostree_store -t ${TEMP_DIR} -d ${STORE_DIR})"
 run_dbus_consumer="sleep 2 && $(run dbus demo/simulate-dbus-consumer $APPIDS)"
 run_usb_mock="$(run usb demo/mock-usb-producer ${BASE_PATH}/DL)"
 
