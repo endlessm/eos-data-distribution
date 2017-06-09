@@ -59,9 +59,10 @@ class Producer(object):
         return self.unpublish_name(f, d)
 
     def unpublish_name(self, name, basedir):
-        producer = self.dirpubs[basedir][name]
+        key = str(name)
+        producer = self.dirpubs[basedir][key]
         producer.removeRegisteredPrefix(name)
-        del self.dirpubs[basedir][n]
+        del self.dirpubs[basedir][key]
 
     def _publish_name(self, M, p, m, f, o, evt, e=None, d=None):
         return self.publish_name(f.get_path(), d)
@@ -74,7 +75,7 @@ class Producer(object):
         file = open(filename, 'rb')
         producer = FileProducer(name, file, cost=self.cost)
         producer.start()
-        self.dirpubs[basedir].update({name: producer})
+        self.dirpubs[basedir].update({str(name): producer})
 
     def walk_dir(self, basedir):
         for root, dirs, files in walk(basedir):
