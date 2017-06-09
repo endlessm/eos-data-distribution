@@ -251,6 +251,17 @@ class Producer(base.Producer):
     def _get_final_segment(self):
         raise NotImplementedError
 
+    def _send_chunk(self, data, n):
+        content = self._get_chunk(n)
+        if content is None:
+            # we don't really support NACKs, log an error and return
+            raise NotImplementedError("got NACK but we don't support it !")
+            #data.getMetaInfo().setType(ContentType.NACK)
+        else:
+            data.setContent(content)
+
+        self.sendFinish(data)
+
     def _on_request_interest(self, name, skeleton, fd_list, fd_variant, first_segment):
         self.emit('interest', self.name, Interest(name), None, None, None)
         fd = fd_list.get(fd_variant.get_handle())
