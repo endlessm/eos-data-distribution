@@ -279,9 +279,9 @@ class DBusProducerSingleton():
         self._dbus_name = build_dbus_name(dbus_name, name)
         self._interface_skeleton_object = skeleton
 
-        address = Gio.dbus_address_get_for_bus_sync(BUS_TYPE, None)
-        self.con = Gio.DBusConnection.new_for_address_sync(address, Gio.DBusConnectionFlags.NONE, None, None)
 
+        address = Gio.dbus_address_get_for_bus_sync(BUS_TYPE, None)
+        self.con = Gio.DBusConnection.new_for_address_sync(address, Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION, None, None)
 
         dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
 
