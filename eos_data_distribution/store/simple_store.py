@@ -91,3 +91,20 @@ class Producer(object):
         [monitor.connect(s, self._unpublish_name, basedir)
          for s in monitor.filterSignals(['moved-out', 'renamed'])]
         self.dirs[basedir] = monitor
+
+if __name__ == '__main__':
+    import argparse
+    from .. import utils
+    from gi.repository import GLib
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("directory")
+    parser.add_argument("-p", "--prefix", default='/')
+    args = utils.parse_args(parser=parser, include_name=False)
+
+    loop = GLib.MainLoop()
+
+    producer = Producer(base=args.directory, prefix=args.prefix)
+    producer.start()
+
+    loop.run()
