@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class Batch(GObject.GObject):
     __gsignals__ = {
+        'worker-complete': (GObject.SIGNAL_RUN_FIRST, None, (object,)),
         'complete': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
@@ -47,6 +48,7 @@ class Batch(GObject.GObject):
     def _on_batch_complete(self, worker):
         logger.info("%s complete: %s", self._type, worker)
         self._incomplete_workers.remove(worker)
+        self.emit('worker-complete', worker)
         if len(self._incomplete_workers) == 0:
             self.emit('complete')
 
