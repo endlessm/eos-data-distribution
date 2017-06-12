@@ -22,7 +22,7 @@ cprofile ()  {
 run () {
         t=$1
         shift 1
-        echo "$title '$t'; $(cprofile ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log; sleep infinity"
+        echo "$title '$t'; $(runpython ${BASE_PATH}/$@) 2>&1 | tee ${BASE_PATH}/$t.log; sleep infinity"
 }
 
 run_router="$(run router eos_data_distribution/producers/soma_subscriptions)"
