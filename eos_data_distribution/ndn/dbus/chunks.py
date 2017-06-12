@@ -288,7 +288,7 @@ class Producer(base.Producer):
 
         self._workers[key] = worker = ProducerWorker(fd, first_segment, final_segment,
                                                       self._send_chunk)
-        self._dbus.return_value(name, self.name.toString(), final_segment)
+        self._dbus.return_value(name, final_segment)
 
         last_emited = first_segment - 1
         # XXX: is this racy ?
