@@ -113,7 +113,7 @@ class Producer(object):
     """
 
     def __init__(self, store_dir):
-        self._store_dir = store_dir
+        self._store_dir = os.path.realpath(store_dir)
         self._fetchers = {}
 
         self._producer = ndn.Producer(SUBSCRIPTIONS_INSTALLED)
