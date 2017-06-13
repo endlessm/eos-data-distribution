@@ -209,7 +209,7 @@ class Consumer(base.Consumer):
             self._set_final_segment(final_segment)
         except GLib.Error as error:
             # XXX actual error handeling !
-            logger.debug('got: %s(%s), asuming TryAgain', error.code, error.message)
+            logger.debug('got: %s(%s), asuming ETRYAGAIN', error.code, error.message)
             # assuming TryAgain
             return self.expressInterest(interest)
 
@@ -276,7 +276,7 @@ class Producer(base.Producer):
             final_segment = self._get_final_segment()
         except NotImplementedError:
             # we can't handle this, let another producer come in and do it.
-            return self._dbus.return_error(name, 'TryAgain')
+            return self._dbus.return_error(name, 'ETRYAGAIN')
 
         key = name.toString()
         try:
