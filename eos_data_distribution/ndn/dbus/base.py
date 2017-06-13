@@ -262,10 +262,9 @@ class Consumer(Base):
         try:
             name, data = interface.call_request_interest_finish(res)
         except GLib.Error as error:
-            # XXX actual error handeling !
-            logger.debug('got: %s, asuming TryAgain', error)
-            # assuming TryAgain
-            return self.expressInterest(interest)
+            if str(error).find('ETRYAGAIN') != -1:
+                return self.expressInterest(interest)
+            return error
 
         del self._pending_interests[interest]
 
