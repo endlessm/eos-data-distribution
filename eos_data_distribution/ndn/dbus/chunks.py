@@ -241,6 +241,8 @@ class Consumer(base.Consumer):
 
 class Producer(base.Producer):
     def __init__(self, name, *args, **kwargs):
+        self._workers = dict()
+
         super(Producer, self).__init__(name=name,
                                        dbus_name=CHUNKS_DBUS_NAME,
                                        skeleton=EosDataDistributionDbus.ChunksChunksProducerSkeleton,

@@ -415,7 +415,6 @@ class Producer(Base):
                  skeleton=EosDataDistributionDbus.BaseProducerSkeleton,
                  *args, **kwargs):
         self.registered = False
-        self._workers = dict()
 
         super(Producer, self).__init__(name=name, *args, **kwargs)
         try:
