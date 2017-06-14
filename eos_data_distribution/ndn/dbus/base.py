@@ -256,7 +256,28 @@ class Consumer(Base):
         while len(keys):
             key = keys.pop()
             logger.debug('trying on proxy: %s', key)
-            return self._proxy_express_interest(proxies[key], interest)
+            try:
+                return self._proxy_express_interest(proxies[key], interest)
+            except GLib.Error as error:
+                # try again: this producer has spawned a new producer, we'll
+                # get it in the next iteration, we could just call
+                # dbus_express_interest, but another (better) producer might
+                # have appeared on another dest, so go through all of it
+                # again.
+
+                if str(error).find('ETRYAGAIN') != -1 or error.code == 24:
+                    del self._pending_interests[interest]
+                    return self.expressInterest(interest)
+
+                # too many: we called twice into the same producer, maybe
+                # we're getting an insistant caller, this is already being
+                # handled.
+                if str(error).find('ETOOMANY') != -1:
+                    return name
+
+                # anything else: we raise
+                logger.debug('unhandled error: %s', error)
+                raise(error)
 
         logger.info("couldn't find a valid proxy")
 
@@ -276,15 +297,9 @@ class Consumer(Base):
         return proxy
 
     def _proxy_express_interest(self, proxy, interest):
-        logger.debug('here')
         interface = proxy.get_interfaces()[0]
-        try:
-            name, data = interface.call_request_interest_sync(interest)
-        except GLib.Error as error:
-            if str(error).find('ETRYAGAIN') != -1:
-                return self.expressInterest(interest)
-            logger.debug('unhandled error: %s', error)
-            raise(error)
+
+        name, data = interface.call_request_interest_sync(interest)
 
         self.emit('data', interest, data)
         self.emit('complete')

@@ -112,7 +112,6 @@ class Consumer(base.Consumer):
         logger.info('init DBUS chunks.Consumer: %s', name)
 
     def _proxy_express_interest(self, proxy, interest):
-        logger.debug('there')
         interface = proxy.get_interfaces()[0]
         # XXX parse interest to see if we're requesting the first chunk
         self.first_segment = 0
@@ -145,20 +144,13 @@ class Consumer(base.Consumer):
         assert(self.filename)
         assert(self.fd)
 
-        try:
-            name, final_segment, fd_list = interface.call_request_interest_sync(
-                interest,
-                GLib.Variant('h', fd_id),
-                self.first_segment, fd_list=fd_list)
-            interface.connect('progress', self._on_progress)
-            self.setName(name)
-            self._set_final_segment(final_segment)
-            return name
-        except GLib.Error as error:
-            if str(error).find('ETRYAGAIN') != -1:
-                return self.expressInterest(interest)
-            logger.debug('unhandled error: %s', error)
-            raise(error)
+        name, final_segment, fd_list = interface.call_request_interest_sync(
+            interest,
+            GLib.Variant('h', fd_id),
+            self.first_segment, fd_list=fd_list)
+        interface.connect('progress', self._on_progress)
+        self.setName(name)
+        self._set_final_segment(final_segment)
         return name
 
     def _save_chunk(self, n, data):
