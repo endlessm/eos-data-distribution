@@ -185,10 +185,9 @@ class Consumer(Base):
             self.expressInterest(self.interest, try_again=True)
             self._wants_start = False
 
-    def _flush_pending_interests(self, manager, obj, d=None):
-        logger.debug('processing pending interests: %s', self._pending_interests)
-        for i in self._pending_interests:
-             interest, dbus_path, dbus_name = i
+    def flush_pending_interests(self):
+        logger.debug('processing pending interests: %s', self._pending_interests.keys())
+        for interest, dbus_path, dbus_name in self._pending_interests.values():
              if self._dbus_express_interest(interest, dbus_path, dbus_name):
                 del self._pending_interests[interest]
 
