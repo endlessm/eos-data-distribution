@@ -455,7 +455,7 @@ class Producer(Base):
         return True
 
     def _on_complete(self, name, skeleton):
-        raise NotImplemented
+        raise NotImplementedError()
 
 if __name__ == '__main__':
     import argparse
