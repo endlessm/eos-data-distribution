@@ -164,7 +164,6 @@ class Consumer(Base):
     def __init__(self, name, dbus_name = BASE_DBUS_NAME,
                  object_manager_class=EosDataDistributionDbus.ObjectManagerClient,
                  *args, **kwargs):
-        self._wants_start = False
         self._pending_interests = dict()
         self._object_manager = None
         self._dbus_name = build_dbus_name(dbus_name, name)
@@ -181,9 +180,7 @@ class Consumer(Base):
     def _on_manager_ready(self, proxy, res):
         self._object_manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)
 
-        if self._wants_start:
-            self.expressInterest(self.interest, try_again=True)
-            self._wants_start = False
+        self.flush_pending_interests()
 
     def flush_pending_interests(self):
         logger.debug('processing pending interests: %s', self._pending_interests.keys())
@@ -207,7 +204,6 @@ class Consumer(Base):
         self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
         if not self._object_manager:
             # come back when you have someone to talk too
-            self._wants_start = True
             return
 
         dbus_path = build_dbus_path(interest)
