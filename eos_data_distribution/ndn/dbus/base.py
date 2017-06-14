@@ -199,7 +199,13 @@ class Consumer(Base):
         if not interest:
             interest = self.name.toString()
 
-        self.interest = interest
+        try:
+            return self._pending_interests[interest]
+        except KeyError:
+            pass
+
+        dbus_path = build_dbus_path(interest)
+        self._pending_interests[interest] = (interest, dbus_path, self._dbus_name)
         if not self._object_manager:
             # come back when you have someone to talk too
             self._wants_start = True
