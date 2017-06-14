@@ -277,7 +277,7 @@ class Producer(base.Producer):
         try:
             final_segment = self._get_final_segment()
         except NotImplementedError:
-            # we can't handle this, let another producer come in and do it.
+            logger.debug("we can't handle this, let another producer come in and do it.")
             return self._dbus.return_error(name, 'ETRYAGAIN')
 
         key = name.toString()
