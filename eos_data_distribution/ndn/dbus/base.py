@@ -225,23 +225,42 @@ class Consumer(Base):
             # come back when you have someone to talk too
             return None
 
-        found = self.dbus_express_interest(
+        try:
+            name = self.dbus_express_interest(
             interest, dbus_path, self._dbus_name)
-        if not found and try_again:
-            return self._pending_interests[interest]
+        except AttributeError:
+            logger.debug('got an error')
+            if try_again: # XXX this looks wrong
+                return self._pending_interests[interest]
 
-    def dbus_express_interest(self,
+        logger.debug('express interest done')
+        del self._pending_interests[interest]
+
+    def dbus_express_interest(self, interest,
                               *args, **kwargs):
+        proxies = dict()
         for dest in self._object_managers.keys():
             try:
-                found = self._dbus_express_interest(
+                proxy = self._get_best_proxy_for_path(interest,
                     dest=dest, *args, **kwargs)
+                proxies[proxy.get_object_path()] = proxy
             except KeyError:
                 continue
+        # XXX we need to select the best matching name
+        # the sorted name will be the longest and biggest
 
-            if found: return found
+        keys = proxies.keys()
+        keys.sort()
 
-    def _dbus_express_interest(self, interest, dbus_path, dbus_name, dest=None):
+        logger.debug('will try proxies: %s', keys)
+        while len(keys):
+            key = keys.pop()
+            logger.debug('trying on proxy: %s', key)
+            return self._proxy_express_interest(proxies[key], interest)
+
+        logger.info("couldn't find a valid proxy")
+
+    def _get_best_proxy_for_path(self, interest, dbus_path, dbus_name, dest=None):
         object_manager = self._object_managers[dest]
         object_paths = [p.get_object_path() for p in object_manager.get_objects()]
         logger.debug('looking for %s in %s on %s.%s', dbus_path, object_paths, dbus_name, dest)
@@ -249,31 +268,28 @@ class Consumer(Base):
         object_path = find_longest_prefix_in_list(interest, object_paths, transform=build_dbus_path)
         if object_path == None:
             logger.debug("failed to find a dbus object for %s %s %s", interest, dbus_name, dbus_path)
-            return None
+            raise KeyError()
 
         proxy = object_manager.get_object(object_path)
+
+        logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, object_path, proxy)
+        return proxy
+
+    def _proxy_express_interest(self, proxy, interest):
+        logger.debug('here')
         interface = proxy.get_interfaces()[0]
-        logger.info('found proxy for: %s ↔ %s, will export %s', dbus_path, object_path, interface)
-
-        return self._do_express_interest(proxy, interface, interest)
-
-    def _do_express_interest(self,  proxy, interface, interest):
-        return interface.call_request_interest(interest,
-                                               callback=self._on_request_interest_complete, user_data=interest)
-
-    def _on_request_interest_complete(self, interface, res, interest):
-        logger.info('call complete, %s', res)
         try:
-            name, data = interface.call_request_interest_finish(res)
+            name, data = interface.call_request_interest_sync(interest)
         except GLib.Error as error:
             if str(error).find('ETRYAGAIN') != -1:
                 return self.expressInterest(interest)
-            return error
-
-        del self._pending_interests[interest]
+            logger.debug('unhandled error: %s', error)
+            raise(error)
 
         self.emit('data', interest, data)
         self.emit('complete')
+
+        return name
 
 class DBusProducerSingleton():
     def __init__(self, name, dbus_name, skeleton):

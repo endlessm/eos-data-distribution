@@ -111,7 +111,9 @@ class Consumer(base.Consumer):
 
         logger.info('init DBUS chunks.Consumer: %s', name)
 
-    def _do_express_interest(self, proxy, interface, interest):
+    def _proxy_express_interest(self, proxy, interest):
+        logger.debug('there')
+        interface = proxy.get_interfaces()[0]
         # XXX parse interest to see if we're requesting the first chunk
         self.first_segment = 0
         if (self._segments):
@@ -143,12 +145,21 @@ class Consumer(base.Consumer):
         assert(self.filename)
         assert(self.fd)
 
-        interface.connect('progress', self._on_progress)
-        interface.call_request_interest(interest,
-                                        GLib.Variant('h', fd_id),
-                                        self.first_segment, fd_list=fd_list,
-                                        callback=self._on_request_interest_complete,
-                                        user_data=interest)
+        try:
+            name, final_segment, fd_list = interface.call_request_interest_sync(
+                interest,
+                GLib.Variant('h', fd_id),
+                self.first_segment, fd_list=fd_list)
+            interface.connect('progress', self._on_progress)
+            self.setName(name)
+            self._set_final_segment(final_segment)
+            return name
+        except GLib.Error as error:
+            if str(error).find('ETRYAGAIN') != -1:
+                return self.expressInterest(interest)
+            logger.debug('unhandled error: %s', error)
+            raise(error)
+        return name
 
     def _save_chunk(self, n, data):
         raise NotImplementedError()
@@ -199,19 +210,6 @@ class Consumer(base.Consumer):
         if not self._emitted_complete and self._check_for_complete():
             self._emitted_complete = True
             proxy.call_complete(name, callback=self._on_complete)
-
-    def _on_request_interest_complete(self, interface, res, interest):
-        logger.info('Consumer: request interest complete: %s, %s, %s', interface, res, interest)
-
-        try:
-            name, final_segment, fd_list = interface.call_request_interest_finish(res)
-            self.setName(name)
-            self._set_final_segment(final_segment)
-        except GLib.Error as error:
-            # XXX actual error handeling !
-            logger.debug('got: %s(%s), asuming ETRYAGAIN', error.code, error.message)
-            # assuming TryAgain
-            return self.expressInterest(interest)
 
     def _set_final_segment(self, n):
         self._final_segment = n
