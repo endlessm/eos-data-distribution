@@ -202,7 +202,7 @@ class Consumer(Base):
         self.flush_pending_interests()
 
     def flush_pending_interests(self):
-        logger.debug('processing pending interests: %s', self._pending_interests)
+        logger.debug('processing pending interests: %s', self._pending_interests.keys())
         for interest, dbus_path, dbus_name in self._pending_interests.values():
              if self.dbus_express_interest(interest, dbus_path, dbus_name):
                 del self._pending_interests[interest]
