@@ -20,8 +20,6 @@
 from gi.repository import GLib
 
 from eos_data_distribution import names, subscription, utils
-from eos_data_distribution.store import simple_store
-
 
 def main():
     import argparse
@@ -34,9 +32,6 @@ def main():
     subscription_producer = subscription.Producer(args.store_dir)
     subscription_producer.start()
 
-    store = simple_store.Producer(
-        base=args.store_dir, prefix=names.SUBSCRIPTIONS_SOMA)
-    store.start()
     GLib.MainLoop().run()
 
 
