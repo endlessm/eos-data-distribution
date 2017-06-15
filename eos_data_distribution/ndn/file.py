@@ -103,11 +103,12 @@ class Consumer(chunks.Consumer):
 
         try:
             stat = os.stat(filename)
-            assert (stat.st_size > self._final_segment * self.chunk_size)
+            assert (stat.st_size >   self._final_segment      * self.chunk_size)
+            assert (stat.st_size <= (self._final_segment + 1) * self.chunk_size)
             self.current_segment = self._final_segment
             logger.debug('Skipping download, found a file with filesize looking right: %s ↔ %s', stat.st_size, self._final_segment * self.chunk_size)
             return self._on_complete(use_part=False)
-        except OSError, AssertionError:
+        except (OSError, AssertionError) as e:
             pass
 
         logger.debug('Opening files for ‘%s’', filename)
