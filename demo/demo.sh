@@ -19,6 +19,12 @@ cprofile ()  {
         echo "python -m cProfile -o $(basename $n).cprof $n.py -vvv $@"
 }
 
+runpython ()  {
+        n=$1
+        shift 1
+        echo "python $n.py -vvv $@"
+}
+
 run () {
         t=$1
         shift 1
