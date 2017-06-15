@@ -200,7 +200,7 @@ class Consumer(Base):
         except KeyError:
             pass
 
-        self._pending_interests[interest] = True
+        self._pending_interests[interest] = try_again
         if not self._object_manager:
             # come back when you have someone to talk too
             return
@@ -210,7 +210,7 @@ class Consumer(Base):
             try:
                 return self._pending_interests[interest]
             except KeyError:
-                self._pending_interests[interest] = True
+                self._pending_interests[interest] = try_again
 
     def _dbus_express_interest(self, interest):
         object_paths = [p.get_object_path() for p in self._object_manager.get_objects()]
@@ -244,9 +244,13 @@ class Consumer(Base):
             logger.debug('request-interest got error: %s', error)
             if str(error).find('ETRYAGAIN') != -1:
                 return self._dbus_express_interest(interest)
+            elif error.code == 24: # Timeout
+                if self._pending_interests[interest]: # do we have try_again ?
+                    return self._dbus_express_interest(interest)
             elif str(error).find('ETOOMANY') != -1:
                 pass
-            raise(error)
+            else:
+                raise(error)
 
         del self._pending_interests[interest]
         return True
