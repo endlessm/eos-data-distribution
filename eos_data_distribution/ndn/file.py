@@ -86,12 +86,13 @@ class Consumer(chunks.Consumer):
 
         return True
 
-    def _on_complete(self, *args, **kwargs):
-        os.close(self._part_fd)
-        self._part_fd = -1
+    def _on_complete(self, use_part=True, *args, **kwargs):
+        if use_part:
+            os.close(self._part_fd)
+            self._part_fd = -1
 
-        os.rename(self._part_filename, self._filename)
-        os.chmod(self._filename, 0o644)
+            os.rename(self._part_filename, self._filename)
+            os.chmod(self._filename, 0o644)
 
         self._segments_file.close(unlink=True)
         super(Consumer, self)._on_complete(*args, **kwargs)
@@ -99,6 +100,16 @@ class Consumer(chunks.Consumer):
     def _create_files(self, filename):
         # XXX this is racy
         assert filename
+
+        try:
+            stat = os.stat(filename)
+            assert (stat.st_size > self._final_segment * self.chunk_size)
+            self.current_segment = self._final_segment
+            logger.debug('Skipping download, found a file with filesize looking right: %s ↔ %s', stat.st_size, self._final_segment * self.chunk_size)
+            return self._on_complete(use_part=False)
+        except OSError, AssertionError:
+            pass
+
         logger.debug('Opening files for ‘%s’', filename)
 
         mkdir_p(os.path.dirname(filename))
