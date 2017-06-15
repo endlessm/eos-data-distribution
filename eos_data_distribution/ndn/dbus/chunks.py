@@ -200,18 +200,11 @@ class Consumer(base.Consumer):
             self._emitted_complete = True
             proxy.call_complete(name, callback=self._on_complete)
 
-    def _on_request_interest_complete(self, interface, res, interest):
+    def _request_interest_complete(self, interface, res, interest):
         logger.info('Consumer: request interest complete: %s, %s, %s', interface, res, interest)
-
-        try:
-            name, final_segment, fd_list = interface.call_request_interest_finish(res)
-            self.setName(name)
-            self._set_final_segment(final_segment)
-        except GLib.Error as error:
-            # XXX actual error handeling !
-            logger.debug('got: %s(%s), asuming ETRYAGAIN', error.code, error.message)
-            # assuming TryAgain
-            return self.expressInterest(interest)
+        name, final_segment, fd_list = interface.call_request_interest_finish(res)
+        self.setName(name)
+        self._set_final_segment(final_segment)
 
     def _set_final_segment(self, n):
         self._final_segment = n
