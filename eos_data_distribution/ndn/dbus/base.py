@@ -409,10 +409,10 @@ class Producer(Base):
 
     def send(self, name, data, flags = {}):
         logger.debug('producer: sending on name %s, %s', name, data)
-        self._dbus.return_value(name, name.toString(), data)
+        self._dbus.return_value(name, data)
 
     def sendFinish(self, name, data):
-        self._dbus.return_value(name, name.toString(), data)
+        self._dbus.return_value(name, data)
 
     def _on_request_interest(self, name, skeleton):
         logger.debug('producer: got interest for name %s ↔ %s', name, self.name)
