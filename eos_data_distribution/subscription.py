@@ -70,7 +70,7 @@ class Fetcher(GObject.GObject):
 
     def _fetch_manifest_complete(self, consumer):
         # we can't know the filename in advance, as it's timestamped
-        with open(consumer._filename, 'r') as f:
+        with open(consumer.get_filename(), 'r') as f:
             manifest = json.load(f)
 
         consumers = []

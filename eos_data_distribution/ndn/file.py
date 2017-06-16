@@ -237,6 +237,9 @@ class FileConsumer(Consumer):
         except ValueError as e:
             pass
 
+    def get_filename(self):
+        return self._filename
+
     def setName(self, name):
         logger.debug('set name: %s ↔ %s', name, self.name)
         if str(name) == str(self.name):
