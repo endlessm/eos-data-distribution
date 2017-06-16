@@ -113,10 +113,12 @@ class Consumer(base.Consumer):
 
     def _do_express_interest(self, proxy, interface, interest):
         # XXX parse interest to see if we're requesting the first chunk
-        self.first_segment = 0
-        if (self._segments):
-            self.current_segment = self.first_segment = self._segments.index(defaults.SegmentState.UNSENT) or 0
-            logger.debug('STARTING AT %s', self.first_segment)
+        try:
+            self.current_segment = self.first_segment = self._segments.index(defaults.SegmentState.UNSENT)
+        except ValueError, AttributeError:
+            self.current_segment = self.first_segment = 0
+
+        logger.debug('STARTING AT %s', self.first_segment)
         self.interest = interest
 
         if self.filename:
