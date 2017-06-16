@@ -227,7 +227,7 @@ class FileConsumer(Consumer):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
         self.dirname = dirname
-        self._filename = filename
+        self._filename = filename or os.path.join(self.dirname, str(self.name).split('/')[-1])
         self._segments_file = None
 
         # If we have an existing download to resume, use that. Otherwise,
@@ -255,9 +255,6 @@ class FileConsumer(Consumer):
             pass
 
     def _read_segments_from_file(self):
-        if not self._filename:
-            self._filename = os.path.join(self.dirname, str(self.name).split('/')[-1])
-
         if self._segments_file:
             self._segments_file.close(unlink=True)
 
