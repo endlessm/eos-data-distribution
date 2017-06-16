@@ -233,7 +233,7 @@ class FileConsumer(Consumer):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
         try:
-            self._read_segments_from_file(name)
+            self._read_segments_from_file()
         except ValueError as e:
             pass
 
@@ -250,13 +250,13 @@ class FileConsumer(Consumer):
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
         try:
-            self._read_segments_from_file(name)
+            self._read_segments_from_file()
         except ValueError as e:
             pass
 
-    def _read_segments_from_file(self, name):
+    def _read_segments_from_file(self):
         if not self._filename:
-            self._filename = os.path.join(self.dirname, str(name).split('/')[-1])
+            self._filename = os.path.join(self.dirname, str(self.name).split('/')[-1])
 
         if self._segments_file:
             self._segments_file.close(unlink=True)
