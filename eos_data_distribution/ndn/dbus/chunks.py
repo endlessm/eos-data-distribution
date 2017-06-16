@@ -156,6 +156,9 @@ class Consumer(base.Consumer):
         raise NotImplementedError()
 
     def _on_progress(self, proxy, name, first_segment, last_segment):
+        if not self._final_segment:
+            return # still initing come back later
+
         segment_table_size = len(self._segments)
         logger.info('got progress, %s → %s (%s:%s)',
                      self.current_segment, last_segment, self._final_segment, segment_table_size)
