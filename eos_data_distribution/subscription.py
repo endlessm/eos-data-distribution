@@ -79,13 +79,14 @@ class Fetcher(GObject.GObject):
             shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append(
                 'shard').append(escaped_filename)
 
-
-            shard_filename = path.realpath(
-                path.join(self._store_dir, 'shard', escaped_filename))
+            last_component = path.basename(shard_ndn_name)
+            shard_dirname = path.realpath(
+                path.join(self._store_dir, 'shard', path.dirname(escaped_filename)))
+            shard_filename = path.join(shard_dirname, last_component)
             self._shard_entries.append(
                 {'manifest_path': shard['path'], 'cache_path': shard_filename})
             consumer = FileConsumer(
-                shard_ndn_name, shard_filename, face=self._face)
+                shard_ndn_name, dirname=shard_dirname, face=self._face)
             consumers.append(consumer)
             logger.info("Starting consumer: %s", (consumer, ))
 

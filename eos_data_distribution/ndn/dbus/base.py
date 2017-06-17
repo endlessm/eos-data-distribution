@@ -283,8 +283,12 @@ class DBusProducerSingleton():
         interface_skeleton.connect('handle-request-interest',
                        self._on_request_interest)
         try:
+            # XXX this is only used in chunks, but having this auto-mapped
+            # with a lambda fails for some reason
             interface_skeleton.connect('handle-complete',
                                     self._on_complete)
+            interface_skeleton.connect('handle-discover-version',
+                                       self._on_discover_version)
         except TypeError:
             pass
 
@@ -318,6 +322,9 @@ class DBusProducerSingleton():
     def _on_complete(self, *args, **kwargs):
         return self._find_handler_and_call('complete', *args, **kwargs)
 
+    def _on_discover_version(self, *args, **kwargs):
+        return self._find_handler_and_call('discover-version', *args, **kwargs)
+
     def _on_request_interest(self, *args, **kwargs):
         return self._find_handler_and_call('request-interest', *args, **kwargs)
 
@@ -346,7 +353,7 @@ class DBusProducerSingleton():
             callback = self._cb_registery[handler_name][prefix]
             return callback(Name(name), skeleton, *args, **kwargs)
 
-    def return_value(self, name, *args, **kwargs):
+    def _return_value(self, method_name, name, *args, **kwargs):
         key = name.toString()
         skeleton, invocation, fd_list = self._obj_registery[key]
         logger.debug('returning value for %s on %s: %s — %s', name, invocation, args, fd_list)
@@ -355,8 +362,12 @@ class DBusProducerSingleton():
         if fd_list: # this looks ridiculous, but fd_list handeling is absolutely borken
             args = extend([fd_list], args)
 
-        skeleton.complete_request_interest(invocation, *args, **kwargs)
+        method = getattr(skeleton, 'complete_%s'%(method_name))
+        method(invocation, *args, **kwargs)
         return True
+
+    def return_value(self, name, *args, **kwargs):
+        self._return_value('request_interest', name, *args, **kwargs)
 
     def return_error(self, name, error):
         skeleton, invocation, fd_list = self._obj_registery[name.toString()]
@@ -403,6 +414,7 @@ class Producer(Base):
             return
 
         self.registred = self._dbus.register_path_for_name(self.name, {
+            'discover-version': self._on_discover_version,
             'request-interest': self._on_request_interest,
             'complete': self._on_complete
         })
@@ -419,6 +431,9 @@ class Producer(Base):
         logger.debug('producer: got interest for name %s ↔ %s', name, self.name)
         self.emit('interest', name, Interest(name), None, None, None)
         return True
+
+    def _on_discover_version(self, name, skeleton):
+        raise NotImplementedError()
 
     def _on_complete(self, name, skeleton):
         raise NotImplementedError()

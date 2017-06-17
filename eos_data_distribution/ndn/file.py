@@ -86,7 +86,10 @@ class Consumer(chunks.Consumer):
 
         return True
 
-    def _on_complete(self, use_part=True, *args, **kwargs):
+    def _complete(self, use_part=True, *args, **kwargs):
+        logger.debug('complete for: %s', self.name)
+        super(Consumer, self)._complete(*args, **kwargs)
+
         if use_part:
             os.close(self._part_fd)
             self._part_fd = -1
@@ -94,22 +97,12 @@ class Consumer(chunks.Consumer):
             os.rename(self._part_filename, self._filename)
             os.chmod(self._filename, 0o644)
 
-        self._segments_file.close(unlink=True)
-        super(Consumer, self)._on_complete(*args, **kwargs)
+        if self._segments_file:
+            self._segments_file.close(unlink=True)
 
     def _create_files(self, filename):
         # XXX this is racy
         assert filename
-
-        try:
-            stat = os.stat(filename)
-            assert (stat.st_size >   self._final_segment      * self.chunk_size)
-            assert (stat.st_size <= (self._final_segment + 1) * self.chunk_size)
-            self.current_segment = self._final_segment
-            logger.debug('Skipping download, found a file with filesize looking right: %s ↔ %s', stat.st_size, self._final_segment * self.chunk_size)
-            return self._on_complete(use_part=False)
-        except (OSError, AssertionError) as e:
-            pass
 
         logger.debug('Opening files for ‘%s’', filename)
 
@@ -223,36 +216,50 @@ class FileConsumer(Consumer):
 
     """
 
-    def __init__(self, name, filename=None, dirname='./', *args, **kwargs):
+    def __init__(self, name, dirname=None, *args, **kwargs):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
-        self.dirname = dirname
-        self._filename = filename or os.path.join(self.dirname, str(self.name).split('/')[-1])
+        self.dirname = dirname or self.name[:-1].join('/')
+        self._set_filename_from_name()
         self._segments_file = None
 
-        # If we have an existing download to resume, use that. Otherwise,
-        # request the first segment to bootstrap us.
+    def _set_filename_from_name(self):
+        self._filename = os.path.join(self.dirname, str(self.name).split('/')[-1])
+        self._check_for_complete()
+
+    def _check_for_complete(self):
+        logger.debug('checking if %s is complete (%s)', self._filename, self._final_segment)
         try:
-            self._read_segments_from_file()
-        except ValueError as e:
-            pass
+            assert(self._final_segment)
+
+            stat = os.stat(self._filename)
+            assert(stat.st_size >   self._final_segment      * self.chunk_size)
+            assert(stat.st_size <= (self._final_segment + 1) * self.chunk_size)
+            self.current_segment = self._final_segment
+            logger.debug('Skipping download, found a file with filesize looking right: %s ↔ %s', stat.st_size, self._final_segment * self.chunk_size)
+        except (OSError, AssertionError) as e:
+            logger.debug('nope: %s', e)
+            return False
+
+        self._complete(use_part=False)
+        return True
 
     def get_filename(self):
         return self._filename
 
     def setName(self, name):
         logger.debug('set name: %s ↔ %s', name, self.name)
+
+
         if str(name) == str(self.name):
             return
 
         super(FileConsumer, self).setName(name)
+        self._set_filename_from_name()
 
         # If we have an existing download to resume, use that. Otherwise,
         # request the first segment to bootstrap us.
-        try:
-            self._read_segments_from_file()
-        except ValueError as e:
-            pass
+        self._read_segments_from_file()
 
     def _read_segments_from_file(self):
         if self._segments_file:
@@ -260,10 +267,15 @@ class FileConsumer(Consumer):
 
         # we need to make the dir early, so that the sgt file can be created
         mkdir_p(os.path.dirname(self._filename))
-        self._segments_file = SegmentsFile(self._filename)
-        self._segments = self._segments_file.read()
+        try:
+            self._segments_file = SegmentsFile(self._filename)
+            self._segments = self._segments_file.read()
+        except ValueError as e:
+            logger.debug('couldnt read segment file %s', e)
+
 
     def _open_files(self):
+        self._read_segments_from_file()
         return self._create_files(self._filename)
 
 def is_subdir(sub_dir, parent_dir):

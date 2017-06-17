@@ -61,7 +61,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output", default=None)
-    parser.add_argument("-d", "--directory", default=None)
     parser.add_argument("-c", "--count", default=10, type=int)
     args = utils.parse_args(parser=parser)
 
@@ -69,11 +68,7 @@ if __name__ == '__main__':
 
     if args.output:
         consumers = [FileConsumer(name="%s-%s"%(args.name, i),
-                                  filename="%s-%s"%(args.output, i))
-                     for i in range(args.count)]
-    elif args.directory:
-        consumers = [FileConsumer(name="%s-%s"%(args.name, i),
-                                  dirname=args.directory)
+                                  dirname=args.output)
                      for i in range(args.count)]
     else:
         consumers = [FileConsumer(name="%s-%s"%(args.name, i))

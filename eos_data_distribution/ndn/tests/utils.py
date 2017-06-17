@@ -27,7 +27,7 @@ def run_producer_test(producer, name, args):
     producer.start()
     if args.output:
         from ..file import FileConsumer
-        consumer = FileConsumer(name, filename=args.output)
+        consumer = FileConsumer(name, dirname=args.output)
         consumer.connect('complete', lambda *a: loop.quit())
         consumer.start()
     loop.run()
@@ -41,7 +41,7 @@ def run_producers_test(producers, names, args):
 
     if args.output:
         from ..file import FileConsumer
-        consumers = [FileConsumer(n, filename="%s-%s"%(args.output, o)) for o,n in enumerate(names)]
+        consumers = [FileConsumer(n, dirname=args.output) for n in names]
 
         def check_complete(*a):
             if all([c._emitted_complete for c in consumers]):

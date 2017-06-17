@@ -103,6 +103,7 @@ class Consumer(base.Consumer):
         self._segments = []
         self._qualified_name = None
         self._emitted_complete = False
+        self._interface = None
 
         super(Consumer, self).__init__(name=name,
                                        dbus_name=CHUNKS_DBUS_NAME,
@@ -112,6 +113,23 @@ class Consumer(base.Consumer):
         logger.info('init DBUS chunks.Consumer: %s', name)
 
     def _do_express_interest(self, proxy, interface, interest):
+        # first we request the version, that will allow to check if we have
+        # an early resolution and not allocate ressources on the other side
+        # for nothing.
+        return interface.call_discover_version(
+            interest, callback=self._on_discover_version_complete,
+            user_data=interest)
+
+    def _on_discover_version_complete(self, interface, res, interest):
+        name, final_segment = interface.call_discover_version_finish(res)
+        # XXX: order here is important as we check for complete in setName()
+        self._set_final_segment(final_segment)
+        self.setName(name)
+
+        self._interface = interface
+        if self._check_for_complete():
+            return # early return if we completed in the init
+
         # XXX parse interest to see if we're requesting the first chunk
         try:
             self.current_segment = self.first_segment = self._segments.index(defaults.SegmentState.UNSENT)
@@ -159,6 +177,9 @@ class Consumer(base.Consumer):
         if not self._final_segment:
             return # still initing come back later
 
+        if self._emitted_complete:
+            return # all finished don't do anything
+
         segment_table_size = len(self._segments)
         logger.info('got progress, %s → %s (%s:%s)',
                      self.current_segment, last_segment, self._final_segment, segment_table_size)
@@ -201,15 +222,17 @@ class Consumer(base.Consumer):
             self.current_segment += 1
 
         self.current_segment -= 1
-        if not self._emitted_complete and self._check_for_complete():
+        self._complete()
+
+    def _complete(self):
+        if not self._emitted_complete:
             self._emitted_complete = True
-            proxy.call_complete(name, callback=self._on_complete)
+            self._interface.call_complete(
+                str(self.name), callback=self._on_complete)
 
     def _request_interest_complete(self, interface, res, interest):
         logger.info('Consumer: request interest complete: %s, %s, %s', interface, res, interest)
         name, final_segment, fd_list = interface.call_request_interest_finish(res)
-        self.setName(name)
-        self._set_final_segment(final_segment)
 
     def _set_final_segment(self, n):
         self._final_segment = n
@@ -232,11 +255,12 @@ class Consumer(base.Consumer):
         return self.current_segment == self._final_segment
 
     def _on_complete(self, *args, **kwargs):
-        logger.debug("COMPLETE: %s, %s", self.current_segment, self._final_segment)
+        logger.debug("COMPLETE: %s, %s, %s", self.name, self.current_segment, self._final_segment)
         assert (self.current_segment == self._final_segment)
         self.emit('complete')
-        os.unlink(self.fd.name)
-        self.fd.close()
+        if self.fd: # may have never opened it
+            os.unlink(self.fd.name)
+            self.fd.close()
         logger.info('fully retrieved: %s', self.name)
 
 class Producer(base.Producer):
@@ -262,21 +286,16 @@ class Producer(base.Producer):
 
         self.sendFinish(data)
 
-    def _on_request_interest(self, name, skeleton, fd_list, fd_variant, first_segment):
-        self.emit('interest', self.name, Interest(name), None, None, None)
-        fd = fd_list.get(fd_variant.get_handle())
-        logger.debug('RequestInterest Handler: name=%s, self.name=%s, fd=%d, first_segment=%d',
-                     name, self.name, fd, first_segment)
-        # do we start on chunk 0 ? full file ? do we start on another chunk
-        # ? we need to seek the file, subsequent calls to get the same
-        # chunks have to be handled in the consumer part and folded into
-        # answering to only one dbus call
-
+    def _on_discover_version(self, name, skeleton):
         try:
             final_segment = self._get_final_segment()
         except NotImplementedError:
             logger.debug("we can't handle this, let another producer come in and do it.")
             return self._dbus.return_error(name, 'ETRYAGAIN')
+        # do we start on chunk 0 ? full file ? do we start on another chunk
+        # ? we need to seek the file, subsequent calls to get the same
+        # chunks have to be handled in the consumer part and folded into
+        # answering to only one dbus call
 
         key = name.toString()
         try:
@@ -286,16 +305,25 @@ class Producer(base.Producer):
         except KeyError:
             pass
 
-        self._workers[key] = worker = ProducerWorker(fd, first_segment, final_segment,
-                                                      self._send_chunk)
-        self._dbus.return_value(name, final_segment)
+        self._workers[key] = worker = ProducerWorker(final_segment)
+        skeleton, invocation, fd_list = self._dbus._obj_registery[key]
+        self._dbus._return_value('discover_version', name, final_segment)
 
+    def _on_request_interest(self, name, skeleton, fd_list, fd_variant, first_segment):
+        self.emit('interest', self.name, Interest(name), None, None, None)
+        fd = fd_list.get(fd_variant.get_handle())
+        logger.debug('RequestInterest Handler: name=%s, self.name=%s, fd=%d, first_segment=%d',
+                     name, self.name, fd, first_segment)
+        key = name.toString()
+        worker = self._workers[key]
         last_emited = first_segment - 1
         # XXX: is this racy ?
         GLib.timeout_add_seconds(5,
             lambda: (worker.data.n > last_emited and
                                  skeleton.emit_progress(key, worker.first_segment,
                                                         worker.data.n)) or worker.working)
+        worker.start(fd, first_segment, self._send_chunk)
+        self._dbus.return_value(name, worker.final_segment)
         return True
 
     def _on_complete(self, name, skeleton):
@@ -305,7 +333,10 @@ class Producer(base.Producer):
         key = name.toString()
         worker = self._workers[key]
         worker.working = False
-        worker.fd.close()
+        try:
+            worker.fd.close()
+        except AttributeError:
+            pass
         del self._workers[key]
         return True
 
@@ -316,22 +347,24 @@ class Producer(base.Producer):
         pass
 
 class ProducerWorker():
-    def __init__(self, fd, first_segment, final_segment, send_chunk):
-        logger.info('Spawning NEW ProducerWorker: %s, %s, %s | %s', fd, first_segment, final_segment, send_chunk)
+    def __init__(self, final_segment):
+        logger.info('Spawning NEW ProducerWorker: %s', final_segment)
         self.working = True
-        self.first_segment = self.current_segment = first_segment
         self.final_segment = final_segment
+
+    def start(self, fd, first_segment, send_chunk):
+        self.first_segment = self.current_segment = first_segment
         self.fd = os.fdopen(fd, 'w+b')
-        self.data = Data(self.fd, first_segment)
+        self.data = Data(self.fd, self.first_segment)
 
         while(True):
             send_chunk(self.data, self.current_segment)
-            if self.current_segment < final_segment:
+            if self.current_segment < self.final_segment:
                 self.current_segment += 1
             else:
                 break
 
-        logger.info('end segments: %s, %s', self.current_segment, final_segment)
+        logger.info('end segments: %s, %s', self.current_segment, self.final_segment)
 
 if __name__ == '__main__':
     import re
