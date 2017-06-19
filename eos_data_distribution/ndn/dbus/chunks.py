@@ -117,10 +117,10 @@ class Consumer(base.Consumer):
         # an early resolution and not allocate ressources on the other side
         # for nothing.
         return interface.call_discover_version(
-            interest, callback=self._on_discover_version_complete,
+            interest, callback=self._on_express_interest_complete,
             user_data=interest)
 
-    def _on_discover_version_complete(self, interface, res, interest):
+    def _express_interest_complete(self, interface, res, interest):
         name, final_segment = interface.call_discover_version_finish(res)
         # XXX: order here is important as we check for complete in setName()
         self._set_final_segment(final_segment)

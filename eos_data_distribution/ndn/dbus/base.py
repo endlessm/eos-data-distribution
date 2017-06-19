@@ -229,18 +229,18 @@ class Consumer(Base):
 
     def _do_express_interest(self,  proxy, interface, interest):
         return interface.call_request_interest(interest,
-                                               callback=self._on_request_interest_complete, user_data=interest)
+                                               callback=self._on_express_interest_complete, user_data=interest)
 
-    def _request_interest_complete(self, interface, res, interest):
+    def _express_interest_complete(self, interface, res, interest):
         name, data = interface.call_request_interest_finish(res)
         self.emit('data', interest, data)
         self.emit('complete')
 
-    def _on_request_interest_complete(self, interface, res, interest):
+    def _on_express_interest_complete(self, interface, res, interest):
         logger.info('call complete, %s', res)
 
         try:
-            self._request_interest_complete(interface, res, interest)
+            self._express_interest_complete(interface, res, interest)
         except GLib.Error as error:
             logger.debug('request-interest got error: %s', error)
             if str(error).find('ETRYAGAIN') != -1:
