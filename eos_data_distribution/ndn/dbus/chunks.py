@@ -166,7 +166,7 @@ class Consumer(base.Consumer):
         interface.call_request_interest(interest,
                                         GLib.Variant('h', fd_id),
                                         self.first_segment, fd_list=fd_list,
-                                        callback=self._on_request_interest_complete,
+                                        callback=self._on_express_interest_complete,
                                         user_data=interest)
 
     def _save_chunk(self, n, data):
