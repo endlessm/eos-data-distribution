@@ -137,7 +137,6 @@ class Consumer(base.Consumer):
             self.current_segment = self.first_segment = 0
 
         logger.debug('STARTING AT %s', self.first_segment)
-        self.interest = interest
 
         if self.filename:
             # did we already have an open file descriptor for this ? if yes,
