@@ -216,10 +216,11 @@ class FileConsumer(Consumer):
 
     """
 
-    def __init__(self, name, dirname=None, *args, **kwargs):
+    def __init__(self, name, dirname=None, sha256=None, *args, **kwargs):
         super(FileConsumer, self).__init__(name, *args, **kwargs)
 
         self.dirname = dirname or self.name[:-1].join('/')
+        self._sha256 = sha256
         self._set_filename_from_name()
         self._segments_file = None
 
@@ -227,16 +228,33 @@ class FileConsumer(Consumer):
         self._filename = os.path.join(self.dirname, str(self.name).split('/')[-1])
         self._check_for_complete()
 
+    def _check_for_complete_sha256(self):
+        sha = hashlib.sha256()
+        with open(self._filename , "rb") as f:
+            while True:
+                buf = f.read(self.chunk_size)
+                if not buf:
+                    break
+                sha.update(buf)
+        assert(sha.hexdigest() == self._sha256)
+        return True
+
+    def _check_for_complete_size(self):
+        assert(self._final_segment)
+
+        stat = os.stat(self._filename)
+        assert(stat.st_size >   self._final_segment      * self.chunk_size)
+        assert(stat.st_size <= (self._final_segment + 1) * self.chunk_size)
+        self.current_segment = self._final_segment
+        logger.debug('Skipping download, found a file with filesize looking right: %s ↔ %s', stat.st_size, self._final_segment * self.chunk_size)
+
     def _check_for_complete(self):
         logger.debug('checking if %s is complete (%s)', self._filename, self._final_segment)
         try:
-            assert(self._final_segment)
-
-            stat = os.stat(self._filename)
-            assert(stat.st_size >   self._final_segment      * self.chunk_size)
-            assert(stat.st_size <= (self._final_segment + 1) * self.chunk_size)
-            self.current_segment = self._final_segment
-            logger.debug('Skipping download, found a file with filesize looking right: %s ↔ %s', stat.st_size, self._final_segment * self.chunk_size)
+            if self._sha256:
+                self._check_for_complete_sha256()
+            else:
+                self._check_for_complete_size()
         except (OSError, AssertionError) as e:
             logger.debug('nope: %s', e)
             return False
