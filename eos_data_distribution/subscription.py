@@ -86,7 +86,8 @@ class Fetcher(GObject.GObject):
             self._shard_entries.append(
                 {'manifest_path': shard['path'], 'cache_path': shard_filename})
             consumer = FileConsumer(
-                shard_ndn_name, dirname=shard_dirname, face=self._face)
+                shard_ndn_name, dirname=shard_dirname,
+                sha256=shard['sha256_csum'], face=self._face)
             consumers.append(consumer)
             logger.info("Starting consumer: %s", (consumer, ))
 
