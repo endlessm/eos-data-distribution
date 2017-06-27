@@ -290,6 +290,7 @@ class Producer(base.Producer):
             final_segment = self._get_final_segment()
         except NotImplementedError:
             logger.debug("we can't handle this, let another producer come in and do it.")
+            self.emit('interest', self.name, Interest(name), None, None, None)
             return self._dbus.return_error(name, 'ETRYAGAIN')
         # do we start on chunk 0 ? full file ? do we start on another chunk
         # ? we need to seek the file, subsequent calls to get the same
@@ -309,7 +310,6 @@ class Producer(base.Producer):
         self._dbus._return_value('discover_version', name, final_segment)
 
     def _on_request_interest(self, name, skeleton, fd_list, fd_variant, first_segment):
-        self.emit('interest', self.name, Interest(name), None, None, None)
         fd = fd_list.get(fd_variant.get_handle())
         logger.debug('RequestInterest Handler: name=%s, self.name=%s, fd=%d, first_segment=%d',
                      name, self.name, fd, first_segment)
