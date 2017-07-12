@@ -167,7 +167,7 @@ class Producer(chunks.Producer):
         return self._getter._size // self.chunk_size
 
     def _send_chunk(self, data, n):
-        logger.info('HTTP send_chunk: %s', n)
+        #logger.info('HTTP send_chunk: %s', n)
         self._getter.queue_request(data, n)
 
 if __name__ == '__main__':

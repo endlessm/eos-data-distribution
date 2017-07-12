@@ -149,6 +149,30 @@ class Interest(str):
     def getName(self):
         return Name(self)
 
+class PIT(dict):
+    """Trivial PIT Class
+
+    This is a simple key store that we use as Pending Interest Table, in
+    here we track all interest that are 'in flight' from the Consumer point
+    of view
+
+    """
+
+    def __init__(self):
+        super(PIT, self).__init__()
+
+    def put(self, key, item):
+        logger.debug('PIT: put %s ↔ %s', key, item)
+        return self.__setitem__(key, item)
+
+    def get(self, key):
+        logger.debug('PIT: get %s', key)
+        return self.__getitem__(key)
+
+    def remove(self, key):
+        logger.debug('PIT: remove %s', key)
+        del self[key]
+
 class Consumer(Base):
     """Base DBus-NDN consumer
 
@@ -164,7 +188,7 @@ class Consumer(Base):
     def __init__(self, name, dbus_name = BASE_DBUS_NAME,
                  object_manager_class=EosDataDistributionDbus.ObjectManagerClient,
                  *args, **kwargs):
-        self._pending_interests = dict()
+        self._pit = PIT()
         self._object_manager = None
         self._dbus_name = build_dbus_name(dbus_name, name)
         dbus_path = BASE_DBUS_PATH # build_dbus_path(name)
@@ -180,10 +204,10 @@ class Consumer(Base):
     def _on_manager_ready(self, proxy, res):
         self._object_manager = Gio.DBusObjectManagerClient.new_for_bus_finish(res)
 
-        self.flush_pending_interests()
+        self.flush_pit()
 
-    def flush_pending_interests(self):
-        pending_interests = self._pending_interests.keys()
+    def flush_pit(self):
+        pending_interests = self._pit.keys()
         logger.debug('processing pending interests: %s', pending_interests)
         for interest in pending_interests:
             self._dbus_express_interest(interest)
@@ -197,21 +221,15 @@ class Consumer(Base):
             interest = self.name.toString()
 
         try:
-            return self._pending_interests[interest]
+            return self._pit.get(interest)
         except KeyError:
-            pass
+            self._pit.put(interest, try_again)
 
-        self._pending_interests[interest] = try_again
         if not self._object_manager:
             # come back when you have someone to talk too
             return
 
         found = self._dbus_express_interest(interest)
-        if not found and try_again:
-            try:
-                return self._pending_interests[interest]
-            except KeyError:
-                self._pending_interests[interest] = try_again
 
     def _dbus_express_interest(self, interest):
         object_paths = [p.get_object_path() for p in self._object_manager.get_objects()]
@@ -228,6 +246,8 @@ class Consumer(Base):
         return self._do_express_interest(proxy, interface, interest)
 
     def _do_express_interest(self,  proxy, interface, interest):
+        # this is not merged above because we overload it in chunks
+
         return interface.call_request_interest(interest,
                                                callback=self._on_express_interest_complete, user_data=interest)
 
@@ -245,17 +265,20 @@ class Consumer(Base):
             logger.debug('request-interest got error: %s', error)
             if str(error).find('ETRYAGAIN') != -1:
                 return self._dbus_express_interest(interest)
-            elif error.code == 24: # Timeout
-                if self._pending_interests[interest]: # do we have try_again ?
-                    return self._dbus_express_interest(interest)
+            elif error.matches(Gio.DBusError.quark(), 24): # Timeout
+                raise(error)
+                if self._pit.get(interest): # do we have try_again ?
+                    # return self._dbus_express_interest(interest)
+                    pass
             elif str(error).find('ETOOMANY') != -1:
                 pass
-            else:
-                raise(error)
 
-        del self._pending_interests[interest]
+            raise(error)
+
+        logger.debug('removing %s from %s', interest, self._pit)
+
+        self._pit.remove(interest)
         return True
-
 
 class DBusProducerSingleton():
     def __init__(self, name, dbus_name, skeleton):

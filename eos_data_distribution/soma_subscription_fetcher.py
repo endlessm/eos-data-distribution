@@ -59,6 +59,7 @@ class Fetcher(object):
         self._subproducers = {}
 
     def _on_interest(self, o, prefix, interest, face, interestFilterId, filter):
+        logger.debug('got interest: %s', interest)
         # We handle one of two paths:
         #   /com.endlessm/subscriptions/soma/subscription/$sub_id/manifest.json/$chunk
         #   /com.endlessm/subscriptions/soma/shard/$shard_url/$chunk

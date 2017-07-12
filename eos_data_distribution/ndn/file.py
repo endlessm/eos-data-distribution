@@ -251,7 +251,7 @@ class FileConsumer(Consumer):
     def _check_for_complete(self):
         logger.debug('checking if %s is complete (%s)', self._filename, self._final_segment)
         try:
-            if self._sha256:
+            if self._sha256 is not None:
                 self._check_for_complete_sha256()
             else:
                 self._check_for_complete_size()
@@ -261,6 +261,7 @@ class FileConsumer(Consumer):
 
         self._complete(use_part=False)
         return True
+
 
     def get_filename(self):
         return self._filename

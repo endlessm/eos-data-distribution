@@ -75,7 +75,7 @@ class Fetcher(GObject.GObject):
 
         consumers = []
         for shard in manifest['shards']:
-            escaped_filename = urllib.quote(shard['download_uri'], safe='')
+            escaped_filename = urllib.quote(shard['download_uri'] + '.' + shard['sha256_csum'], safe='')
             shard_ndn_name = Name(SUBSCRIPTIONS_SOMA).append(
                 'shard').append(escaped_filename)
 
